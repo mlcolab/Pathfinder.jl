@@ -28,9 +28,9 @@ function pathfinder(
     θs, logpθs, ∇logpθs = optimize(logp, ∇logp, θ₀, optimizer; kwargs...)
     L = length(θs) - 1
     @assert length(logpθs) == length(∇logpθs) == L + 1
-    Σs = cov_estimate(θs, ∇logpθs; history_length=history_length)
-    ϕ_logqϕ_λ = map(θs, ∇logpθs, Σs) do θ, ∇logpθ, Σ
-        ϕ, logqϕ = bfgs_sample(rng, θ, ∇logpθ, Σ, ndraws_elbo)
+    μs, Σs = mvnormal_estimate(θs, ∇logpθs; history_length=history_length)
+    ϕ_logqϕ_λ = map(μs, Σs) do μ, Σ
+        ϕ, logqϕ = mvnormal_sample_logpdf(rng, μ, Σ, ndraws_elbo)
         λ = elbo(logp.(ϕ), logqϕ)
         return ϕ, logqϕ, λ
     end
@@ -38,10 +38,24 @@ function pathfinder(
     lopt = argmax(λ[2:end]) + 1
     @info "Optimized for $L iterations. Maximum ELBO of $(round(λ[lopt]; digits=2)) reached at iteration $(lopt - 1)."
 
+    # get parameters of ELBO-maximizing distribution
+    μopt = μs[lopt]
     Σopt = Σs[lopt]
-    μopt = muladd(Σopt, ∇logpθs[lopt], θs[lopt])
 
-    return μopt, Σopt, ϕ[lopt], logqϕ[lopt]
+    # reuse existing draws; draw additional ones if necessary
+    ϕdraws = ϕ[lopt]
+    logqϕdraws = logqϕ[lopt]
+    if ndraws_elbo < ndraws
+        append!.(
+            (ϕdraws, logqϕdraws),
+            mvnormal_sample_logpdf(rng, μopt, Σopt, ndraws - ndraws_elbo),
+        )
+    else
+        ϕdraws = ϕdraws[1:ndraws]
+        logqϕdraws = logqϕdraws[1:ndraws]
+    end
+
+    return μopt, Σopt, ϕdraws, logqϕdraws
 end
 
 # multipath-pathfinder
@@ -91,7 +105,7 @@ end
 
 # Gilbert, J.C., Lemaréchal, C. Some numerical experiments with variable-storage quasi-Newton algorithms.
 # Mathematical Programming 45, 407–435 (1989). https://doi.org/10.1007/BF01589113
-function cov_estimate(θs, ∇logpθs; history_length=5, ϵ=1e-12)
+function mvnormal_estimate(θs, ∇logpθs; history_length=5, ϵ=1e-12)
     L = length(θs) - 1
     θ = θs[1]
     N = length(θ)
@@ -105,7 +119,9 @@ function cov_estimate(θs, ∇logpθs; history_length=5, ϵ=1e-12)
     Y = Vector{typeof(y)}(undef, 0)
 
     α, β, γ = fill!(similar(θ), true), similar(θ, N, 0), similar(θ, 0, 0)
-    Σs = [SymWoodbury(Diagonal(α), β, γ)]
+    Σ = SymWoodbury(Diagonal(α), β, γ)
+    μs = [muladd(Σ, ∇logpθ, θ)]
+    Σs = [Σ]
 
     m = 0
     for l in 1:L
@@ -163,27 +179,26 @@ function cov_estimate(θs, ∇logpθs; history_length=5, ϵ=1e-12)
         rmul!(γ22, nRinv)
         lmul!(nRinv′, γ22)
 
-        push!(Σs, SymWoodbury(Diagonal(α), β, γ))
+        Σ = SymWoodbury(Diagonal(α), β, γ)
+        push!(μs, muladd(Σ, ∇logpθ, θ))
+        push!(Σs, Σ)
     end
-    return Σs
+    return μs, Σs
 end
 
-function bfgs_sample(rng, θ, ∇logpθ, Σ::SymWoodbury, ndraws)
-    N = length(θ)
-
-    # compute mean
-    μ = muladd(Σ, ∇logpθ, θ)
+function mvnormal_sample_logpdf(rng, μ, Σ::SymWoodbury, ndraws)
+    N = length(μ)
 
     # draw points
-    u = Random.randn!(rng, similar(θ, N, ndraws))
+    u = Random.randn!(rng, similar(μ, N, ndraws))
     unormsq = map(x -> sum(abs2, x), eachcol(u))
-    ϕ = unwhiten!(Σ, u)
-    ϕ .+= μ
+    x = unwhiten!(Σ, u)
+    x .+= μ
 
     # compute log density at each point
-    logqϕ = ((logabsdet(Σ)[1] + N * log2π) .+ unormsq) ./ -2
+    logpx = ((logabsdet(Σ)[1] + N * log2π) .+ unormsq) ./ -2
 
-    return collect(eachcol(ϕ)), logqϕ
+    return collect(eachcol(x)), logpx
 end
 
 # given x drawn from an IID standard normal, in-place map x to one drawn from a
