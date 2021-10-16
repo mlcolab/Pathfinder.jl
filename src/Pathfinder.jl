@@ -58,10 +58,10 @@ function multipathfinder(
         logpϕ = logp.(ϕ)
         return μ, Σ, ϕ, logpϕ - logqϕ
     end
-    μs, Σs, ϕs, logws = ntuple(i -> getindex.(res, i), Val(4))
+    μs, Σs, ϕs, logqϕs = ntuple(i -> getindex.(res, i), Val(4))
     ϕsvec = reduce(vcat, ϕs)
-    logwsvec = reduce(vcat, logws)
-    ϕsample = psir(rng, ϕsvec, logwsvec, ndraws)
+    logqϕsvec = reduce(vcat, logqϕs)
+    ϕsample = psir(rng, ϕsvec, logqϕsvec, ndraws)
     return ϕsample
 end
 
@@ -126,7 +126,7 @@ function cov_estimate(θs, ∇logpθs; history_length=5, ϵ=1e-12)
 
             # Gilbert et al, eq 4.9
             a = dot(y, Diagonal(α), y)
-            c = dot(s, Diagonal(inv.(α)), s)
+            c = dot(s, inv(Diagonal(α)), s)
             @. α′ = b / (a / α + y^2 - (a / c) * (s / α)^2)
             α = α′
         else
