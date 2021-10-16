@@ -6,6 +6,7 @@ using Optim: Optim, LineSearches
 using PSIS
 using StatsBase
 using StatsFuns
+using WoodburyMatrices: SymWoodbury
 
 export pathfinder, multipathfinder
 
@@ -27,9 +28,9 @@ function pathfinder(
     θs, logpθs, ∇logpθs = optimize(logp, ∇logp, θ₀, optimizer; kwargs...)
     L = length(θs) - 1
     @assert length(logpθs) == length(∇logpθs) == L + 1
-    αs, βs, γs = cov_estimate(θs, ∇logpθs; history_length=history_length)
-    ϕ_logqϕ_λ = map(θs, ∇logpθs, αs, βs, γs) do θ, ∇logpθ, α, β, γ
-        ϕ, logqϕ = bfgs_sample(rng, θ, ∇logpθ, α, β, γ, ndraws_elbo)
+    Σs = cov_estimate(θs, ∇logpθs; history_length=history_length)
+    ϕ_logqϕ_λ = map(θs, ∇logpθs, Σs) do θ, ∇logpθ, Σ
+        ϕ, logqϕ = bfgs_sample(rng, θ, ∇logpθ, Σ, ndraws_elbo)
         λ = elbo(logp.(ϕ), logqϕ)
         return ϕ, logqϕ, λ
     end
@@ -37,8 +38,9 @@ function pathfinder(
     lopt = argmax(λ[2:end]) + 1
     @info "Optimized for $L iterations. Maximum ELBO of $(round(λ[lopt]; digits=2)) reached at iteration $(lopt - 1)."
 
-    Σopt = Diagonal(αs[lopt]) + βs[lopt] * γs[lopt] * βs[lopt]'
-    μopt = θs[lopt] + Σopt * ∇logpθs[lopt]
+    Σopt = Σs[lopt]
+    μopt = muladd(Σopt, ∇logpθs[lopt], θs[lopt])
+
     return μopt, Σopt, ϕ[lopt], logqϕ[lopt]
 end
 
@@ -103,9 +105,7 @@ function cov_estimate(θs, ∇logpθs; history_length=5, ϵ=1e-12)
     Y = Vector{typeof(y)}(undef, 0)
 
     α, β, γ = fill!(similar(θ), true), similar(θ, N, 0), similar(θ, 0, 0)
-    αs = [α]
-    βs = [β]
-    γs = [γ]
+    Σs = [SymWoodbury(Diagonal(α), β, γ)]
 
     m = 0
     for l in 1:L
@@ -132,7 +132,6 @@ function cov_estimate(θs, ∇logpθs; history_length=5, ϵ=1e-12)
         else
             @warn "Skipping inverse Hessian update to avoid negative curvature."
         end
-        push!(αs, α)
 
         J′ = length(S) # min(m, history_length)
         β = similar(θ, N, 2J′)
@@ -164,25 +163,50 @@ function cov_estimate(θs, ∇logpθs; history_length=5, ϵ=1e-12)
         rmul!(γ22, nRinv)
         lmul!(nRinv′, γ22)
 
-        push!(βs, β)
-        push!(γs, γ)
+        push!(Σs, SymWoodbury(Diagonal(α), β, γ))
     end
-    return αs, βs, γs
+    return Σs
 end
 
-function bfgs_sample(rng, θ, ∇logpθ, α, β, γ, ndraws)
+function bfgs_sample(rng, θ, ∇logpθ, Σ::SymWoodbury, ndraws)
     N = length(θ)
+
+    # compute mean
+    μ = muladd(Σ, ∇logpθ, θ)
+
+    # draw points
+    u = Random.randn!(rng, similar(θ, N, ndraws))
+    unormsq = map(x -> sum(abs2, x), eachcol(u))
+    ϕ = unwhiten!(Σ, u)
+    ϕ .+= μ
+
+    # compute log density at each point
+    logqϕ = ((logabsdet(Σ)[1] + N * log2π) .+ unormsq) ./ -2
+
+    return collect(eachcol(ϕ)), logqϕ
+end
+
+# given x drawn from an IID standard normal, in-place map x to one drawn from a
+# zero-centered normal with covariance Σ
+function unwhiten!(Σ::SymWoodbury, x)
+    α = Σ.A.diag
+    β = Σ.B
+    γ = Σ.D
+
+    # compute components for T, where Σ=TTᵀ, i.e. T = √α Q [L 0; 0 I]
     F = qr(β ./ sqrt.(α))
-    Q = Matrix(F.Q)
-    R = F.R
-    L = cholesky(Symmetric(I + R * Symmetric(γ) * R')).L
-    logdetΣ = sum(log, α) + 2logdet(L)
-    μ = β * (γ * (β' * ∇logpθ))
-    μ .+= θ .+ α .* ∇logpθ
-    u = randn(rng, N, ndraws)
-    ϕ = μ .+ sqrt.(α) .* (Q * ((L - I) * (Q' * u)) .+ u)
-    logqϕ = ((logdetΣ + N * log2π) .+ sum.(abs2, eachcol(u))) ./ -2
-    return map(collect, eachcol(ϕ)), logqϕ
+    R = UpperTriangular(F.R)
+    Z = rmul!(R * γ, R')
+    Z[diagind(Z)] .+= true
+    L = cholesky(Symmetric(Z)).L
+
+    # apply x ↦ Tx
+    J = size(β, 2)
+    @views lmul!(L, x[1:J])
+    lmul!(F.Q, x)
+    x .*= sqrt.(α)
+
+    return x
 end
 
 end
