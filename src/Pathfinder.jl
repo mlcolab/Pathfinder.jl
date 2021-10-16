@@ -21,11 +21,10 @@ function pathfinder(
     rng = Random.default_rng(),
     optimizer = DEFAULT_OPTIMIZER,
     history_length = optimizer isa Optim.LBFGS ? optimizer.m : 5,
-    iterations = 1_000,
     ndraws_elbo = 5,
     kwargs...,
 )
-    θs, logpθs, ∇logpθs = optimize(logp, ∇logp, θ₀, optimizer; iterations = iterations, kwargs...)
+    θs, logpθs, ∇logpθs = optimize(logp, ∇logp, θ₀, optimizer; kwargs...)
     L = length(θs) - 1
     @assert length(logpθs) == length(∇logpθs) == L + 1
     αs, βs, γs = cov_estimate(θs, ∇logpθs; history_length = history_length)
