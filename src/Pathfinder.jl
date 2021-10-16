@@ -11,23 +11,23 @@ export pathfinder, multipathfinder
 
 # Note: we override the default history length to be shorter and the default line search
 # to be More-Thuente, which keeps the approximate Hessian positive-definite
-const DEFAULT_OPTIMIZER = Optim.LBFGS(; m = 5, linesearch = LineSearches.MoreThuente())
+const DEFAULT_OPTIMIZER = Optim.LBFGS(; m=5, linesearch=LineSearches.MoreThuente())
 
 function pathfinder(
     logp,
     ∇logp,
     θ₀,
     ndraws;
-    rng = Random.default_rng(),
-    optimizer = DEFAULT_OPTIMIZER,
-    history_length = optimizer isa Optim.LBFGS ? optimizer.m : 5,
-    ndraws_elbo = 5,
+    rng=Random.default_rng(),
+    optimizer=DEFAULT_OPTIMIZER,
+    history_length=optimizer isa Optim.LBFGS ? optimizer.m : 5,
+    ndraws_elbo=5,
     kwargs...,
 )
     θs, logpθs, ∇logpθs = optimize(logp, ∇logp, θ₀, optimizer; kwargs...)
     L = length(θs) - 1
     @assert length(logpθs) == length(∇logpθs) == L + 1
-    αs, βs, γs = cov_estimate(θs, ∇logpθs; history_length = history_length)
+    αs, βs, γs = cov_estimate(θs, ∇logpθs; history_length=history_length)
     ϕ_logqϕ_λ = map(θs, ∇logpθs, αs, βs, γs) do θ, ∇logpθ, α, β, γ
         ϕ, logqϕ = bfgs_sample(rng, θ, ∇logpθ, α, β, γ, ndraws_elbo)
         λ = elbo(logp.(ϕ), logqϕ)
@@ -44,17 +44,11 @@ end
 
 # multipath-pathfinder
 function multipathfinder(
-    logp,
-    ∇logp,
-    θ₀s,
-    ndraws;
-    ndraws_per_run = 5,
-    rng = Random.default_rng(),
-    kwargs...,
+    logp, ∇logp, θ₀s, ndraws; ndraws_per_run=5, rng=Random.default_rng(), kwargs...
 )
     # TODO: allow to be parallelized
     res = map(θ₀s) do θ₀
-        μ, Σ, ϕ, logqϕ = pathfinder(logp, ∇logp, θ₀, ndraws_per_run; rng = rng, kwargs...)
+        μ, Σ, ϕ, logqϕ = pathfinder(logp, ∇logp, θ₀, ndraws_per_run; rng=rng, kwargs...)
         logpϕ = logp.(ϕ)
         return μ, Σ, ϕ, logpϕ - logqϕ
     end
@@ -69,7 +63,7 @@ function optimize(logp, ∇logp, θ₀, optimizer; kwargs...)
     f(x) = -logp(x)
     g!(y, x) = (y .= .-∇logp(x))
 
-    options = Optim.Options(; store_trace = true, extended_trace = true, kwargs...)
+    options = Optim.Options(; store_trace=true, extended_trace=true, kwargs...)
     res = Optim.optimize(f, g!, θ₀, optimizer, options)
 
     θ = Optim.minimizer(res)
@@ -82,14 +76,14 @@ end
 elbo(logpϕ, logqϕ) = mean(logpϕ) - mean(logqϕ)
 
 function psir(rng, ϕ, log_ratios, ndraws)
-    logw, _ = PSIS.psis(log_ratios; normalize = true)
+    logw, _ = PSIS.psis(log_ratios; normalize=true)
     w = StatsBase.pweights(exp.(logw))
-    return StatsBase.sample(rng, ϕ, w, ndraws; replace = true)
+    return StatsBase.sample(rng, ϕ, w, ndraws; replace=true)
 end
 
 # Gilbert, J.C., Lemaréchal, C. Some numerical experiments with variable-storage quasi-Newton algorithms.
 # Mathematical Programming 45, 407–435 (1989). https://doi.org/10.1007/BF01589113
-function cov_estimate(θs, ∇logpθs; history_length = 5, ϵ = 1e-12)
+function cov_estimate(θs, ∇logpθs; history_length=5, ϵ=1e-12)
     L = length(θs) - 1
     θ = θs[1]
     N = length(θ)
@@ -108,9 +102,9 @@ function cov_estimate(θs, ∇logpθs; history_length = 5, ϵ = 1e-12)
     γs = [γ]
 
     m = 0
-    for l = 1:L
-        s .= θs[l+1] .- θs[l]
-        y .= ∇logpθs[l] .- ∇logpθs[l+1]
+    for l in 1:L
+        s .= θs[l + 1] .- θs[l]
+        y .= ∇logpθs[l] .- ∇logpθs[l + 1]
         α′ = copy(α)
         b = dot(y, s)
         if b > ϵ * sum(abs2, y)  # curvature is positive, safe to update inverse Hessian
@@ -137,29 +131,29 @@ function cov_estimate(θs, ∇logpθs; history_length = 5, ϵ = 1e-12)
         J′ = length(S) # min(m, history_length)
         β = similar(θ, N, 2J′)
         γ = fill!(similar(θ, 2J′, 2J′), false)
-        for j = 1:J′
+        for j in 1:J′
             yⱼ = Y[j]
             sⱼ = S[j]
             β[1:N, j] .= α .* yⱼ
-            β[1:N, J′+j] .= sⱼ
-            for i = 1:(j-1)
-                γ[J′+i, J′+j] = dot(S[i], yⱼ)
+            β[1:N, J′ + j] .= sⱼ
+            for i in 1:(j - 1)
+                γ[J′ + i, J′ + j] = dot(S[i], yⱼ)
             end
-            γ[J′+j, J′+j] = dot(sⱼ, yⱼ)
+            γ[J′ + j, J′ + j] = dot(sⱼ, yⱼ)
         end
-        R = @views UpperTriangular(γ[J′+1:2J′, J′+1:2J′])
-        nRinv = @views UpperTriangular(γ[1:J′, J′+1:2J′])
+        R = @views UpperTriangular(γ[(J′ + 1):(2J′), (J′ + 1):(2J′)])
+        nRinv = @views UpperTriangular(γ[1:J′, (J′ + 1):(2J′)])
         copyto!(nRinv, -I)
         ldiv!(R, nRinv)
-        nRinv′ = @views LowerTriangular(copyto!(γ[J′+1:2J′, 1:J′], nRinv'))
-        for j = 1:J′
+        nRinv′ = @views LowerTriangular(copyto!(γ[(J′ + 1):(2J′), 1:J′], nRinv'))
+        for j in 1:J′
             αyⱼ = β[1:N, j]
-            for i = 1:(j-1)
-                γ[J′+i, J′+j] = dot(Y[i], αyⱼ)
+            for i in 1:(j - 1)
+                γ[J′ + i, J′ + j] = dot(Y[i], αyⱼ)
             end
-            γ[J′+j, J′+j] += dot(Y[j], αyⱼ)
+            γ[J′ + j, J′ + j] += dot(Y[j], αyⱼ)
         end
-        γ22 = @view γ[J′+1:2J′, J′+1:2J′]
+        γ22 = @view γ[(J′ + 1):(2J′), (J′ + 1):(2J′)]
         LinearAlgebra.copytri!(γ22, 'U', false, false)
         rmul!(γ22, nRinv)
         lmul!(nRinv′, γ22)
