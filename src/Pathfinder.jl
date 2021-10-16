@@ -37,8 +37,8 @@ function pathfinder(
     lopt = argmax(λ[2:end]) + 1
     @info "Optimized for $L iterations. Maximum ELBO of $(round(λ[lopt]; digits=2)) reached at iteration $(lopt - 1)."
 
-    μopt = θs[lopt] .+ αs[lopt] .* ∇logpθs[lopt]
     Σopt = Diagonal(αs[lopt]) + βs[lopt] * γs[lopt] * βs[lopt]'
+    μopt = θs[lopt] + Σopt * ∇logpθs[lopt]
     return μopt, Σopt, ϕ[lopt], logqϕ[lopt]
 end
 
