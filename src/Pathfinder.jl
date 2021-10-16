@@ -18,10 +18,10 @@ function pathfinder(
     ∇logp,
     θ₀,
     ndraws;
-    rng=Random.default_rng(),
-    optimizer=DEFAULT_OPTIMIZER,
-    history_length=optimizer isa Optim.LBFGS ? optimizer.m : 5,
-    ndraws_elbo=5,
+    rng::Random.AbstractRNG=Random.default_rng(),
+    optimizer::Optim.AbstractOptimizer=DEFAULT_OPTIMIZER,
+    history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : 5,
+    ndraws_elbo::Int=5,
     kwargs...,
 )
     θs, logpθs, ∇logpθs = optimize(logp, ∇logp, θ₀, optimizer; kwargs...)
@@ -44,7 +44,13 @@ end
 
 # multipath-pathfinder
 function multipathfinder(
-    logp, ∇logp, θ₀s, ndraws; ndraws_per_run=5, rng=Random.default_rng(), kwargs...
+    logp,
+    ∇logp,
+    θ₀s,
+    ndraws;
+    ndraws_per_run::Int=5,
+    rng::Random.AbstractRNG=Random.default_rng(),
+    kwargs...,
 )
     # TODO: allow to be parallelized
     res = map(θ₀s) do θ₀
