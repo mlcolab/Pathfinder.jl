@@ -119,7 +119,7 @@ approximate draws from the target distribution.
 - `importance::Bool=true`: Perform Pareto smoothed importance resampling of draws.
 
 # Returns
-- `dists::Distributions.MixtureModel`: Uniformly weighted mixture of ELBO-maximizing
+- `dist::Distributions.MixtureModel`: Uniformly weighted mixture of ELBO-maximizing
     multivariate normal distributions
 - `ϕ::Vector{<:AbstractVector{<:Real}}`: `ndraws` approxiate draws from target distribution
 """
@@ -273,7 +273,7 @@ function fit_mvnormal(θs, ∇logpθs; history_length=5, ϵ=1e-12)
 end
 
 # faster than computing `logpdf` and `rand` independently
-function rand_and_logpdf(rng, dist::MvNormal, ndraws)
+function rand_and_logpdf(rng, dist::MvNormal{T,WoodburyPDMat{T}}, ndraws) where {T}
     μ = dist.μ
     Σ = dist.Σ
     N = length(μ)
