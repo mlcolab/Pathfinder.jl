@@ -273,7 +273,7 @@ function fit_mvnormal(θs, ∇logpθs; history_length=5, ϵ=1e-12)
 end
 
 # faster than computing `logpdf` and `rand` independently
-function rand_and_logpdf(rng, dist::MvNormal{T,WoodburyPDMat{T}}, ndraws) where {T}
+function rand_and_logpdf(rng, dist::MvNormal{T,<:WoodburyPDMat{T}}, ndraws) where {T}
     μ = dist.μ
     Σ = dist.Σ
     N = length(μ)
