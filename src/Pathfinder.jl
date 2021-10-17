@@ -54,10 +54,15 @@ function pathfinder(
     ndraws_elbo::Int=5,
     kwargs...,
 )
+    # compute trajectory
     θs, logpθs, ∇logpθs = optimize(logp, ∇logp, θ₀, optimizer; kwargs...)
     L = length(θs) - 1
     @assert length(logpθs) == length(∇logpθs) == L + 1
-    μs, Σs = mvnormal_estimate(θs, ∇logpθs; history_length=history_length)
+
+    # fit mv-normal distributions to trajectory
+    μs, Σs = fit_mvnormal(θs, ∇logpθs; history_length=history_length)
+
+    # find ELBO-maximizing distribution
     ϕ_logqϕ_λ = map(μs, Σs) do μ, Σ
         ϕ, logqϕ = mvnormal_sample_logpdf(rng, μ, Σ, ndraws_elbo)
         λ = elbo(logp.(ϕ), logqϕ)
@@ -87,7 +92,6 @@ function pathfinder(
     return μopt, Σopt, ϕdraws, logqϕdraws
 end
 
-
 """
     multipathfinder(
         logp,
@@ -101,8 +105,9 @@ Filter samples from a mixture of multivariate normal distributions fit using `pa
 
 For `n=length(θ₀s)`, `n` parallel runs of pathfinder produce `n` multivariate normal
 approximations of the posterior. These are combined to a mixture model with uniform weights.
-Draws from the components are then filtered using Pareto smoothed importance resampling to
-better approximate draws from the target distribution.
+Draws from the components are then resampled with replacement. If `filter=true`, then
+Pareto smoothed importance resampling is used, so that the resulting draws better
+approximate draws from the target distribution.
 
 # Arguments
 - `logp`: a callable that computes the log-density of the target distribution.
@@ -111,12 +116,13 @@ better approximate draws from the target distribution.
 - `ndraws`: number of approximate draws to return
 
 # Keywords
-- `ndraws_per_run::Int`: The random of draws to take for each component before resampling
+- `ndraws_per_run::Int=5`: The number of draws to take for each component before resampling.
+- `importance::Bool=true`: Perform Pareto smoothed importance resampling of draws.
 
 # Returns
 - `μs`: means of multivariate normal approximations
 - `Σs`: covariances of multivariate normal approximations
-- `ϕ::Vector{<:AbstractVector{<:Real}}`: `ndraws` draws from multivariate normal
+- `ϕ::Vector{<:AbstractVector{<:Real}}`: `ndraws` approxiate draws from target distribution
 """
 function multipathfinder(
     logp,
@@ -125,21 +131,30 @@ function multipathfinder(
     ndraws;
     ndraws_per_run::Int=5,
     rng::Random.AbstractRNG=Random.default_rng(),
+    importance::Bool=true,
     kwargs...,
 )
     if ndraws > ndraws_per_run * length(θ₀s)
         @warn "More draws requested than total number of draws across replicas. Draws will not be unique."
     end
+
+    # run pathfinder independently from each starting point
     # TODO: allow to be parallelized
     res = map(θ₀s) do θ₀
-        μ, Σ, ϕ, logqϕ = pathfinder(logp, ∇logp, θ₀, ndraws_per_run; rng=rng, kwargs...)
-        logpϕ = logp.(ϕ)
-        return μ, Σ, ϕ, logpϕ - logqϕ
+        return pathfinder(logp, ∇logp, θ₀, ndraws_per_run; rng=rng, kwargs...)
     end
     μs, Σs, ϕs, logqϕs = ntuple(i -> getindex.(res, i), Val(4))
+
+    # draw samples from mixture of multivariate normal distributions
     ϕsvec = reduce(vcat, ϕs)
-    logqϕsvec = reduce(vcat, logqϕs)
-    ϕsample = psir(rng, ϕsvec, logqϕsvec, ndraws)
+    ϕsample = if importance
+        # perform importance resampling
+        log_ratios = logp.(ϕsvec) .- reduce(vcat, logqϕs)
+        psir(rng, ϕsvec, log_ratios, ndraws)
+    else
+        StatsBase.sample(rng, ϕsvec, ndraws; replace=true)
+    end
+
     return μs, Σs, ϕsample
 end
 
@@ -154,20 +169,31 @@ function optimize(logp, ∇logp, θ₀, optimizer; kwargs...)
     θs = Optim.x_trace(res)::Vector{typeof(θ)}
     logpθs = -Optim.f_trace(res)
     ∇logpθs = map(tr -> -tr.metadata["g(x)"], Optim.trace(res))::typeof(θs)
+
     return θs, logpθs, ∇logpθs
 end
 
 elbo(logpϕ, logqϕ) = mean(logpϕ) - mean(logqϕ)
 
 function psir(rng, ϕ, log_ratios, ndraws)
-    logw, _ = PSIS.psis(log_ratios; normalize=true)
-    w = StatsBase.pweights(exp.(logw))
-    return StatsBase.sample(rng, ϕ, w, ndraws; replace=true)
+    log_weights, _ = PSIS.psis(log_ratios; normalize=true)
+    weights = StatsBase.pweights(exp.(log_weights))
+    return StatsBase.sample(rng, ϕ, weights, ndraws; replace=true)
 end
 
 # Gilbert, J.C., Lemaréchal, C. Some numerical experiments with variable-storage quasi-Newton algorithms.
 # Mathematical Programming 45, 407–435 (1989). https://doi.org/10.1007/BF01589113
-function mvnormal_estimate(θs, ∇logpθs; history_length=5, ϵ=1e-12)
+"""
+    fit_mvnormal(θs, ∇logpθs; history_length=5, ϵ=1e-12)
+
+Fit a multivariate-normal distribution to each point on the trajectory `θs`.
+
+Given `θs` with gradients `∇logpθs`, construct LBFGS inverse Hessian approximations with
+the provided `history_length`. The inverse Hessians approximate a covariance. The
+covariances and corresponding means that define multivariate normal approximations per
+point are returned.
+"""
+function fit_mvnormal(θs, ∇logpθs; history_length=5, ϵ=1e-12)
     L = length(θs) - 1
     θ = θs[1]
     N = length(θ)
