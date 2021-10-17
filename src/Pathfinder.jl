@@ -1,18 +1,22 @@
 module Pathfinder
 
+using Distributions: MixtureModel, MvNormal
 using LinearAlgebra
 using Optim: Optim, LineSearches
-using PSIS: psis
+using PDMats: PDMats
+using PSIS
 using Random
+using Statistics: mean
 using StatsBase: StatsBase
 using StatsFuns: log2π
-using WoodburyMatrices: SymWoodbury
 
 export pathfinder, multipathfinder
 
 # Note: we override the default history length to be shorter and the default line search
 # to be More-Thuente, which keeps the approximate inverse Hessian positive-definite
 const DEFAULT_OPTIMIZER = Optim.LBFGS(; m=5, linesearch=LineSearches.MoreThuente())
+
+include("woodbury.jl")
 
 """
     pathfinder(logp, ∇logp, θ₀::AbstractVector{<:Real}, ndraws::Int; kwargs...)
@@ -60,11 +64,11 @@ function pathfinder(
     @assert length(logpθs) == length(∇logpθs) == L + 1
 
     # fit mv-normal distributions to trajectory
-    μs, Σs = fit_mvnormal(θs, ∇logpθs; history_length=history_length)
+    dists = fit_mvnormal(θs, ∇logpθs; history_length=history_length)
 
     # find ELBO-maximizing distribution
-    ϕ_logqϕ_λ = map(μs, Σs) do μ, Σ
-        ϕ, logqϕ = mvnormal_sample_logpdf(rng, μ, Σ, ndraws_elbo)
+    ϕ_logqϕ_λ = map(dists) do dist
+        ϕ, logqϕ = rand_and_logpdf(rng, dist, ndraws_elbo)
         λ = elbo(logp.(ϕ), logqϕ)
         return ϕ, logqϕ, λ
     end
@@ -73,23 +77,19 @@ function pathfinder(
     @info "Optimized for $L iterations. Maximum ELBO of $(round(λ[lopt]; digits=2)) reached at iteration $(lopt - 1)."
 
     # get parameters of ELBO-maximizing distribution
-    μopt = μs[lopt]
-    Σopt = Σs[lopt]
+    distopt = dists[lopt]
 
     # reuse existing draws; draw additional ones if necessary
     ϕdraws = ϕ[lopt]
     logqϕdraws = logqϕ[lopt]
     if ndraws_elbo < ndraws
-        append!.(
-            (ϕdraws, logqϕdraws),
-            mvnormal_sample_logpdf(rng, μopt, Σopt, ndraws - ndraws_elbo),
-        )
+        append!.((ϕdraws, logqϕdraws), rand_and_logpdf(rng, distopt, ndraws - ndraws_elbo))
     else
         ϕdraws = ϕdraws[1:ndraws]
         logqϕdraws = logqϕdraws[1:ndraws]
     end
 
-    return μopt, Σopt, ϕdraws, logqϕdraws
+    return distopt, ϕdraws, logqϕdraws
 end
 
 """
@@ -143,7 +143,7 @@ function multipathfinder(
     res = map(θ₀s) do θ₀
         return pathfinder(logp, ∇logp, θ₀, ndraws_per_run; rng=rng, kwargs...)
     end
-    μs, Σs, ϕs, logqϕs = ntuple(i -> getindex.(res, i), Val(4))
+    dists, ϕs, logqϕs = ntuple(i -> getindex.(res, i), Val(3))
 
     # draw samples from mixture of multivariate normal distributions
     ϕsvec = reduce(vcat, ϕs)
@@ -155,7 +155,7 @@ function multipathfinder(
         StatsBase.sample(rng, ϕsvec, ndraws; replace=true)
     end
 
-    return μs, Σs, ϕsample
+    return MixtureModel(dists), ϕsample
 end
 
 function optimize(logp, ∇logp, θ₀, optimizer; kwargs...)
@@ -207,9 +207,9 @@ function fit_mvnormal(θs, ∇logpθs; history_length=5, ϵ=1e-12)
     Y = Vector{typeof(y)}(undef, 0)
 
     α, β, γ = fill!(similar(θ), true), similar(θ, N, 0), similar(θ, 0, 0)
-    Σ = SymWoodbury(Diagonal(α), β, γ)
-    μs = [muladd(Σ, ∇logpθ, θ)]
-    Σs = [Σ]
+    Σ = WoodburyPDMat(Diagonal(α), β, γ)
+    μ = muladd(Σ, ∇logpθ, θ)
+    dists = [MvNormal(μ, Σ)]
 
     m = 0
     for l in 1:L
@@ -267,49 +267,28 @@ function fit_mvnormal(θs, ∇logpθs; history_length=5, ϵ=1e-12)
         rmul!(γ22, nRinv)
         lmul!(nRinv′, γ22)
 
-        Σ = SymWoodbury(Diagonal(α), β, γ)
-        push!(μs, muladd(Σ, ∇logpθ, θ))
-        push!(Σs, Σ)
+        Σ = WoodburyPDMat(Diagonal(α), β, γ)
+        push!(dists, MvNormal(muladd(Σ, ∇logpθ, θ), Σ))
     end
-    return μs, Σs
+    return dists
 end
 
-function mvnormal_sample_logpdf(rng, μ, Σ::SymWoodbury, ndraws)
+# faster than computing `logpdf` and `rand` independently
+function rand_and_logpdf(rng, dist::MvNormal, ndraws)
+    μ = dist.μ
+    Σ = dist.Σ
     N = length(μ)
 
     # draw points
     u = Random.randn!(rng, similar(μ, N, ndraws))
     unormsq = map(x -> sum(abs2, x), eachcol(u))
-    x = unwhiten!(Σ, u)
+    x = PDMats.unwhiten!(u, Σ, u)
     x .+= μ
 
     # compute log density at each point
-    logpx = ((logabsdet(Σ)[1] + N * log2π) .+ unormsq) ./ -2
+    logpx = ((logdet(Σ) + N * log2π) .+ unormsq) ./ -2
 
     return collect(eachcol(x)), logpx
-end
-
-# given x drawn from an IID standard normal, in-place map x to one drawn from a
-# zero-centered normal with covariance Σ
-function unwhiten!(Σ::SymWoodbury, x)
-    α = Σ.A.diag
-    β = Σ.B
-    γ = Σ.D
-
-    # compute components for T, where Σ=TTᵀ, i.e. T = √α Q [L 0; 0 I]
-    F = qr(β ./ sqrt.(α))
-    R = UpperTriangular(F.R)
-    Z = rmul!(R * γ, R')
-    Z[diagind(Z)] .+= true
-    L = cholesky(Symmetric(Z)).L
-
-    # apply x ↦ Tx
-    J = size(β, 2)
-    @views lmul!(L, x[1:J])
-    lmul!(F.Q, x)
-    x .*= sqrt.(α)
-
-    return x
 end
 
 end
