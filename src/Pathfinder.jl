@@ -11,9 +11,38 @@ using WoodburyMatrices: SymWoodbury
 export pathfinder, multipathfinder
 
 # Note: we override the default history length to be shorter and the default line search
-# to be More-Thuente, which keeps the approximate Hessian positive-definite
+# to be More-Thuente, which keeps the approximate inverse Hessian positive-definite
 const DEFAULT_OPTIMIZER = Optim.LBFGS(; m=5, linesearch=LineSearches.MoreThuente())
 
+"""
+    pathfinder(logp, ∇logp, θ₀::AbstractVector{<:Real}, ndraws::Int; kwargs...)
+
+Find the best multivariate normal approximation encountered while optimizing `logp`.
+
+The multivariate normal approximation returned is the one that maximizes the evidence lower
+bound (ELBO), or equivalently, minimizes the KL divergence between
+
+# Arguments
+- `logp`: a callable that computes the log-density of the target distribution.
+- `∇logp`: a callable that computes the gradient of `logp`.
+- `θ₀`: initial point from which to begin optimization
+- `ndraws`: number of approximate draws to return
+
+# Keywords
+- `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
+- `optimizer::Optim.AbstractOptimizer`: Optimizer to be used for constructing trajectory.
+    Defaults to `Optim.LBFGS(; m=5, linesearch=LineSearches.MoreThuente())`.
+- `history_length::Int=5`: Size of the history used to approximate the inverse Hessian.
+    This should only be set when `optimizer` is not an `Optim.LBFGS`.
+- `ndraws_elbo::Int=5`: Number of draws used to estimate the ELBO
+- `kwargs...` : Remaining keywords are forwarded to `Optim.Options`.
+
+# Returns
+- `μ`: mean of multivariate normal approximation 
+- `Σ`: covariance of multivariate normal approximation 
+- `ϕ::Vector{<:AbstractVector{<:Real}}`: `ndraws` draws from multivariate normal
+- `logqϕ::Vector{<:Real}`: log-density of multivariate normal at `ϕ` values
+"""
 function pathfinder(
     logp,
     ∇logp,
@@ -58,7 +87,37 @@ function pathfinder(
     return μopt, Σopt, ϕdraws, logqϕdraws
 end
 
-# multipath-pathfinder
+
+"""
+    multipathfinder(
+        logp,
+        ∇logp,
+        θ₀s::AbstractVector{AbstractVector{<:Real}},
+        ndraws::Int;
+        kwargs...
+    )
+
+Filter samples from a mixture of multivariate normal distributions fit using `pathfinder`.
+
+For `n=length(θ₀s)`, `n` parallel runs of pathfinder produce `n` multivariate normal
+approximations of the posterior. These are combined to a mixture model with uniform weights.
+Draws from the components are then filtered using Pareto smoothed importance resampling to
+better approximate draws from the target distribution.
+
+# Arguments
+- `logp`: a callable that computes the log-density of the target distribution.
+- `∇logp`: a callable that computes the gradient of `logp`.
+- `θ₀s`: vector of initial points from which each optimization will begin
+- `ndraws`: number of approximate draws to return
+
+# Keywords
+- `ndraws_per_run::Int`: The random of draws to take for each component before resampling
+
+# Returns
+- `μs`: means of multivariate normal approximations
+- `Σs`: covariances of multivariate normal approximations
+- `ϕ::Vector{<:AbstractVector{<:Real}}`: `ndraws` draws from multivariate normal
+"""
 function multipathfinder(
     logp,
     ∇logp,
