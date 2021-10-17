@@ -42,8 +42,7 @@ bound (ELBO), or equivalently, minimizes the KL divergence between
 - `kwargs...` : Remaining keywords are forwarded to `Optim.Options`.
 
 # Returns
-- `μ`: mean of multivariate normal approximation 
-- `Σ`: covariance of multivariate normal approximation 
+- `dist::Distributions.MvNormal`: ELBO-maximizing multivariate normal distribution
 - `ϕ::Vector{<:AbstractVector{<:Real}}`: `ndraws` draws from multivariate normal
 - `logqϕ::Vector{<:Real}`: log-density of multivariate normal at `ϕ` values
 """
@@ -120,8 +119,8 @@ approximate draws from the target distribution.
 - `importance::Bool=true`: Perform Pareto smoothed importance resampling of draws.
 
 # Returns
-- `μs`: means of multivariate normal approximations
-- `Σs`: covariances of multivariate normal approximations
+- `dists::Distributions.MixtureModel`: Uniformly weighted mixture of ELBO-maximizing
+    multivariate normal distributions
 - `ϕ::Vector{<:AbstractVector{<:Real}}`: `ndraws` approxiate draws from target distribution
 """
 function multipathfinder(
