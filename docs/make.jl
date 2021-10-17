@@ -16,4 +16,4 @@ makedocs(;
     pages=["Home" => "index.md"],
 )
 
-deploydocs(; repo="github.com/sethaxen/Pathfinder.jl")
+deploydocs(; repo="github.com/sethaxen/Pathfinder.jl", devbranch="main")
