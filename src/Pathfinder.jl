@@ -1,11 +1,11 @@
 module Pathfinder
 
-using Random, LinearAlgebra, Statistics
-
+using LinearAlgebra
 using Optim: Optim, LineSearches
-using PSIS
-using StatsBase
-using StatsFuns
+using PSIS: psis
+using Random
+using StatsBase: StatsBase
+using StatsFuns: log2π
 using WoodburyMatrices: SymWoodbury
 
 export pathfinder, multipathfinder
