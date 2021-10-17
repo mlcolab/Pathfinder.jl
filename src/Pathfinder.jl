@@ -81,7 +81,7 @@ function multipathfinder(
     ϕsvec = reduce(vcat, ϕs)
     logqϕsvec = reduce(vcat, logqϕs)
     ϕsample = psir(rng, ϕsvec, logqϕsvec, ndraws)
-    return ϕsample
+    return μs, Σs, ϕsample
 end
 
 function optimize(logp, ∇logp, θ₀, optimizer; kwargs...)
