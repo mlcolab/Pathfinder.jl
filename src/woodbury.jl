@@ -33,24 +33,25 @@ struct WoodburyPDMat{
     TA<:AbstractMatrix{T},
     TB<:AbstractMatrix{T},
     TD<:AbstractMatrix{T},
-    TcholA<:Cholesky{T},
+    TUA<:Union{Diagonal{T},UpperTriangular{T}},
     TQ<:AbstractMatrix{T},
-    TcholC<:Cholesky{T},
+    TUC<:Union{Diagonal{T},UpperTriangular{T}},
 } <: PDMats.AbstractPDMat{T}
     A::TA
     B::TB
     D::TD
-    cholA::TcholA
+    UA::TUA
     Q::TQ
-    cholC::TcholC
+    UC::TUC
 end
 
 function WoodburyPDMat(A, B, D)
     cholA = cholesky(A)
-    QR = qr(cholA.U' \ B)
-    R = UpperTriangular(QR.R)
+    UA = cholA.U
+    Q, _R = qr(UA' \ B)
+    R = UpperTriangular(_R)
     cholC = cholesky(Symmetric(muladd(R, D * R', I)))
-    return WoodburyPDMat(A, B, D, cholA, QR.Q, cholC)
+    return WoodburyPDMat(A, B, D, UA, Q, cholC.U)
 end
 
 PDMats.dim(W::WoodburyPDMat) = size(W.A, 1)
@@ -60,15 +61,16 @@ Base.Matrix(W::WoodburyPDMat) = Matrix(Symmetric(muladd(W.B, W.D * W.B', W.A)))
 Base.getindex(W::WoodburyPDMat, inds...) = getindex(Matrix(W), inds...)
 
 function Base.inv(W::WoodburyPDMat)
-    invLA = inv(W.cholA.U')
-    A = invLA' * invLA
-    B = invLA' * Matrix(W.Q)
-    D = inv(W.cholC) - I
-    return WoodburyPDMat(A, B, D)
+    invUA = inv(W.UA)
+    Anew = invUA * invUA'
+    Bnew = invUA * Matrix(W.Q)
+    invUC = inv(W.UC)
+    Dnew = muladd(invUC, invUC', -I)
+    return WoodburyPDMat(Anew, Bnew, Dnew)
 end
 
 LinearAlgebra.det(W::WoodburyPDMat) = exp(logdet(W))
-LinearAlgebra.logdet(W::WoodburyPDMat) = logdet(W.cholA) + logdet(W.cholC)
+LinearAlgebra.logdet(W::WoodburyPDMat) = 2 * (logdet(W.UA) + logdet(W.UC))
 function LinearAlgebra.logabsdet(W::WoodburyPDMat)
     l = logdet(W)
     return (l, one(l))
@@ -80,17 +82,17 @@ function LinearAlgebra.diag(W::WoodburyPDMat)
 end
 
 function PDMats.invquad(W::WoodburyPDMat{<:Real}, x::AbstractVector{<:Real})
-    v = W.Q' * (W.cholA.U' \ x)
+    v = W.Q' * (W.UA' \ x)
     n, k = size(W.B)
-    return @views sum(abs2, W.cholC.U' \ v[1:k]) + sum(abs2, v[(k + 1):n])
+    return @views sum(abs2, W.UC' \ v[1:k]) + sum(abs2, v[(k + 1):n])
 end
 
-function PDMats.unwhiten!(r::DenseVecOrMat, W::WoodburyPDMat, x::DenseVecOrMat)
+function PDMats.unwhiten!(r::StridedVecOrMat, W::WoodburyPDMat, x::StridedVecOrMat)
     k = size(W.B, 2)
     copyto!(r, x)
-    @views lmul!(W.cholC.U', r[1:k])
+    @views lmul!(W.UC', r[1:k])
     lmul!(W.Q, r)
-    lmul!(W.cholA.U', r)
+    lmul!(W.UA', r)
     return r
 end
 
@@ -99,17 +101,17 @@ Base.adjoint(W::WoodburyPDMat) = W
 Base.transpose(W::WoodburyPDMat) = W
 
 function LinearAlgebra.lmul!(W::WoodburyPDMat, x::StridedVecOrMat)
-    LA = W.cholA.U'
-    LC = W.cholC.U'
+    UA = W.UA'
+    UC = W.UC'
     Q = W.Q
     k = size(W.B, 2)
-    lmul!(LA', x)
+    lmul!(UA, x)
     lmul!(Q', x)
     x1 = x isa AbstractVector ? view(x, 1:k) : view(x, 1:k, :)
-    lmul!(LC', x1)
-    lmul!(LC, x1)
+    lmul!(UC, x1)
+    lmul!(UC', x1)
     lmul!(Q, x)
-    lmul!(LA, x)
+    lmul!(UA', x)
     return x
 end
 
