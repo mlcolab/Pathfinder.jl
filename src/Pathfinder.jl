@@ -68,6 +68,9 @@ function multipathfinder(
     rng::Random.AbstractRNG=Random.default_rng(),
     kwargs...,
 )
+    if ndraws > ndraws_per_run * length(θ₀s)
+        @warn "More draws requested than total number of draws across replicas. Draws will not be unique."
+    end
     # TODO: allow to be parallelized
     res = map(θ₀s) do θ₀
         μ, Σ, ϕ, logqϕ = pathfinder(logp, ∇logp, θ₀, ndraws_per_run; rng=rng, kwargs...)
