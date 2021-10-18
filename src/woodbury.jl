@@ -105,7 +105,10 @@ function LinearAlgebra.mul!(y::AbstractMatrix, W::WoodburyPDMat, x::StridedVecOr
     return lmul!(W, copyto!(y, x))
 end
 
-Base.:*(a::WoodburyPDMat, c::Real) = WoodburyPDMat(a.A * c, a.B, a.D * c)
+function Base.:*(W::WoodburyPDMat, c::Real)
+    c > 0 || return Matrix(W) * c
+    return WoodburyPDMat(W.A * c, W.B * one(c), W.D * c)
+end
 
 PDMats.dim(W::WoodburyPDMat) = size(W.A, 1)
 
