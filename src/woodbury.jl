@@ -45,13 +45,23 @@ struct WoodburyPDMat{
     UC::TUC
 end
 
-function WoodburyPDMat(A, B, D)
+function WoodburyPDMat(
+    A::AbstractMatrix{T}, B::AbstractMatrix{T}, D::AbstractMatrix{T}
+) where {T}
     cholA = cholesky(A)
     UA = cholA.U
     Q, _R = qr(UA' \ B)
     R = UpperTriangular(_R)
     cholC = cholesky(Symmetric(muladd(R, D * R', I)))
     return WoodburyPDMat(A, B, D, UA, Q, cholC.U)
+end
+function WoodburyPDMat(A, B, D)
+    T = Base.promote_eltype(A, B, D)
+    return WoodburyPDMat(
+        convert(AbstractMatrix{T}, A),
+        convert(AbstractMatrix{T}, B),
+        convert(AbstractMatrix{T}, D),
+    )
 end
 
 Base.Matrix(W::WoodburyPDMat) = Matrix(Symmetric(muladd(W.B, W.D * W.B', W.A)))
