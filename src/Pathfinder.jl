@@ -17,6 +17,7 @@ export pathfinder, multipathfinder
 const DEFAULT_OPTIMIZER = Optim.LBFGS(; m=5, linesearch=LineSearches.MoreThuente())
 
 include("woodbury.jl")
+include("inverse_hessian.jl")
 
 """
     pathfinder(logp, ∇logp, θ₀::AbstractVector{<:Real}, ndraws::Int; kwargs...)
@@ -204,77 +205,49 @@ function fit_mvnormal(
     θs, ∇logpθs; cov_init=gilbert_initialization, history_length=5, ϵ=1e-12
 )
     L = length(θs) - 1
-    θ = θs[1]
-    N = length(θ)
-    s = similar(θ)
-    # S = similar(θ, N, history_length)
+    θ₁ = θs[1]
+    ∇logpθ₁ = ∇logpθs[1]
+
+    # allocate caches/containers
+    s = similar(θ₁) # BFGS update, i.e. sₗ = θₗ₊₁ - θₗ = -λ Hₗ ∇logpθₗ
+    y = similar(∇logpθ1) # cache for yₗ = ∇logpθₗ₊₁ - ∇logpθₗ = Hₗ₊₁ \ s₁ (secant equation)
+    # (1)
     S = Vector{typeof(s)}(undef, 0)
-
-    ∇logpθ = ∇logpθs[1]
-    y = similar(∇logpθ)
-    # Y = similar(∇logpθ, N, history_length)
     Y = Vector{typeof(y)}(undef, 0)
-
-    α, β, γ = fill!(similar(θ), true), similar(θ, N, 0), similar(θ, 0, 0)
-    Σ = WoodburyPDMat(Diagonal(α), β, γ)
-    μ = muladd(Σ, ∇logpθ, θ)
+    α = fill!(similar(θ₁), true)
+    Σ = lbfgs_inverse_hessian(α, S, Y) # Σ₀ = I
+    μ = muladd(Σ, ∇logpθ₁, θ₁)
     dists = [MvNormal(μ, Σ)]
 
-    m = 0
+    # (2)
     for l in 1:L
+        # (b)
         s .= θs[l + 1] .- θs[l]
         y .= ∇logpθs[l] .- ∇logpθs[l + 1]
-        α′ = copy(α)
-        b = dot(y, s)
-        if b > ϵ * sum(abs2, y)  # curvature is positive, safe to update inverse Hessian
-            # replace oldest stored s and y with new ones
+        # (d)
+        if dot(y, s) > ϵ * sum(abs2, y)  # curvature is positive, safe to update inverse Hessian
+            # (i)
             push!(S, copy(s))
             push!(Y, copy(y))
-            m += 1
 
+            # (ii)
+            # replace oldest stored s and y with new ones
             if length(S) > history_length
-                popfirst!(S)
-                popfirst!(Y)
+                s = popfirst!(S)
+                y = popfirst!(Y)
             end
 
+            # (iii-iv)
             # initial diagonal estimate of Σ
             α = cov_init(α, s, y)
         else
             @warn "Skipping inverse Hessian update to avoid negative curvature."
         end
 
-        J′ = length(S) # min(m, history_length)
-        β = similar(θ, N, 2J′)
-        γ = fill!(similar(θ, 2J′, 2J′), false)
-        for j in 1:J′
-            yⱼ = Y[j]
-            sⱼ = S[j]
-            β[1:N, j] .= α .* yⱼ
-            β[1:N, J′ + j] .= sⱼ
-            for i in 1:(j - 1)
-                γ[J′ + i, J′ + j] = dot(S[i], yⱼ)
-            end
-            γ[J′ + j, J′ + j] = dot(sⱼ, yⱼ)
-        end
-        R = @views UpperTriangular(γ[(J′ + 1):(2J′), (J′ + 1):(2J′)])
-        nRinv = @views UpperTriangular(γ[1:J′, (J′ + 1):(2J′)])
-        copyto!(nRinv, -I)
-        ldiv!(R, nRinv)
-        nRinv′ = @views LowerTriangular(copyto!(γ[(J′ + 1):(2J′), 1:J′], nRinv'))
-        for j in 1:J′
-            αyⱼ = β[1:N, j]
-            for i in 1:(j - 1)
-                γ[J′ + i, J′ + j] = dot(Y[i], αyⱼ)
-            end
-            γ[J′ + j, J′ + j] += dot(Y[j], αyⱼ)
-        end
-        γ22 = @view γ[(J′ + 1):(2J′), (J′ + 1):(2J′)]
-        LinearAlgebra.copytri!(γ22, 'U', false, false)
-        rmul!(γ22, nRinv)
-        lmul!(nRinv′, γ22)
-
-        Σ = WoodburyPDMat(Diagonal(α), β, γ)
-        push!(dists, MvNormal(muladd(Σ, ∇logpθ, θ), Σ))
+        # (a)
+        Σ = lbfgs_inverse_hessian(α, S, Y)
+        μ = muladd(Σ, ∇logpθ, θ)
+        push!(dists, MvNormal(μ, Σ))
     end
     return dists
 end
