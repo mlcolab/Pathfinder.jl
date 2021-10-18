@@ -66,6 +66,12 @@ end
 
 Base.Matrix(W::WoodburyPDMat) = Matrix(Symmetric(muladd(W.B, W.D * W.B', W.A)))
 
+function Base.AbstractMatrix{T}(W::WoodburyPDMat) where {T}
+    return WoodburyPDMat(
+        map(k -> convert(AbstractMatrix{T}, getfield(W, k)), fieldnames(typeof(W)))...
+    )
+end
+
 Base.getindex(W::WoodburyPDMat, inds...) = getindex(Matrix(W), inds...)
 
 Base.adjoint(W::WoodburyPDMat) = W

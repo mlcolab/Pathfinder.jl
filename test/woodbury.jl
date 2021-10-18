@@ -54,6 +54,11 @@ end
             @test M * M' ≈ Wmat
             @test WoodburyPDMat(A, B, big.(D)) isa WoodburyPDMat{BigFloat}
             @test Matrix(WoodburyPDMat(A, B, big.(D))) ≈ Wmat
+            Wbig = convert(AbstractMatrix{BigFloat}, W)
+            @test Wbig isa WoodburyPDMat{BigFloat}
+            @test Wbig ≈ Wmat
+            test_decompositions(W)
+            @test convert(AbstractMatrix{T}, W) === W
         end
 
         @testset "inv" begin
