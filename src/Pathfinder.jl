@@ -191,6 +191,8 @@ function gilbert_initialization(α, s, y)
     return @. b / (a / α + y^2 - (a / c) * (s / α)^2)
 end
 
+nocedal_wright_scaling(α, s, y) = fill!(similar(α), dot(y, s) / sum(abs2, y))
+
 """
     fit_mvnormal(θs, ∇logpθs; cov_init=gilbert_initialization, history_length=5, ϵ=1e-12)
 
@@ -205,25 +207,25 @@ function fit_mvnormal(
     θs, ∇logpθs; cov_init=gilbert_initialization, history_length=5, ϵ=1e-12
 )
     L = length(θs) - 1
-    θ₁ = θs[1]
-    ∇logpθ₁ = ∇logpθs[1]
+    θ = θs[1]
+    ∇logpθ = ∇logpθs[1]
 
     # allocate caches/containers
-    s = similar(θ₁) # BFGS update, i.e. sₗ = θₗ₊₁ - θₗ = -λ Hₗ ∇logpθₗ
-    y = similar(∇logpθ1) # cache for yₗ = ∇logpθₗ₊₁ - ∇logpθₗ = Hₗ₊₁ \ s₁ (secant equation)
+    s = similar(θ) # BFGS update, i.e. sₗ = θₗ₊₁ - θₗ = -λ Hₗ ∇logpθₗ
+    y = similar(∇logpθ) # cache for yₗ = ∇logpθₗ₊₁ - ∇logpθₗ = Hₗ₊₁ \ s₁ (secant equation)
     # (1)
     S = Vector{typeof(s)}(undef, 0)
     Y = Vector{typeof(y)}(undef, 0)
-    α = fill!(similar(θ₁), true)
+    α = fill!(similar(θ), true)
     Σ = lbfgs_inverse_hessian(α, S, Y) # Σ₀ = I
-    μ = muladd(Σ, ∇logpθ₁, θ₁)
+    μ = muladd(Σ, ∇logpθ, θ)
     dists = [MvNormal(μ, Σ)]
 
     # (2)
     for l in 1:L
         # (b)
-        s .= θs[l + 1] .- θs[l]
-        y .= ∇logpθs[l] .- ∇logpθs[l + 1]
+        s .= θs[l + 1] .- θ
+        y .= ∇logpθ .- ∇logpθs[l + 1]
         # (d)
         if dot(y, s) > ϵ * sum(abs2, y)  # curvature is positive, safe to update inverse Hessian
             # (i)
@@ -246,6 +248,8 @@ function fit_mvnormal(
 
         # (a)
         Σ = lbfgs_inverse_hessian(α, S, Y)
+        θ = θs[l + 1]
+        ∇logpθ = ∇logpθs[l + 1]
         μ = muladd(Σ, ∇logpθ, θ)
         push!(dists, MvNormal(μ, Σ))
     end
