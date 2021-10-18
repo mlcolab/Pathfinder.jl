@@ -180,10 +180,18 @@ function psir(rng, ϕ, log_ratios, ndraws)
     return StatsBase.sample(rng, ϕ, weights, ndraws; replace=true)
 end
 
+# eq 4.9
 # Gilbert, J.C., Lemaréchal, C. Some numerical experiments with variable-storage quasi-Newton algorithms.
 # Mathematical Programming 45, 407–435 (1989). https://doi.org/10.1007/BF01589113
+function gilbert_initialization(α, s, y)
+    a = dot(y, Diagonal(α), y)
+    b = dot(y, s)
+    c = dot(s, inv(Diagonal(α)), s)
+    return @. b / (a / α + y^2 - (a / c) * (s / α)^2)
+end
+
 """
-    fit_mvnormal(θs, ∇logpθs; history_length=5, ϵ=1e-12)
+    fit_mvnormal(θs, ∇logpθs; cov_init=gilbert_initialization, history_length=5, ϵ=1e-12)
 
 Fit a multivariate-normal distribution to each point on the trajectory `θs`.
 
@@ -192,7 +200,9 @@ the provided `history_length`. The inverse Hessians approximate a covariance. Th
 covariances and corresponding means that define multivariate normal approximations per
 point are returned.
 """
-function fit_mvnormal(θs, ∇logpθs; history_length=5, ϵ=1e-12)
+function fit_mvnormal(
+    θs, ∇logpθs; cov_init=gilbert_initialization, history_length=5, ϵ=1e-12
+)
     L = length(θs) - 1
     θ = θs[1]
     N = length(θ)
@@ -227,11 +237,8 @@ function fit_mvnormal(θs, ∇logpθs; history_length=5, ϵ=1e-12)
                 popfirst!(Y)
             end
 
-            # Gilbert et al, eq 4.9
-            a = dot(y, Diagonal(α), y)
-            c = dot(s, inv(Diagonal(α)), s)
-            @. α′ = b / (a / α + y^2 - (a / c) * (s / α)^2)
-            α = α′
+            # initial diagonal estimate of Σ
+            α = cov_init(α, s, y)
         else
             @warn "Skipping inverse Hessian update to avoid negative curvature."
         end
