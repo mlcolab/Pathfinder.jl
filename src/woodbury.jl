@@ -101,8 +101,8 @@ Base.adjoint(W::WoodburyPDMat) = W
 Base.transpose(W::WoodburyPDMat) = W
 
 function LinearAlgebra.lmul!(W::WoodburyPDMat, x::StridedVecOrMat)
-    UA = W.UA'
-    UC = W.UC'
+    UA = W.UA
+    UC = W.UC
     Q = W.Q
     k = size(W.B, 2)
     lmul!(UA, x)
