@@ -54,11 +54,13 @@ function WoodburyPDMat(A, B, D)
     return WoodburyPDMat(A, B, D, UA, Q, cholC.U)
 end
 
-PDMats.dim(W::WoodburyPDMat) = size(W.A, 1)
-
 Base.Matrix(W::WoodburyPDMat) = Matrix(Symmetric(muladd(W.B, W.D * W.B', W.A)))
 
 Base.getindex(W::WoodburyPDMat, inds...) = getindex(Matrix(W), inds...)
+
+Base.adjoint(W::WoodburyPDMat) = W
+
+Base.transpose(W::WoodburyPDMat) = W
 
 function Base.inv(W::WoodburyPDMat)
     invUA = inv(W.UA)
@@ -80,25 +82,6 @@ function LinearAlgebra.diag(W::WoodburyPDMat)
     D = Symmetric(W.D)
     return diag(W.A) + map(b -> dot(b, D, b), eachrow(W.B))
 end
-
-function PDMats.invquad(W::WoodburyPDMat{<:Real}, x::AbstractVector{<:Real})
-    v = W.Q' * (W.UA' \ x)
-    n, k = size(W.B)
-    return @views sum(abs2, W.UC' \ v[1:k]) + sum(abs2, v[(k + 1):n])
-end
-
-function PDMats.unwhiten!(r::StridedVecOrMat, W::WoodburyPDMat, x::StridedVecOrMat)
-    k = size(W.B, 2)
-    copyto!(r, x)
-    @views lmul!(W.UC', r[1:k])
-    lmul!(W.Q, r)
-    lmul!(W.UA', r)
-    return r
-end
-
-Base.adjoint(W::WoodburyPDMat) = W
-
-Base.transpose(W::WoodburyPDMat) = W
 
 function LinearAlgebra.lmul!(W::WoodburyPDMat, x::StridedVecOrMat)
     UA = W.UA
@@ -123,3 +106,20 @@ function LinearAlgebra.mul!(y::AbstractMatrix, W::WoodburyPDMat, x::StridedVecOr
 end
 
 Base.:*(a::WoodburyPDMat, c::Real) = WoodburyPDMat(a.A * c, a.B, a.D * c)
+
+PDMats.dim(W::WoodburyPDMat) = size(W.A, 1)
+
+function PDMats.invquad(W::WoodburyPDMat{<:Real}, x::AbstractVector{<:Real})
+    v = W.Q' * (W.UA' \ x)
+    n, k = size(W.B)
+    return @views sum(abs2, W.UC' \ v[1:k]) + sum(abs2, v[(k + 1):n])
+end
+
+function PDMats.unwhiten!(r::StridedVecOrMat, W::WoodburyPDMat, x::StridedVecOrMat)
+    k = size(W.B, 2)
+    copyto!(r, x)
+    @views lmul!(W.UC', r[1:k])
+    lmul!(W.Q, r)
+    lmul!(W.UA', r)
+    return r
+end
