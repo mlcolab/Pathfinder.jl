@@ -18,6 +18,9 @@ end
     #! format: on
     N = length(S[1])
     α = rand(N)
+
+    @test @inferred(Pathfinder.lbfgs_inverse_hessian(α, empty(S), empty(Y))) ≈ Diagonal(α)
+
     H = Pathfinder.lbfgs_inverse_hessian(α, S, Y)
     Hexp = lbfgs_inverse_hessian_explicit(α, reduce(hcat, S), reduce(hcat, Y))
     @test H ≈ Hexp
