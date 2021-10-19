@@ -7,7 +7,7 @@
 
 An implementation of Pathfinder, [^1] a variational method for initializing Markov chain Monte Carlo (MCMC) methods.
 
-[^1] Lu Zhang, Bob Carpenter, Andrew Gelman, Aki Vehtari (2021).
-     Pathfinder: Parallel quasi-Newton variational inference.
-     arXiv: [2108.03782](https://arxiv.org/abs/2108.03782) [stat.ML]
-[^2] https://github.com/LuZhangstat/Pathfinder
+[^1]: Lu Zhang, Bob Carpenter, Andrew Gelman, Aki Vehtari (2021).
+      Pathfinder: Parallel quasi-Newton variational inference.
+      arXiv: [2108.03782](https://arxiv.org/abs/2108.03782) [stat.ML]
+[^2]: https://github.com/LuZhangstat/Pathfinder
