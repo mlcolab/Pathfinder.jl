@@ -104,7 +104,7 @@ end
             @test mul!(y, W, x) === y
             @test y ≈ Wmat * x
 
-            X = randn(T, n)
+            X = randn(T, n, 5)
             Y = similar(X)
             @test mul!(Y, W, X) === Y
             @test Y ≈ Wmat * X
