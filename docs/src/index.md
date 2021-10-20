@@ -9,6 +9,8 @@ Documentation for [Pathfinder](https://github.com/sethaxen/Pathfinder.jl).
 ```@index
 ```
 
-```@autodocs
-Modules = [Pathfinder]
+```@docs
+pathfinder
+multipathfinder
+WoodburyPDMat
 ```
