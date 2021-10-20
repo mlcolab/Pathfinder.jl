@@ -24,9 +24,9 @@ T = L_A Q \\begin{pmatrix} L_C & 0 \\\\ 0 & I \\end{pmatrix}.
 For a derivation of this decomposition for the special case of diagonal ``A``, see
 appendix A of [^Zhang2021].
 
-[^Zhang2021] Lu Zhang, Bob Carpenter, Andrew Gelman, Aki Vehtari (2021).
-             Pathfinder: Parallel quasi-Newton variational inference.
-             arXiv: [2108.03782](https://arxiv.org/abs/2108.03782) [stat.ML]
+[^Zhang2021]: Lu Zhang, Bob Carpenter, Andrew Gelman, Aki Vehtari (2021).
+              Pathfinder: Parallel quasi-Newton variational inference.
+              arXiv: [2108.03782](https://arxiv.org/abs/2108.03782) [stat.ML]
 """
 struct WoodburyPDMat{
     T<:Real,
