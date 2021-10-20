@@ -3,7 +3,7 @@
 
 Compute approximate inverse Hessian initialized from `α` from history stored in `S` and `Y`.
 
-With ``A = \\diag(α)``, the expression is
+With ``A = \\operatorname{diag}(α)``, the expression is
 
 ```math
 \\begin{align}
