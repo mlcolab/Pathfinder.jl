@@ -232,18 +232,18 @@ function fit_mvnormal(
             push!(S, copy(s))
             push!(Y, copy(y))
 
+            # (iii-iv)
+            # initial diagonal estimate of Σ
+            α = cov_init(α, s, y)
+
             # (ii)
             # replace oldest stored s and y with new ones
             if length(S) > history_length
                 s = popfirst!(S)
                 y = popfirst!(Y)
             end
-
-            # (iii-iv)
-            # initial diagonal estimate of Σ
-            α = cov_init(α, s, y)
         else
-            @warn "Skipping inverse Hessian update to avoid negative curvature."
+            @warn "Skipping inverse Hessian update from iteration $l to avoid negative curvature."
         end
 
         # (a)
