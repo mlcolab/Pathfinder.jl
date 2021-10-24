@@ -217,7 +217,7 @@ function fit_mvnormal(
     S = Vector{typeof(s)}(undef, 0)
     Y = Vector{typeof(y)}(undef, 0)
     α = fill!(similar(θ), true)
-    Σ = lbfgs_inverse_hessian(α, S, Y) # Σ₀ = I
+    Σ = lbfgs_inverse_hessian(Diagonal(α), S, Y) # Σ₀ = I
     μ = muladd(Σ, ∇logpθ, θ)
     dists = [MvNormal(μ, Σ)]
 
@@ -247,7 +247,7 @@ function fit_mvnormal(
         end
 
         # (a)
-        Σ = lbfgs_inverse_hessian(α, S, Y)
+        Σ = lbfgs_inverse_hessian(Diagonal(α), S, Y)
         θ = θs[l + 1]
         ∇logpθ = ∇logpθs[l + 1]
         μ = muladd(Σ, ∇logpθ, θ)

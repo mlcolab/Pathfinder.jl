@@ -2,13 +2,12 @@ using LinearAlgebra
 using Pathfinder
 using Test
 
-function lbfgs_inverse_hessian_explicit(α, S, Y)
-    A = Diagonal(α)
-    B = [A * Y S]
+function lbfgs_inverse_hessian_explicit(H₀, S, Y)
+    B = [H₀ * Y S]
     R = triu(S'Y)
     E = Diagonal(R)
-    D = [0*I -inv(R); -inv(R)' R' \ (E + Y' * A * Y)/R]
-    return A + B * D * B'
+    D = [0*I -inv(R); -inv(R)' R' \ (E + Y' * H₀ * Y)/R]
+    return H₀ + B * D * B'
 end
 
 @testset "lbfgs_inverse_hessian!" begin
@@ -18,10 +17,11 @@ end
     #! format: on
     N = length(S[1])
     α = rand(N)
+    H₀ = Diagonal(α)
 
-    @test @inferred(Pathfinder.lbfgs_inverse_hessian(α, empty(S), empty(Y))) ≈ Diagonal(α)
+    @test @inferred(Pathfinder.lbfgs_inverse_hessian(H₀, empty(S), empty(Y))) ≈ H₀
 
-    H = Pathfinder.lbfgs_inverse_hessian(α, S, Y)
-    Hexp = lbfgs_inverse_hessian_explicit(α, reduce(hcat, S), reduce(hcat, Y))
+    H = Pathfinder.lbfgs_inverse_hessian(H₀, S, Y)
+    Hexp = lbfgs_inverse_hessian_explicit(H₀, reduce(hcat, S), reduce(hcat, Y))
     @test H ≈ Hexp
 end

@@ -1,27 +1,34 @@
 """
-    lbfgs_inverse_hessian(α, S, Y)
+    lbfgs_inverse_hessian(H₀, S, Y)
 
-Compute approximate inverse Hessian initialized from `α` from history stored in `S` and `Y`.
+Compute approximate inverse Hessian initialized from `H₀` from history stored in `S` and `Y`.
 
-With ``A = \\operatorname{diag}(α)``, the expression is
+From Theorem 2.2 of [^Byrd1994], the expression is
 
 ```math
 \\begin{align}
-B &= \\begin{pmatrix}AY & S\\end{pmatrix}\\\\
+B &= \\begin{pmatrix}H_0 Y & S\\end{pmatrix}\\\\
 R &= \\operatorname{triu}(S^\\mathrm{T} Y)\\\\
-E &= I ∘ R\\\\
+E &= I \\circ R\\\\
 D &= \\begin{pmatrix}
     0 & -R^{-1}\\\\
-    -R^{-\\mathrm{T}} & R^\\mathrm{-T} (E + Y^\\mathrm{T} A Y ) R^\\mathrm{-1}
+    -R^{-\\mathrm{T}} & R^\\mathrm{-T} (E + Y^\\mathrm{T} H₀ Y ) R^\\mathrm{-1}\\\\
+H &= H_0 + B D B^\\mathrm{T}
 \\end{pmatrix}
 \\end{align}
 ```
+
+[^Byrd1994]: Byrd, R.H., Nocedal, J. & Schnabel, R.B.
+             Representations of quasi-Newton matrices and their use in limited memory methods.
+             Mathematical Programming 63, 129–156 (1994).
+             doi: [10.1007/BF01582063](https://doi.org/10.1007/BF01582063)
 """
-function lbfgs_inverse_hessian(α, S, Y)
+function lbfgs_inverse_hessian(H₀::Diagonal, S, Y)
     J = length(S)
+    α = H₀.diag
     B = similar(α, size(α, 1), 2J)
     D = fill!(similar(α, 2J, 2J), false)
-    iszero(J) && return WoodburyPDMat(Diagonal(α), B, D)
+    iszero(J) && return WoodburyPDMat(H₀, B, D)
 
     for j in 1:J
         yⱼ = Y[j]
@@ -50,5 +57,5 @@ function lbfgs_inverse_hessian(α, S, Y)
     rmul!(D22, nRinv)
     lmul!(nRinv′, D22)
 
-    return WoodburyPDMat(Diagonal(α), B, D)
+    return WoodburyPDMat(H₀, B, D)
 end
