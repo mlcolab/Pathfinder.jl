@@ -1,3 +1,67 @@
+
+# eq 4.9
+# Gilbert, J.C., Lemaréchal, C. Some numerical experiments with variable-storage quasi-Newton algorithms.
+# Mathematical Programming 45, 407–435 (1989). https://doi.org/10.1007/BF01589113
+function gilbert_initialization(α, s, y)
+    a = dot(y, Diagonal(α), y)
+    b = dot(y, s)
+    c = dot(s, inv(Diagonal(α)), s)
+    return @. b / (a / α + y^2 - (a / c) * (s / α)^2)
+end
+
+nocedal_wright_scaling(α, s, y) = fill!(similar(α), dot(y, s) / sum(abs2, y))
+
+function lbfgs_inverse_hessians(
+    θs, ∇logpθs; cov_init=gilbert_initialization, history_length=5, ϵ=1e-12
+)
+    L = length(θs) - 1
+    θ = θs[1]
+    ∇logpθ = ∇logpθs[1]
+
+    # allocate caches/containers
+    s = similar(θ) # BFGS update, i.e. sₗ = θₗ₊₁ - θₗ = -λ Hₗ ∇logpθₗ
+    y = similar(∇logpθ) # cache for yₗ = ∇logpθₗ₊₁ - ∇logpθₗ = Hₗ₊₁ \ s₁ (secant equation)
+    # (1)
+    S = Vector{typeof(s)}(undef, 0)
+    Y = Vector{typeof(y)}(undef, 0)
+    α = fill!(similar(θ), true)
+    H = lbfgs_inverse_hessian(Diagonal(α), S, Y) # H₀ = I
+    Hs = [H]
+
+    # (2)
+    for l in 1:L
+        # (b)
+        s .= θs[l + 1] .- θ
+        y .= ∇logpθ .- ∇logpθs[l + 1]
+        # (d)
+        if dot(y, s) > ϵ * sum(abs2, y)  # curvature is positive, safe to update inverse Hessian
+            # (i)
+            push!(S, copy(s))
+            push!(Y, copy(y))
+
+            # (iii-iv)
+            # initial diagonal estimate of Σ
+            α = cov_init(α, s, y)
+
+            # (ii)
+            # replace oldest stored s and y with new ones
+            if length(S) > history_length
+                s = popfirst!(S)
+                y = popfirst!(Y)
+            end
+        else
+            @warn "Skipping inverse Hessian update from iteration $l to avoid negative curvature."
+        end
+
+        # (a)
+        θ = θs[l + 1]
+        ∇logpθ = ∇logpθs[l + 1]
+        H = lbfgs_inverse_hessian(Diagonal(α), S, Y)
+        push!(Hs, H)
+    end
+    return Hs
+end
+
 """
     lbfgs_inverse_hessian(H₀, S, Y)
 
