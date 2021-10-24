@@ -50,8 +50,7 @@ function WoodburyPDMat(
 ) where {T}
     cholA = cholesky(A)
     UA = cholA.U
-    Q, _R = qr(UA' \ B)
-    R = UpperTriangular(_R)
+    Q, R = qr(UA' \ B)
     cholC = cholesky(Symmetric(muladd(R, D * R', I)))
     return WoodburyPDMat(A, B, D, UA, Q, cholC.U)
 end
@@ -103,7 +102,7 @@ function LinearAlgebra.lmul!(W::WoodburyPDMat, x::StridedVecOrMat)
     UA = W.UA
     UC = W.UC
     Q = W.Q
-    k = size(W.B, 2)
+    k = minimum(size(W.B))
     lmul!(UA, x)
     lmul!(Q', x)
     x1 = x isa AbstractVector ? view(x, 1:k) : view(x, 1:k, :)
@@ -130,12 +129,13 @@ PDMats.dim(W::WoodburyPDMat) = size(W.A, 1)
 
 function PDMats.invquad(W::WoodburyPDMat{<:Real}, x::AbstractVector{<:Real})
     v = W.Q' * (W.UA' \ x)
-    n, k = size(W.B)
+    n, m = size(W.B)
+    k = min(m, n)
     return @views sum(abs2, W.UC' \ v[1:k]) + sum(abs2, v[(k + 1):n])
 end
 
 function PDMats.unwhiten!(r::StridedVecOrMat, W::WoodburyPDMat, x::StridedVecOrMat)
-    k = size(W.B, 2)
+    k = minimum(size(W.B))
     copyto!(r, x)
     @views lmul!(W.UC', r[1:k])
     lmul!(W.Q, r)

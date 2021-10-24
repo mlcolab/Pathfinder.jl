@@ -11,16 +11,19 @@ end
 rand_pd_diag_mat(T, n) = Diagonal(rand(T, n))
 
 function decompose(W)
-    n, k = size(W.B)
+    n, m = size(W.B)
+    k = min(n, m)
     UA = W.UA
     Q = W.Q
     UC = W.UC
-    T = UA' * Q * [UC' 0*I; 0*I I(n - k)]
+    X = zeros(eltype(UC), n, n)
+    X[diagind(X)] .= true
+    X[1:k, 1:k] .= UC'
+    T = UA' * Q * X
     return T
 end
 
 function test_decompositions(W)
-    n, k = size(W.B)
     UA = cholesky(W.A).U
     Q, R = qr(UA' \ W.B)
     C = I + R * W.D * R'
@@ -33,9 +36,10 @@ end
 @testset "WoodburyPDMat" begin
     @testset "A $Atype, D $Dtype" for T in (Float64, Float32),
         Atype in (:dense, :diag),
-        Dtype in (:dense, :diag)
+        Dtype in (:dense, :diag),
+        n in (5, 10),
+        k in (5, 10)
 
-        n, k = 10, 5
         A = Atype === :diag ? rand_pd_diag_mat(T, n) : rand_pd_mat(T, n)
         B = randn(T, n, k)
         D = Dtype === :diag ? rand_pd_diag_mat(T, k) : rand_pd_mat(T, k)
@@ -45,7 +49,7 @@ end
         @testset "basic" begin
             @test eltype(W) === T
             @test eltype(Wmat) === T
-            @test size(W) == (10, 10)
+            @test size(W) == (n, n)
             @test Matrix(W) ≈ Wmat
             @test W[3, 5] ≈ Wmat[3, 5]
             @test W ≈ Wmat
