@@ -18,6 +18,7 @@ const DEFAULT_OPTIMIZER = Optim.LBFGS(; m=5, linesearch=LineSearches.MoreThuente
 
 include("woodbury.jl")
 include("inverse_hessian.jl")
+include("mvnormal.jl")
 
 """
     pathfinder(logp, ∇logp, θ₀::AbstractVector{<:Real}, ndraws::Int; kwargs...)
@@ -64,7 +65,7 @@ function pathfinder(
     @assert length(logpθs) == length(∇logpθs) == L + 1
 
     # fit mv-normal distributions to trajectory
-    dists = fit_mvnormal(θs, ∇logpθs; history_length=history_length)
+    dists = fit_mvnormals(θs, ∇logpθs; history_length=history_length)
 
     # find ELBO-maximizing distribution
     ϕ_logqϕ_λ = map(dists) do dist
@@ -179,40 +180,6 @@ function psir(rng, ϕ, log_ratios, ndraws)
     log_weights, _ = PSIS.psis(log_ratios; normalize=true)
     weights = StatsBase.pweights(exp.(log_weights))
     return StatsBase.sample(rng, ϕ, weights, ndraws; replace=true)
-end
-
-"""
-    fit_mvnormal(θs, ∇logpθs; cov_init=gilbert_initialization, history_length=5, ϵ=1e-12)
-
-Fit a multivariate-normal distribution to each point on the trajectory `θs`.
-
-Given `θs` with gradients `∇logpθs`, construct LBFGS inverse Hessian approximations with
-the provided `history_length`. The inverse Hessians approximate a covariance. The
-covariances and corresponding means that define multivariate normal approximations per
-point are returned.
-"""
-function fit_mvnormal(θs, ∇logpθs; kwargs...)
-    Σs = lbfgs_inverse_hessians(θs, ∇logpθs; kwargs...)
-    μs = muladd.(Σs, ∇logpθs, θs)
-    return MvNormal.(μs, Σs)
-end
-
-# faster than computing `logpdf` and `rand` independently
-function rand_and_logpdf(rng, dist::MvNormal{T,<:WoodburyPDMat{T}}, ndraws) where {T}
-    μ = dist.μ
-    Σ = dist.Σ
-    N = length(μ)
-
-    # draw points
-    u = Random.randn!(rng, similar(μ, N, ndraws))
-    unormsq = map(x -> sum(abs2, x), eachcol(u))
-    x = PDMats.unwhiten!(u, Σ, u)
-    x .+= μ
-
-    # compute log density at each point
-    logpx = ((logdet(Σ) + N * log2π) .+ unormsq) ./ -2
-
-    return collect(eachcol(x)), logpx
 end
 
 end
