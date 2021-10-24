@@ -5,13 +5,14 @@
 """
     WoodburyPDMat(A::AbstractMatrix{T}, B::AbstractMatrix{T}, D::AbstractMatrix{T}) where {T<:Real}
 
-Lazily represents symmetric matrices constructed from a low-rank update, that is
+Lazily represents symmetric matrices constructed from an update to a full-rank matrix,
 ```math
 W = A + B D B',
 ```
-where ``A`` is a full rank positive definite matrix, ``D`` is a rank-``k`` symmetric matrix,
-and ``B`` is a matrix of compatible size. Note that ``B`` and ``D`` must be chosen such that
-``W`` is positive definite; this is only implicitly checked.
+where ``A`` is an ``n \\times n`` full rank positive definite matrix, ``D`` is an
+``m \\times m`` symmetric matrix, and ``B`` is an ``n \\times m`` matrix. Note that ``B``
+and ``D`` must be chosen such that ``W`` is positive definite; this is only implicitly
+checked.
 
 Overloads for `WoodburyPDMat` make extensive use of the following decomposition.
 Let ``L_A L_A^\\mathrm{T} = A`` be the Cholesky decomposition of ``A``, and
@@ -20,6 +21,9 @@ Then, ``W = T T^\\mathrm{T}``, where
 ```math
 T = L_A Q \\begin{pmatrix} L_C & 0 \\\\ 0 & I \\end{pmatrix}.
 ```
+
+The positive definite requirement is equivalent to the requirement that both ``A`` and
+``C`` are positive definite.
 
 For a derivation of this decomposition for the special case of diagonal ``A``, see
 appendix A of [^Zhang2021].
