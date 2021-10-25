@@ -32,7 +32,7 @@ include("test_utils.jl")
             x, logpx = Pathfinder.rand_and_logpdf(rng, dist, ndraws)
             rng = MersenneTwister(42)
             x2 = rand(rng, dist, ndraws)
-            logpx2 = logpdf(dist, x2)
+            logpx2 = logpdf.(dist, x2)
             @test x ≈ x2
             @test logpx ≈ logpx2
         end
