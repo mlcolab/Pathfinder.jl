@@ -62,8 +62,8 @@ function pathfinder(
 )
     # compute trajectory
     θs, logpθs, ∇logpθs = optimize(logp, ∇logp, θ₀, optimizer; kwargs...)
+    @assert length(logpθs) == length(∇logpθs)
     L = length(θs) - 1
-    @assert length(logpθs) == length(∇logpθs) == L + 1
 
     # fit mv-normal distributions to trajectory
     dists = fit_mvnormals(θs, ∇logpθs; history_length=history_length)
