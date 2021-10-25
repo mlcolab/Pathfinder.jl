@@ -41,19 +41,13 @@ end
         end
         logp(x) = fb(0.03, x)
         ∇logp(x) = ForwardDiff.gradient(logp, x)
-        f(x) = -logp(x)
-        g!(y, x) = copyto!(y, -∇logp(x))
         nocedal_wright_scaling(α, s, y) = fill!(similar(α), dot(y, s) / sum(abs2, y))
         θ₀ = 10 * randn(n)
 
         optimizer = Optim.LBFGS(;
             m=history_length, linesearch=Optim.LineSearches.MoreThuente()
         )
-        options = Optim.Options(; store_trace=true, extended_trace=true)
-        res = Optim.optimize(f, g!, θ₀, optimizer, options)
-        θs = Optim.x_trace(res)
-        logpθs = -Optim.f_trace(res)
-        ∇logpθs = map(tr -> -tr.metadata["g(x)"], Optim.trace(res))
+        θs, logpθs, ∇logpθs = Pathfinder.maximize_with_trace(logp, ∇logp, θ₀, optimizer)
 
         # run lbfgs_inverse_hessians with the same initialization as Optim.LBFGS
         Hs = Pathfinder.lbfgs_inverse_hessians(
