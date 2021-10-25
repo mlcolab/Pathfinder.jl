@@ -19,6 +19,7 @@ const DEFAULT_OPTIMIZER = Optim.LBFGS(; m=5, linesearch=LineSearches.MoreThuente
 include("woodbury.jl")
 include("inverse_hessian.jl")
 include("mvnormal.jl")
+include("elbo.jl")
 
 """
     pathfinder(logp, ∇logp, θ₀::AbstractVector{<:Real}, ndraws::Int; kwargs...)
@@ -68,29 +69,18 @@ function pathfinder(
     dists = fit_mvnormals(θs, ∇logpθs; history_length=history_length)
 
     # find ELBO-maximizing distribution
-    ϕ_logqϕ_λ = map(dists) do dist
-        ϕ, logqϕ = rand_and_logpdf(rng, dist, ndraws_elbo)
-        λ = elbo(logp.(ϕ), logqϕ)
-        return ϕ, logqϕ, λ
-    end
-    ϕ, logqϕ, λ = ntuple(i -> getindex.(ϕ_logqϕ_λ, i), Val(3))
-    lopt = argmax(λ[2:end]) + 1
-    @info "Optimized for $L iterations. Maximum ELBO of $(round(λ[lopt]; digits=2)) reached at iteration $(lopt - 1)."
+    lopt, ϕopt, logqϕopt, λopt = maximize_elbo(rng, logp, dists, ndraws_elbo)
+    @info "Optimized for $L iterations. Maximum ELBO of $(round(λopt; digits=2)) reached at iteration $(lopt - 1)."
 
     # get parameters of ELBO-maximizing distribution
     distopt = dists[lopt]
 
     # reuse existing draws; draw additional ones if necessary
-    ϕdraws = ϕ[lopt]
-    logqϕdraws = logqϕ[lopt]
     if ndraws_elbo < ndraws
-        append!.((ϕdraws, logqϕdraws), rand_and_logpdf(rng, distopt, ndraws - ndraws_elbo))
-    else
-        ϕdraws = ϕdraws[1:ndraws]
-        logqϕdraws = logqϕdraws[1:ndraws]
+        append!.((ϕopt, logqϕopt), rand_and_logpdf(rng, distopt, ndraws - ndraws_elbo))
     end
 
-    return distopt, ϕdraws, logqϕdraws
+    return distopt, ϕopt[1:ndraws], logqϕopt[1:ndraws]
 end
 
 """
@@ -173,8 +163,6 @@ function optimize(logp, ∇logp, θ₀, optimizer; kwargs...)
 
     return θs, logpθs, ∇logpθs
 end
-
-elbo(logpϕ, logqϕ) = mean(logpϕ) - mean(logqϕ)
 
 function psir(rng, ϕ, log_ratios, ndraws)
     log_weights, _ = PSIS.psis(log_ratios; normalize=true)
