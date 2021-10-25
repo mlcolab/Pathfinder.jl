@@ -11,11 +11,11 @@ point are returned.
 function fit_mvnormals(θs, ∇logpθs; kwargs...)
     Σs = lbfgs_inverse_hessians(θs, ∇logpθs; kwargs...)
     μs = muladd.(Σs, ∇logpθs, θs)
-    return MvNormal.(μs, Σs)
+    return Distributions.MvNormal.(μs, Σs)
 end
 
 # faster than computing `logpdf` and `rand` independently
-function rand_and_logpdf(rng, dist::MvNormal, ndraws)
+function rand_and_logpdf(rng, dist::Distributions.MvNormal, ndraws)
     μ = dist.μ
     Σ = dist.Σ
     N = length(μ)
@@ -30,4 +30,11 @@ function rand_and_logpdf(rng, dist::MvNormal, ndraws)
     logpx = (muladd(N, log2π, logdet(Σ)) .+ unormsq) ./ -2
 
     return collect(eachcol(x)), logpx
+end
+# defined for testing purposes
+function rand_and_logpdf(rng, dist, ndraws)
+    x = rand(rng, dist, ndraws)
+    logpx = Distributions.logpdf(dist, x)
+    xvec = x isa AbstractVector ? x : collect(eachcol(x))
+    return xvec, logpx
 end

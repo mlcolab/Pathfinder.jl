@@ -1,6 +1,6 @@
 module Pathfinder
 
-using Distributions: MixtureModel, MvNormal
+using Distributions: Distributions
 using LinearAlgebra
 using Optim: Optim, LineSearches
 using PDMats: PDMats
@@ -146,7 +146,7 @@ function multipathfinder(
         StatsBase.sample(rng, ϕsvec, ndraws; replace=true)
     end
 
-    return MixtureModel(dists), ϕsample
+    return Distributions.MixtureModel(dists), ϕsample
 end
 
 function optimize(logp, ∇logp, θ₀, optimizer; kwargs...)
