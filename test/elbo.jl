@@ -13,10 +13,10 @@ using Test
         lopt, ϕ, logqϕ, λ = Pathfinder.maximize_elbo(rng, logp, dists, 100_000)
         r = σs ./ 0.8
         # explicit elbo calculation
-        λexp = (1 .- r.^2) ./ 2 .+ log.(r)
+        λexp = (1 .- r .^ 2) ./ 2 .+ log.(r)
         @test lopt == 3
         @test λ ≈ mean.(logp.(ϕ) .- logqϕ) ≈ λ
-        @test λ ≈ λexp rtol=1e-2
+        @test λ ≈ λexp rtol = 1e-2
         @test λ[lopt] ≈ 0
     end
 end
