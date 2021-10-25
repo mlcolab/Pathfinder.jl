@@ -5,9 +5,8 @@ function maximize_elbo(rng, logp, dists, ndraws)
         return ϕ, logqϕ, λ
     end
     ϕ, logqϕ, λ = ntuple(i -> getindex.(ϕ_logqϕ_λ, i), Val(3))
-    lopt = argmax(λ[2:end]) + 1
-
-    return lopt, ϕ[lopt], logqϕ[lopt], λ[lopt]
+    lopt = argmax(λ)
+    return lopt, ϕ, logqϕ, λ
 end
 
 elbo(logpϕ, logqϕ) = mean(logpϕ) - mean(logqϕ)

@@ -69,18 +69,22 @@ function pathfinder(
     dists = fit_mvnormals(θs, ∇logpθs; history_length=history_length)
 
     # find ELBO-maximizing distribution
-    lopt, ϕopt, logqϕopt, λopt = maximize_elbo(rng, logp, dists, ndraws_elbo)
-    @info "Optimized for $L iterations. Maximum ELBO of $(round(λopt; digits=2)) reached at iteration $(lopt - 1)."
+    lopt, ϕ, logqϕ, λ = maximize_elbo(rng, logp, dists[2:end], ndraws_elbo)
+    @info "Optimized for $L iterations. Maximum ELBO of $(round(λ[lopt]; digits=2)) reached at iteration $lopt."
 
     # get parameters of ELBO-maximizing distribution
-    distopt = dists[lopt]
+    distopt = dists[lopt + 1]
 
     # reuse existing draws; draw additional ones if necessary
+    ϕopt = copy(ϕ[lopt])
+    logqϕopt = copy(logqϕ[lopt])
     if ndraws_elbo < ndraws
-        append!.((ϕopt, logqϕopt), rand_and_logpdf(rng, distopt, ndraws - ndraws_elbo))
+        ϕnew, logqϕnew = rand_and_logpdf(rng, distopt, ndraws - ndraws_elbo)
+        append!(ϕopt, ϕnew)
+        append!(logqϕopt, logqϕnew)
     end
 
-    return distopt, ϕopt[1:ndraws], logqϕopt[1:ndraws]
+    return distopt, ϕopt, logqϕopt
 end
 
 """
