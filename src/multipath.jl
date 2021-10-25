@@ -11,7 +11,8 @@ Filter samples from a mixture of multivariate normal distributions fit using `pa
 
 For `n=length(θ₀s)`, `n` parallel runs of pathfinder produce `n` multivariate normal
 approximations of the posterior. These are combined to a mixture model with uniform weights.
-Draws from the components are then resampled with replacement. If `filter=true`, then
+
+Draws from the components are then resampled with replacement. If `importance=true`, then
 Pareto smoothed importance resampling is used, so that the resulting draws better
 approximate draws from the target distribution.
 
