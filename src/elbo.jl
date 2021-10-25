@@ -1,7 +1,7 @@
 function maximize_elbo(rng, logp, dists, ndraws)
     ϕ_logqϕ_λ = map(dists) do dist
-        ϕ, logqϕ = rand_and_logpdf(rng, dist, ndraws)
-        λ = elbo(logp.(ϕ), logqϕ)
+        ϕmat, logqϕ = rand_and_logpdf(rng, dist, ndraws)
+        λ = elbo(logp.(eachcol(ϕmat)), logqϕ)
         return ϕ, logqϕ, λ
     end
     ϕ, logqϕ, λ = ntuple(i -> getindex.(ϕ_logqϕ_λ, i), Val(3))
