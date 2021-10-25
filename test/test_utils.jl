@@ -19,3 +19,12 @@ function Pathfinder.rand_and_logpdf(rng, dist, ndraws)
     end
     return xvec, logpx
 end
+
+# banana distribution
+_ϕb(b, x) = [x[1]; x[2] + b * (x[1]^2 - 100); x[3:end]]
+function _fb(b, x)
+    y = _ϕb(b, x)
+    Σ = Diagonal([100; ones(length(y) - 1)])
+    return -dot(y, inv(Σ), y) / 2
+end
+logp_banana(x) = _fb(0.03, x)
