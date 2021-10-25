@@ -29,11 +29,12 @@ function rand_and_logpdf(rng, dist::Distributions.MvNormal, ndraws)
     # compute log density at each point
     logpx = (muladd(N, log2π, logdet(Σ)) .+ unormsq) ./ -2
 
-    return x, logpx
+    return collect(eachcol(x)), logpx
 end
 # defined for testing purposes
 function rand_and_logpdf(rng, dist, ndraws)
     x = rand(rng, dist, ndraws)
     logpx = Distributions.logpdf(dist, x)
-    return x, logpx
+    xvec = x isa AbstractVector ? x : collect(eachcol(x))
+    return xvec, logpx
 end

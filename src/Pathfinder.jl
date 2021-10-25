@@ -77,9 +77,7 @@ function pathfinder(
 
     # reuse existing draws; draw additional ones if necessary
     if ndraws_elbo < ndraws
-        ϕmatnew, logqϕnew = rand_and_logpdf(rng, distopt, ndraws - ndraws_elbo)
-        append!(ϕopt, collect(eachcol(ϕmatnew)))
-        append!(logqϕopt, logqϕnew)
+        append!.((ϕopt, logqϕopt), rand_and_logpdf(rng, distopt, ndraws - ndraws_elbo))
     end
 
     return distopt, ϕopt[1:ndraws], logqϕopt[1:ndraws]
