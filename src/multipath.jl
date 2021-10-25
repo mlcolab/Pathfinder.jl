@@ -26,7 +26,7 @@ approximate draws from the target distribution.
 - `importance::Bool=true`: Perform Pareto smoothed importance resampling of draws.
 
 # Returns
-- `dist::Distributions.MixtureModel`: Uniformly weighted mixture of ELBO-maximizing
+- `q::Distributions.MixtureModel`: Uniformly weighted mixture of ELBO-maximizing
     multivariate normal distributions
 - `ϕ::Vector{<:AbstractVector{<:Real}}`: `ndraws` approxiate draws from target distribution
 """
@@ -49,7 +49,7 @@ function multipathfinder(
     res = map(θ₀s) do θ₀
         return pathfinder(logp, ∇logp, θ₀, ndraws_per_run; rng=rng, kwargs...)
     end
-    dists, ϕs, logqϕs = ntuple(i -> getindex.(res, i), Val(3))
+    qs, ϕs, logqϕs = ntuple(i -> getindex.(res, i), Val(3))
 
     # draw samples from mixture of multivariate normal distributions
     ϕsvec = reduce(vcat, ϕs)
@@ -60,5 +60,5 @@ function multipathfinder(
         resample(rng, ϕsvec, ndraws)
     end
 
-    return Distributions.MixtureModel(dists), ϕsample
+    return Distributions.MixtureModel(qs), ϕsample
 end

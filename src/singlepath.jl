@@ -22,7 +22,7 @@ This should only be set when `optimizer` is not an `Optim.LBFGS`.
 - `kwargs...` : Remaining keywords are forwarded to `Optim.Options`.
 
 # Returns
-- `dist::Distributions.MvNormal`: ELBO-maximizing multivariate normal distribution
+- `q::Distributions.MvNormal`: ELBO-maximizing multivariate normal distribution
 - `ϕ::Vector{<:AbstractVector{<:Real}}`: `ndraws` draws from multivariate normal
 - `logqϕ::Vector{<:Real}`: log-density of multivariate normal at `ϕ` values
 """
@@ -43,23 +43,23 @@ function pathfinder(
     L = length(θs) - 1
 
     # fit mv-normal distributions to trajectory
-    dists = fit_mvnormals(θs, ∇logpθs; history_length=history_length)
+    qs = fit_mvnormals(θs, ∇logpθs; history_length=history_length)
 
     # find ELBO-maximizing distribution
-    lopt, ϕ, logqϕ, λ = maximize_elbo(rng, logp, dists[2:end], ndraws_elbo)
+    lopt, ϕ, logqϕ, λ = maximize_elbo(rng, logp, qs[2:end], ndraws_elbo)
     @info "Optimized for $L iterations. Maximum ELBO of $(round(λ[lopt]; digits=2)) reached at iteration $lopt."
 
     # get parameters of ELBO-maximizing distribution
-    distopt = dists[lopt + 1]
+    qopt = qs[lopt + 1]
 
     # reuse existing draws; draw additional ones if necessary
     ϕopt = copy(ϕ[lopt])
     logqϕopt = copy(logqϕ[lopt])
     if ndraws_elbo < ndraws
-        ϕnew, logqϕnew = rand_and_logpdf(rng, distopt, ndraws - ndraws_elbo)
+        ϕnew, logqϕnew = rand_and_logpdf(rng, qopt, ndraws - ndraws_elbo)
         append!(ϕopt, ϕnew)
         append!(logqϕopt, logqϕnew)
     end
 
-    return distopt, ϕopt, logqϕopt
+    return qopt, ϕopt, logqϕopt
 end
