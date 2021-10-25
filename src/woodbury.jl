@@ -3,11 +3,15 @@
 # PDMatsExtras.WoodburyPDMat
 
 """
-    WoodburyPDMat(A::AbstractMatrix{T}, B::AbstractMatrix{T}, D::AbstractMatrix{T}) where {T<:Real}
+    WoodburyPDMat <: PDMats.AbstractPDMat
 
-Lazily represents symmetric matrices constructed from an update to a full-rank matrix,
+Lazily represents a real positive definite (PD) matrix as an update to a full-rank PD matrix.
+
+    WoodburyPDMat(A, B, D)
+
+Constructs the ``n \\times n`` PD matrix
 ```math
-W = A + B D B',
+W = A + B D B^\\mathrm{T},
 ```
 where ``A`` is an ``n \\times n`` full rank positive definite matrix, ``D`` is an
 ``m \\times m`` symmetric matrix, and ``B`` is an ``n \\times m`` matrix. Note that ``B``
@@ -16,8 +20,9 @@ checked.
 
 Overloads for `WoodburyPDMat` make extensive use of the following decomposition.
 Let ``L_A L_A^\\mathrm{T} = A`` be the Cholesky decomposition of ``A``, and
-let ``Q R = L_A^{-1} B`` be a thin QR decomposition. Define ``C = I + RDR^\\mathrm{T}``.
-Then, ``W = T T^\\mathrm{T}``, where
+let ``Q R = L_A^{-1} B`` be a thin QR decomposition. Define ``C = I + RDR^\\mathrm{T}``,
+with the Cholesky decomposition ``L_C L_C^\\mathrm{T} = C``. Then, ``W = T T^\\mathrm{T}``,
+where
 ```math
 T = L_A Q \\begin{pmatrix} L_C & 0 \\\\ 0 & I \\end{pmatrix}.
 ```
@@ -98,7 +103,7 @@ function LinearAlgebra.logabsdet(W::WoodburyPDMat)
 end
 
 function LinearAlgebra.diag(W::WoodburyPDMat)
-    D = Symmetric(W.D)
+    D = W.D isa Diagonal ? W.D : Symmetric(W.D)
     return diag(W.A) + map(b -> dot(b, D, b), eachrow(W.B))
 end
 
