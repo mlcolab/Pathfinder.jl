@@ -7,4 +7,5 @@ using Test
     include("inverse_hessian.jl")
     include("mvnormal.jl")
     include("elbo.jl")
+    include("resample.jl")
 end
