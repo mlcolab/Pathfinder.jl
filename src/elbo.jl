@@ -9,4 +9,4 @@ function maximize_elbo(rng, logp, dists, ndraws)
     return lopt, ϕ, logqϕ, λ
 end
 
-elbo(logpϕ, logqϕ) = mean(logpϕ) - mean(logqϕ)
+elbo(logpϕ, logqϕ) = Statistics.mean(logpϕ) - Statistics.mean(logqϕ)

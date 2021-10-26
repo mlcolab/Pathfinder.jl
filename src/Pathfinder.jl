@@ -4,9 +4,9 @@ using Distributions: Distributions
 using LinearAlgebra
 using Optim: Optim, LineSearches
 using PDMats: PDMats
-using PSIS
+using PSIS: PSIS
 using Random
-using Statistics: mean
+using Statistics: Statistics
 using StatsBase: StatsBase
 using StatsFuns: log2π
 
