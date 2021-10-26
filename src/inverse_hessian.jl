@@ -40,11 +40,11 @@ function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_len
             push!(Y, copy(y))
 
             if length(S) > history_length
-            # remove oldest s and y from history
+                # remove oldest s and y from history
                 popfirst!(S)
                 popfirst!(Y)
             end
-            
+
             # initial diagonal estimate of H
             α = Hinit(α, s, y)
         else
