@@ -23,29 +23,30 @@ function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_len
     ∇logpθ = ∇logpθs[1]
 
     # allocate caches/containers
-    s = similar(θ) # BFGS update, i.e. sₗ = θₗ₊₁ - θₗ = -λ Hₗ ∇logpθₗ
+    s = similar(θ) # cache for BFGS update, i.e. sₗ = θₗ₊₁ - θₗ = -λ Hₗ ∇logpθₗ
     y = similar(∇logpθ) # cache for yₗ = ∇logpθₗ₊₁ - ∇logpθₗ = Hₗ₊₁ \ s₁ (secant equation)
-    S = Vector{typeof(s)}(undef, 0)
-    Y = Vector{typeof(y)}(undef, 0)
-    α = fill!(similar(θ), true)
+    S = Vector{typeof(s)}(undef, 0) # history of s
+    Y = Vector{typeof(y)}(undef, 0) # history of y
+    α = fill!(similar(θ), true) # diag(H₀)
     H = lbfgs_inverse_hessian(Diagonal(α), S, Y) # H₀ = I
-    Hs = [H]
+    Hs = [H] # trace of H
 
     for l in 1:L
         s .= θs[l + 1] .- θ
         y .= ∇logpθ .- ∇logpθs[l + 1]
         if dot(y, s) > ϵ * sum(abs2, y)  # curvature is positive, safe to update inverse Hessian
+            # add s and y to history
             push!(S, copy(s))
             push!(Y, copy(y))
 
+            if length(S) > history_length
+            # remove oldest s and y from history
+                popfirst!(S)
+                popfirst!(Y)
+            end
+            
             # initial diagonal estimate of H
             α = Hinit(α, s, y)
-
-            # replace oldest stored s and y with new ones
-            if length(S) > history_length
-                s = popfirst!(S)
-                y = popfirst!(Y)
-            end
         else
             @warn "Skipping inverse Hessian update from iteration $l to avoid negative curvature."
         end
@@ -55,6 +56,7 @@ function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_len
         H = lbfgs_inverse_hessian(Diagonal(α), S, Y)
         push!(Hs, H)
     end
+
     return Hs
 end
 
