@@ -22,7 +22,7 @@ function rand_and_logpdf(rng, dist::Distributions.MvNormal, ndraws)
 
     # draw points
     u = Random.randn!(rng, similar(μ, N, ndraws))
-    unormsq = map(x -> sum(abs2, x), eachcol(u))
+    unormsq = vec(sum(abs2, u; dims=1))
     x = PDMats.unwhiten!(u, Σ, u)
     x .+= μ
 
