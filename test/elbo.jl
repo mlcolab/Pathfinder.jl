@@ -4,19 +4,34 @@ using Random
 using Test
 
 @testset "ELBO estimation" begin
-    @testset "maximize_elbo" begin
-        target_dist = Normal(0, 0.8)
+    @testset "elbo_and_samples" begin
+        σ_target = 0.08
+        target_dist = Normal(0, σ_target)
         logp(x) = logpdf(target_dist, x)
         σs = [1e-3, 0.05, 0.8, 1.0, 1.1, 1.2, 5.0, 10.0]
+        rng = MersenneTwister(42)
+        @testset for σ in σs
+            dist = Normal(0, σ)
+            elbo, ϕ, logqϕ = @inferred Pathfinder.elbo_and_samples(
+                rng, logp, dist, 1_000_000
+            )
+            # explicit elbo calculation
+            r = σ / σ_target
+            elbo_exp = (1 - r^2) / 2 + log(r)
+            @test elbo ≈ elbo_exp rtol = 1e-2
+            @test mean(logp(ϕ) - logqϕ) ≈ elbo
+        end
+    end
+
+    @testset "maximize_elbo" begin
+        σ_target = 0.08
+        target_dist = Normal(0, σ_target)
+        logp(x) = logpdf(target_dist, x)
+        σs = [1e-3, 0.05, σ_target, 1.0, 1.1, 1.2, 5.0, 10.0]
         dists = Normal.(0, σs)
         rng = MersenneTwister(42)
-        lopt, ϕ, logqϕ, λ = Pathfinder.maximize_elbo(rng, logp, dists, 100_000)
-        r = σs ./ 0.8
-        # explicit elbo calculation
-        λexp = (1 .- r .^ 2) ./ 2 .+ log.(r)
+        lopt, elbo, ϕ, logqϕ = @inferred Pathfinder.maximize_elbo(rng, logp, dists, 100)
         @test lopt == 3
-        @test λ ≈ mean.(logp.(ϕ) .- logqϕ) ≈ λ
-        @test λ ≈ λexp rtol = 1e-2
-        @test λ[lopt] ≈ 0
+        @test elbo ≈ 0
     end
 end
