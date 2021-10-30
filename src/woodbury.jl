@@ -145,11 +145,35 @@ function PDMats.invquad(W::WoodburyPDMat{<:Real}, x::AbstractVector{<:Real})
     return @views sum(abs2, W.UC' \ v[1:k]) + sum(abs2, v[(k + 1):n])
 end
 
+function PDMats.invquad!(
+    r::AbstractArray{T}, W::WoodburyPDMat, x::StridedMatrix{T}
+) where {T}
+    v = lmul!(W.Q', W.UA' \ x)
+    k = minimum(size(W.B))
+    @views ldiv!(W.UC', v[1:k, :])
+    colwise_sumsq!(r, v, true)
+    return r
+end
+
 function PDMats.unwhiten!(r::StridedVecOrMat, W::WoodburyPDMat, x::StridedVecOrMat)
     k = minimum(size(W.B))
     copyto!(r, x)
     @views lmul!(W.UC', x isa AbstractVector ? r[1:k] : r[1:k, :])
     lmul!(W.Q, r)
     lmul!(W.UA', r)
+    return r
+end
+
+# duplicated from https://github.com/JuliaStats/PDMats.jl/blob/master/src/utils.jl
+function colwise_sumsq!(r::AbstractArray, a::AbstractMatrix, c::Real)
+    n = length(r)
+    @assert n == size(a, 2)
+    for j in 1:n
+        v = zero(eltype(a))
+        @simd for i in 1:size(a, 1)
+            @inbounds v += abs2(a[i, j])
+        end
+        r[j] = v * c
+    end
     return r
 end

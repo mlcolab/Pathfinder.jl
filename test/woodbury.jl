@@ -129,20 +129,28 @@ end
             @test PDMats.dim(W) == n
         end
 
-        @testset "PDMats.invquad" begin
-            x = randn(T, n)
-            @test @inferred(invquad(W, x)) ≈ dot(x, inv(Wmat), x)
-        end
-
-        @testset "PDMats.invquad" begin
-            x = randn(T, n)
-            @test @inferred(invquad(W, x)) ≈ dot(x, inv(Wmat), x)
-        end
-
         @testset "unwhiten" begin
-            x = randn(T, n)
             M = decompose(W)
+
+            x = randn(T, n)
             @test @inferred(unwhiten(W, x)) ≈ M * x
+
+            X = randn(T, n, 100)
+            @test @inferred(unwhiten(W, X)) ≈ M * X
+        end
+
+        @testset "PDMats.invquad" begin
+            x = randn(T, n)
+            @test @inferred(invquad(W, x)) ≈ dot(x, inv(Wmat), x)
+
+            u = randn(T, n)
+            @test invquad(W, unwhiten(W, u)) ≈ dot(u, u)
+
+            X = randn(T, n, 100)
+            @test @inferred(invquad(W, X)) ≈ invquad(PDMats.PDMat(Symmetric(Wmat)), X)
+
+            U = randn(T, n, 100)
+            @test invquad(W, unwhiten(W, U)) ≈ vec(sum(abs2, U; dims=1))
         end
     end
 end
