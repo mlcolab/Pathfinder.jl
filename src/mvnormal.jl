@@ -10,7 +10,8 @@ point are returned.
 """
 function fit_mvnormals(θs, ∇logpθs; kwargs...)
     Σs = lbfgs_inverse_hessians(θs, ∇logpθs; kwargs...)
-    μs = muladd.(Σs, ∇logpθs, θs)
+    l = length(Σs)
+    μs = @views muladd.(Σs, ∇logpθs[1:l], θs[1:l])
     return Distributions.MvNormal.(μs, Σs)
 end
 

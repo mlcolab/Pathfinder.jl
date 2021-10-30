@@ -32,8 +32,10 @@ function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_len
     Hs = [H] # trace of H
 
     for l in 1:L
-        s .= θs[l + 1] .- θ
-        y .= ∇logpθ .- ∇logpθs[l + 1]
+        θlp1, ∇logpθlp1 = θs[l + 1], ∇logpθs[l + 1]
+        (any(isnan, θlp1) || any(isnan, ∇logpθlp1)) && break
+        s .= θlp1 .- θ
+        y .= ∇logpθ .- ∇logpθlp1
         if dot(y, s) > ϵ * sum(abs2, y)  # curvature is positive, safe to update inverse Hessian
             # add s and y to history
             push!(S, copy(s))
@@ -51,8 +53,7 @@ function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_len
             @warn "Skipping inverse Hessian update from iteration $l to avoid negative curvature."
         end
 
-        θ = θs[l + 1]
-        ∇logpθ = ∇logpθs[l + 1]
+        θ, ∇logpθ = θlp1, ∇logpθlp1
         H = lbfgs_inverse_hessian(Diagonal(α), S, Y)
         push!(Hs, H)
     end
