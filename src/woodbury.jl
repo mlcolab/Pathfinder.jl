@@ -148,7 +148,7 @@ end
 function PDMats.unwhiten!(r::StridedVecOrMat, W::WoodburyPDMat, x::StridedVecOrMat)
     k = minimum(size(W.B))
     copyto!(r, x)
-    @views lmul!(W.UC', r[1:k])
+    @views lmul!(W.UC', x isa AbstractVector ? r[1:k] : r[1:k, :])
     lmul!(W.Q, r)
     lmul!(W.UA', r)
     return r
