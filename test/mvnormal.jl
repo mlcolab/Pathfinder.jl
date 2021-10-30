@@ -1,4 +1,6 @@
 using Distributions
+using ForwardDiff
+using Optim
 using Pathfinder
 using Random
 using Test
@@ -25,6 +27,26 @@ include("test_utils.jl")
         @testset "MvNormal" begin
             n = 10
             Σ = rand_pd_mat(Float64, 10)
+            μ = randn(n)
+            dist = MvNormal(μ, Σ)
+
+            rng = MersenneTwister(42)
+            x, logpx = @inferred Pathfinder.rand_and_logpdf(rng, dist, ndraws)
+            rng = MersenneTwister(42)
+            x2 = rand(rng, dist, ndraws)
+            logpx2 = logpdf(dist, x2)
+            @test x ≈ collect(eachcol(x2))
+            @test logpx ≈ logpx2
+        end
+
+        @testset "MvNormal{T,Pathfinder.WoodburyPDMat{T}}" begin
+            n = 10
+            ndraws = 20
+            nhist = 4
+            A = rand_pd_diag_mat(Float64, 10)
+            D = rand_pd_mat(Float64, 2nhist)
+            B = randn(n, 2nhist)
+            Σ = Pathfinder.WoodburyPDMat(A, B, D)
             μ = randn(n)
             dist = MvNormal(μ, Σ)
 
