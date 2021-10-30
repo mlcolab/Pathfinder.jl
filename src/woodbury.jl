@@ -80,6 +80,8 @@ function Base.AbstractMatrix{T}(W::WoodburyPDMat) where {T}
     )
 end
 
+Base.size(W::WoodburyPDMat) = size(W.A)
+
 Base.getindex(W::WoodburyPDMat, inds...) = getindex(Matrix(W), inds...)
 
 Base.adjoint(W::WoodburyPDMat) = W
