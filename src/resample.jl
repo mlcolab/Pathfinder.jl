@@ -3,7 +3,7 @@
 
 Draw `ndraws` samples from `x`, with replacement.
 
-If `ndraws` is provided, perform Pareto smoothed importance resampling.
+If `log_weights` is provided, perform Pareto smoothed importance resampling.
 """
 function resample(rng, x, log_ratios, ndraws)
     log_weights, _ = PSIS.psis(log_ratios; normalize=true)
