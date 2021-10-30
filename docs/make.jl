@@ -13,7 +13,11 @@ makedocs(;
         canonical="https://sethaxen.github.io/Pathfinder.jl",
         assets=String[],
     ),
-    pages=["Home" => "index.md"],
+    pages=[
+        "Home" => "index.md",
+        "Single-path Pathfinder" => "pathfinder.md",
+        "Multi-path Pathfinder" => "multipathfinder.md",
+    ],
 )
 
 deploydocs(; repo="github.com/sethaxen/Pathfinder.jl", devbranch="main")
