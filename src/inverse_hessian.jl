@@ -50,7 +50,7 @@ function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_len
             # initial diagonal estimate of H
             α = Hinit(α, s, y)
         else
-            @warn "Skipping inverse Hessian update from iteration $l to avoid negative curvature."
+            @debug "Skipping inverse Hessian update from iteration $l to avoid negative curvature."
         end
 
         θ, ∇logpθ = θlp1, ∇logpθlp1
