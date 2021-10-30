@@ -35,7 +35,8 @@ using Test
         logp(x) = -dot(x, P, x) / 2
         ∇logp(x) = -(P * x)
         x₀ = [2.08, 3.77, -1.26, -0.97, -3.91]
-        q, _, _ = pathfinder(logp, ∇logp, x₀, 10; ndraws_elbo=100)
+        rng = MersenneTwister(38)
+        q, _, _ = pathfinder(logp, ∇logp, x₀, 10; rng=rng, ndraws_elbo=100)
         @test q.Σ ≈ Σ rtol = 1e-1
     end
 end
