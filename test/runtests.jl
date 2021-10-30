@@ -8,4 +8,6 @@ using Test
     include("mvnormal.jl")
     include("elbo.jl")
     include("resample.jl")
+    include("singlepath.jl")
+    include("multipath.jl")
 end
