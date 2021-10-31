@@ -21,14 +21,17 @@ function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_len
     L = length(θs) - 1
     θ = θs[1]
     ∇logpθ = ∇logpθs[1]
+    n = length(θ)
 
     # allocate caches/containers
+    history_ind = 0 # index of last set history entry
+    history_length_effective = 0 # length of history so far
     s = similar(θ) # cache for BFGS update, i.e. sₗ = θₗ₊₁ - θₗ = -λ Hₗ ∇logpθₗ
     y = similar(∇logpθ) # cache for yₗ = ∇logpθₗ₊₁ - ∇logpθₗ = Hₗ₊₁ \ s₁ (secant equation)
-    S = Vector{typeof(s)}(undef, 0) # history of s
-    Y = Vector{typeof(y)}(undef, 0) # history of y
+    S = similar(s, n, min(history_length, L)) # history of s
+    Y = similar(y, n, min(history_length, L)) # history of y
     α = fill!(similar(θ), true) # diag(H₀)
-    H = lbfgs_inverse_hessian(Diagonal(α), S, Y) # H₀ = I
+    H = lbfgs_inverse_hessian(Diagonal(α), S, Y, history_ind, history_length_effective) # H₀ = I
     Hs = [H] # trace of H
 
     for l in 1:L
@@ -38,14 +41,10 @@ function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_len
         y .= ∇logpθ .- ∇logpθlp1
         if dot(y, s) > ϵ * sum(abs2, y)  # curvature is positive, safe to update inverse Hessian
             # add s and y to history
-            push!(S, copy(s))
-            push!(Y, copy(y))
-
-            if length(S) > history_length
-                # remove oldest s and y from history
-                popfirst!(S)
-                popfirst!(Y)
-            end
+            history_ind = mod1(history_ind + 1, history_length)
+            history_length_effective = max(history_ind, history_length_effective)
+            S[1:n, history_ind] .= s
+            Y[1:n, history_ind] .= y
 
             # initial diagonal estimate of H
             α = Hinit(α, s, y)
@@ -54,7 +53,7 @@ function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_len
         end
 
         θ, ∇logpθ = θlp1, ∇logpθlp1
-        H = lbfgs_inverse_hessian(Diagonal(α), S, Y)
+        H = lbfgs_inverse_hessian(Diagonal(α), S, Y, history_ind, history_length_effective)
         push!(Hs, H)
     end
 
@@ -62,11 +61,17 @@ function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_len
 end
 
 """
-    lbfgs_inverse_hessian(H₀, S, Y) -> WoodburyPDMat
+    lbfgs_inverse_hessian(H₀, S₀, Y₀, history_ind, history_length) -> WoodburyPDMat
 
-Compute approximate inverse Hessian initialized from `H₀` from history stored in `S` and `Y`.
+Compute approximate inverse Hessian initialized from `H₀` from history stored in `S₀` and `Y₀`.
 
-From Theorem 2.2 of [^Byrd1994], the expression is
+`history_ind` indicates the column in `S₀` and `Y₀` that was most recently added to the
+history, while `history_length` indicates the number of first columns in `S₀` and `Y₀`
+currently being used for storing history.
+`S = S₀[:, history_ind+1:history_length; 1:history_ind]` reorders the columns of `₀` so that the
+oldest is first and newest is last.
+
+From Theorem 2.2 of [^Byrd1994], the expression for the inverse Hessian ``H`` is
 
 ```math
 \\begin{align}
@@ -75,7 +80,7 @@ R &= \\operatorname{triu}(S^\\mathrm{T} Y)\\\\
 E &= I \\circ R\\\\
 D &= \\begin{pmatrix}
     0 & -R^{-1}\\\\
-    -R^{-\\mathrm{T}} & R^\\mathrm{-T} (E + Y^\\mathrm{T} H₀ Y ) R^\\mathrm{-1}\\\\
+    -R^{-\\mathrm{T}} & R^\\mathrm{-T} (E + Y^\\mathrm{T} H_0 Y ) R^\\mathrm{-1}\\\\
 H &= H_0 + B D B^\\mathrm{T}
 \\end{pmatrix}
 \\end{align}
@@ -86,39 +91,39 @@ H &= H_0 + B D B^\\mathrm{T}
              Mathematical Programming 63, 129–156 (1994).
              doi: [10.1007/BF01582063](https://doi.org/10.1007/BF01582063)
 """
-function lbfgs_inverse_hessian(H₀::Diagonal, S, Y)
-    J = length(S)
+function lbfgs_inverse_hessian(H₀::Diagonal, S0, Y0, history_ind, history_length)
+    J = history_length
     α = H₀.diag
     B = similar(α, size(α, 1), 2J)
     D = fill!(similar(α, 2J, 2J), false)
     iszero(J) && return WoodburyPDMat(H₀, B, D)
 
-    for j in 1:J
-        yⱼ = Y[j]
-        sⱼ = S[j]
-        B[:, j] .= α .* yⱼ
-        B[:, J + j] .= sⱼ
-        for i in 1:(j - 1)
-            D[J + i, J + j] = dot(S[i], yⱼ)
-        end
-        D[J + j, J + j] = dot(sⱼ, yⱼ)
+    hist_inds = [(history_ind + 1):history_length; 1:history_ind]
+    @views begin
+        S = S0[:, hist_inds]
+        Y = Y0[:, hist_inds]
+        B₁ = B[:, 1:J]
+        B₂ = B[:, (J + 1):(2J)]
+        D₁₁ = D[1:J, 1:J]
+        D₁₂ = D[1:J, (J + 1):(2J)]
+        D₂₁ = D[(J + 1):(2J), 1:J]
+        D₂₂ = D[(J + 1):(2J), (J + 1):(2J)]
     end
-    R = @views UpperTriangular(D[(J + 1):(2J), (J + 1):(2J)])
-    nRinv = @views UpperTriangular(D[1:J, (J + 1):(2J)])
+
+    mul!(B₁, Diagonal(α), Y)
+    copyto!(B₂, S)
+    mul!(D₂₂, S', Y)
+    triu!(D₂₂)
+    R = UpperTriangular(D₂₂)
+    nRinv = UpperTriangular(D₁₂)
     copyto!(nRinv, -I)
     ldiv!(R, nRinv)
-    nRinv′ = @views LowerTriangular(copyto!(D[(J + 1):(2J), 1:J], nRinv'))
-    for j in 1:J
-        αyⱼ = @views B[:, j]
-        for i in 1:(j - 1)
-            D[J + i, J + j] = dot(Y[i], αyⱼ)
-        end
-        D[J + j, J + j] += dot(Y[j], αyⱼ)
-    end
-    D22 = @view D[(J + 1):(2J), (J + 1):(2J)]
-    LinearAlgebra.copytri!(D22, 'U', false, false)
-    rmul!(D22, nRinv)
-    lmul!(nRinv′, D22)
+    nRinv′ = LowerTriangular(copyto!(D₂₁, nRinv'))
+    tril!(D₂₂) # eliminate all but diagonal
+    mul!(D₂₂, Y', B₁, true, true)
+    LinearAlgebra.copytri!(D₂₂, 'U', false, false)
+    rmul!(D₂₂, nRinv)
+    lmul!(nRinv′, D₂₂)
 
     return WoodburyPDMat(H₀, B, D)
 end
