@@ -8,7 +8,7 @@ using Test
     @testset "MvNormal" begin
         n = 10
         nruns = 20
-        ndraws = 1000_000
+        ndraws = 1_000_000
         ndraws_per_run = ndraws ÷ nruns
         Σ = rand_pd_mat(Float64, n)
         μ = randn(n)
@@ -25,8 +25,8 @@ using Test
         μ_hat = mean(ϕ)
         Σ_hat = cov(ϕ .- Ref(μ_hat); corrected=false)
         # adapted from the MvNormal tests
-        # allow for 3x disagreement in atol, since this method is approximate
-        multiplier = 5
+        # allow for 10x more disagreement in atol, since this method is approximate
+        multiplier = 10
         for i in 1:n
             atol = sqrt(Σ[i, i] / ndraws) * 8 * multiplier
             @test μ_hat[i] ≈ μ[i] atol = atol
