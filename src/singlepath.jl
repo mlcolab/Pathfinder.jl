@@ -39,8 +39,8 @@ function pathfinder(
 )
     # compute trajectory
     θs, logpθs, ∇logpθs = maximize_with_trace(logp, ∇logp, θ₀, optimizer; kwargs...)
-    @assert length(logpθs) == length(∇logpθs)
     L = length(θs) - 1
+    @assert L + 1 == length(logpθs) == length(∇logpθs)
 
     # fit mv-normal distributions to trajectory
     qs = fit_mvnormals(θs, ∇logpθs; history_length=history_length)
