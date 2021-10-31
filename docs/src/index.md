@@ -25,8 +25,6 @@ Its extension, multi-path Pathfinder, runs Pathfinder multiple times.
 It returns a uniformly-weighted mixture model of the multivariate normal approximations of the individual runs.
 It also uses importance resampling to return samples that better approximate the target distribution.
 
-See [Usage](@ref).
-
 [^Zhang2021]: Lu Zhang, Bob Carpenter, Andrew Gelman, Aki Vehtari (2021).
               Pathfinder: Parallel quasi-Newton variational inference.
               arXiv: [2108.03782](https://arxiv.org/abs/2108.03782) [stat.ML].
