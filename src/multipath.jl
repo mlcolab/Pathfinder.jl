@@ -9,8 +9,9 @@
 
 Filter samples from a mixture of multivariate normal distributions fit using `pathfinder`.
 
-For `n=length(θ₀s)`, `n` parallel runs of pathfinder produce `n` multivariate normal
-approximations of the posterior. These are combined to a mixture model with uniform weights.
+For `nruns=length(θ₀s)`, `nruns` parallel runs of pathfinder produce `nruns` multivariate
+normal approximations of the posterior. These are combined to a mixture model with uniform
+weights.
 
 Draws from the components are then resampled with replacement. If `importance=true`, then
 Pareto smoothed importance resampling is used, so that the resulting draws better
@@ -19,7 +20,8 @@ approximate draws from the target distribution.
 # Arguments
 - `logp`: a callable that computes the log-density of the target distribution.
 - `∇logp`: a callable that computes the gradient of `logp`.
-- `θ₀s`: vector of initial points from which each optimization will begin
+- `θ₀s`: vector of length `nruns` of initial points of length `dim` from which each
+    single-path Pathfinder run will begin
 - `ndraws`: number of approximate draws to return
 
 # Keywords
@@ -29,7 +31,8 @@ approximate draws from the target distribution.
 # Returns
 - `q::Distributions.MixtureModel`: Uniformly weighted mixture of ELBO-maximizing
     multivariate normal distributions
-- `ϕ::Vector{<:AbstractVector{<:Real}}`: `ndraws` approxiate draws from target distribution
+- `ϕ::AbstractMatrix{<:Real}`: approximate draws from target distribution with size
+    `(dim, ndraws)`
 """
 function multipathfinder(
     logp,

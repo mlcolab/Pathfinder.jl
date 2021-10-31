@@ -9,7 +9,7 @@ bound (ELBO), or equivalently, minimizes the KL divergence between
 # Arguments
 - `logp`: a callable that computes the log-density of the target distribution.
 - `∇logp`: a callable that computes the gradient of `logp`.
-- `θ₀`: initial point from which to begin optimization
+- `θ₀`: initial point of length `dim` from which to begin optimization
 - `ndraws`: number of approximate draws to return
 
 # Keywords
@@ -23,8 +23,8 @@ This should only be set when `optimizer` is not an `Optim.LBFGS`.
 
 # Returns
 - `q::Distributions.MvNormal`: ELBO-maximizing multivariate normal distribution
-- `ϕ::Vector{<:AbstractVector{<:Real}}`: `ndraws` draws from multivariate normal
-- `logqϕ::Vector{<:Real}`: log-density of multivariate normal at `ϕ` values
+- `ϕ::AbstractMatrix{<:Real}`: draws from multivariate normal with size `(dim, ndraws)`
+- `logqϕ::Vector{<:Real}`: log-density of multivariate normal at columns of `ϕ`
 """
 function pathfinder(
     logp,
