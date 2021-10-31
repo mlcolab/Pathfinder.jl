@@ -3,7 +3,7 @@ function maximize_with_trace(f, ∇f, x₀, optimizer; kwargs...)
     g!(y, x) = (y .= .-∇f(x))
 
     function callback(states)
-        # terminate BFGS if optimization encounters NaNs
+        # terminate if optimization encounters NaNs
         s = states[end]
         md = s.metadata
         return isnan(s.value) || any(isnan, md["x"]) || any(isnan, md["g(x)"])
