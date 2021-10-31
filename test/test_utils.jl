@@ -13,12 +13,11 @@ function Pathfinder.rand_and_logpdf(rng, dist, ndraws)
     x = rand(rng, dist, ndraws)
     if x isa AbstractVector
         logpx = Distributions.logpdf.(dist, x)
-        xvec = x
+        x = collect(x')
     else
         logpx = Distributions.logpdf(dist, x)
-        xvec = collect(eachcol(x))
     end
-    return xvec, logpx
+    return x, logpx
 end
 
 # banana distribution

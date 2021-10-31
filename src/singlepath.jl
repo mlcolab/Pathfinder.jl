@@ -55,7 +55,7 @@ function pathfinder(
     # reuse existing draws; draw additional ones if necessary
     if ndraws_elbo < ndraws
         ϕnew, logqϕnew = rand_and_logpdf(rng, q, ndraws - ndraws_elbo)
-        append!(ϕ, ϕnew)
+        ϕ = hcat(ϕ, ϕnew)
         append!(logqϕ, logqϕnew)
     end
 

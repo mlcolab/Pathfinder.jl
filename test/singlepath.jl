@@ -17,8 +17,9 @@ using Test
             @test q.Σ isa Pathfinder.WoodburyPDMat
             @test q.Σ ≈ I
             @test size(q.Σ.B) == (n, 2) # history contains only 1 iteration
-            @test length(ϕ) == ndraws
-            @test logqϕ ≈ logpdf.(Ref(q), ϕ)
+            @test ϕ isa AbstractMatrix
+            @test size(ϕ) == (n, ndraws)
+            @test logqϕ ≈ logpdf(q, ϕ)
         end
     end
     @testset "MvNormal" begin

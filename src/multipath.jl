@@ -50,16 +50,21 @@ function multipathfinder(
     res = map(θ₀s) do θ₀
         return pathfinder(logp, ∇logp, θ₀, ndraws_per_run; rng=rng, kwargs...)
     end
-    qs, ϕs, logqϕs = ntuple(i -> getindex.(res, i), Val(3))
+    qs = reduce(vcat, first.(res))
+    ϕs = reduce(hcat, getindex.(res, 2))
 
     # draw samples from mixture of multivariate normal distributions
-    ϕsvec = reduce(vcat, ϕs)
-    ϕsample = if importance
-        log_ratios = logp.(ϕsvec) .- reduce(vcat, logqϕs)
-        resample(rng, ϕsvec, log_ratios, ndraws)
+    inds = axes(ϕs, 2)
+    sample_inds = if importance
+        logqϕs = reduce(vcat, last.(res))
+        log_ratios = map(((ϕ, logqϕ),) -> logp(ϕ) - logqϕ, zip(eachcol(ϕs), logqϕs))
+        resample(rng, inds, log_ratios, ndraws)
     else
-        resample(rng, ϕsvec, ndraws)
+        resample(rng, inds, ndraws)
     end
 
-    return Distributions.MixtureModel(qs), ϕsample
+    q = Distributions.MixtureModel(qs)
+    ϕ = ϕs[:, sample_inds]
+
+    return q, ϕ
 end
