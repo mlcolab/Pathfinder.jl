@@ -5,7 +5,7 @@ using Test
 
 @testset "single path pathfinder" begin
     @testset "IsoNormal" begin
-        # here pathfinder finds the exact solution after 1 iteration
+        # here pathfinder finds the exact solution on 1st iteration
         logp(x) = -sum(abs2, x) / 2
         ∇logp(x) = -x
         ndraws = 100
@@ -16,7 +16,9 @@ using Test
             @test q.μ ≈ zeros(n)
             @test q.Σ isa Pathfinder.WoodburyPDMat
             @test q.Σ ≈ I
-            @test size(q.Σ.B) == (n, 2) # history contains only 1 iteration
+            # at zeroth iteration, we already have exact mean and covariance,
+            # so history is empty
+            @test size(q.Σ.B) == (n, 0)
             @test length(ϕ) == ndraws
             @test logqϕ ≈ logpdf.(Ref(q), ϕ)
         end
