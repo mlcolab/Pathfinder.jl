@@ -46,11 +46,20 @@ function multipathfinder(
     end
 
     # run pathfinder independently from each starting point
-    # TODO: allow to be parallelized
-    res = map(θ₀s) do θ₀
-        return pathfinder(logp, ∇logp, θ₀, ndraws_per_run; rng=rng, kwargs...)
+    nruns = length(θ₀s)
+    # run pathfinder once to get output types
+    q₁, ϕ₁, logqϕ₁ = pathfinder(logp, ∇logp, first(θ₀s), ndraws_per_run; rng=rng, kwargs...)
+    qs = Vector{typeof(q₁)}(undef, nruns)
+    ϕs = Vector{typeof(ϕ₁)}(undef, nruns)
+    logqϕs = Vector{typeof(logqϕ₁)}(undef, nruns)
+    qs[1], ϕs[1], logqϕs[1] = q₁, ϕ₁, logqϕ₁
+    # execute remaining runs in parallel
+    Threads.@threads for i in 2:nruns
+        θ₀ = θ₀s[i]
+        qs[i], ϕs[i], logqϕs[i] = pathfinder(
+            logp, ∇logp, θ₀, ndraws_per_run; rng=rng, kwargs...
+        )
     end
-    qs, ϕs, logqϕs = ntuple(i -> getindex.(res, i), Val(3))
 
     # draw samples from mixture of multivariate normal distributions
     ϕsvec = reduce(vcat, ϕs)
