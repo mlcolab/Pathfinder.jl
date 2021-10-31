@@ -53,12 +53,24 @@ function multipathfinder(
     ϕs = Vector{typeof(ϕ₁)}(undef, nruns)
     logqϕs = Vector{typeof(logqϕ₁)}(undef, nruns)
     qs[1], ϕs[1], logqϕs[1] = q₁, ϕ₁, logqϕ₁
-    # execute remaining runs in parallel
-    Threads.@threads for i in 2:nruns
-        θ₀ = θ₀s[i]
-        qs[i], ϕs[i], logqϕs[i] = pathfinder(
-            logp, ∇logp, θ₀, ndraws_per_run; rng=rng, kwargs...
-        )
+    if nruns > 1
+        interval = 1:min(nruns - 1, Threads.nthreads())
+        # deepcopy logp and ∇logp in case it's a callable that mutates inner state
+        logps = [deepcopy(logp) for _ in interval]
+        ∇logps = [deepcopy(∇logp) for _ in interval]
+        # copy of RNG for each thread
+        rngs = [deepcopy(rng) for _ in interval]
+        # individual seeds for each run
+        seeds = rand(rng, UInt, nruns - 1)
+
+        Threads.@threads for i in 2:nruns
+            id = Threads.threadid()
+            rngᵢ = rngs[id]
+            Random.seed!(rngᵢ, seeds[i - 1])
+            qs[i], ϕs[i], logqϕs[i] = pathfinder(
+                logps[id], ∇logps[id], θ₀s[i], ndraws_per_run; rng=rngᵢ, kwargs...
+            )
+        end
     end
 
     # draw samples from mixture of multivariate normal distributions
