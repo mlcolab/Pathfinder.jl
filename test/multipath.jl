@@ -26,7 +26,7 @@ using Test
         Σ_hat = cov(ϕ .- Ref(μ_hat); corrected=false)
         # adapted from the MvNormal tests
         # allow for 3x disagreement in atol, since this method is approximate
-        multiplier = 3
+        multiplier = 5
         for i in 1:n
             atol = sqrt(Σ[i, i] / ndraws) * 8 * multiplier
             @test μ_hat[i] ≈ μ[i] atol = atol
