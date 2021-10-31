@@ -58,8 +58,7 @@ typeof(q)
 ```
 
 Note that while we could draw samples from `q` directly, these aren't equivalent to the samples returned by multi-path Pathfinder, which uses multiple importance sampling with Pareto-smoothed importance resampling to combine the individual runs.
-
-Let's draw exact samples from the funnel and compare them with Pathfinder's samples.
+Let's draw exact samples from the funnel and compare them with Pathfinder's samples and samples from `q` directly.
 
 ```@example 1
 using Plots
@@ -68,10 +67,15 @@ using Plots
 β₁ = @. randn() * exp(τ / 2)
 τ_approx = first.(ϕ)
 β₁_approx = getindex.(ϕ, 2)
+ϕ2 = rand(q, ndraws)
+τ_approx2 = ϕ2[1, :]
+β₁_approx2 = ϕ2[2, :]
 
 plt = scatter(β₁, τ; msw=0, ms=2, alpha=0.1, label="Exact")
-scatter!(β₁_approx, τ_approx;
-        msw=0, ms=2, alpha=0.5, xlims=(-15, 15), ylims=(-15, 15),
-        label="multi-path Pathfinder", xlabel="β₁", ylabel="τ", legend=true)
+scatter!(β₁_approx2, τ_approx2; msw=0, ms=2, alpha=0.2, label="multi-path Pathfinder w/o IR")
+scatter!(β₁_approx, τ_approx; msw=0, ms=2, alpha=0.2, label="multi-path Pathfinder")
+plot!(xlims=(-15, 15), ylims=(-15, 15), xlabel="β₁", ylabel="τ", legend=true)
 plt
 ```
+
+Here we can see that the mixture model (`q`) places too much probability mass on the lower part of the funnel, which is corrected by the importance resampling.
