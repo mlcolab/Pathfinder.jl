@@ -80,8 +80,6 @@ function Base.AbstractMatrix{T}(W::WoodburyPDMat) where {T}
     )
 end
 
-Base.size(W::WoodburyPDMat) = size(W.A)
-
 Base.getindex(W::WoodburyPDMat, inds...) = getindex(Matrix(W), inds...)
 
 Base.adjoint(W::WoodburyPDMat) = W
@@ -138,24 +136,24 @@ end
 
 PDMats.dim(W::WoodburyPDMat) = size(W.A, 1)
 
-function PDMats.invquad(W::WoodburyPDMat{<:Real}, x::AbstractVector{<:Real})
+function PDMats.invquad(W::WoodburyPDMat, x::AbstractVector{T}) where {T}
     v = W.Q' * (W.UA' \ x)
     n, m = size(W.B)
     k = min(m, n)
     return @views sum(abs2, W.UC' \ v[1:k]) + sum(abs2, v[(k + 1):n])
 end
 
-function PDMats.invquad!(
-    r::AbstractArray{T}, W::WoodburyPDMat, x::StridedMatrix{T}
-) where {T}
+function PDMats.invquad!(r::AbstractArray, W::WoodburyPDMat, x::StridedMatrix{T}) where {T}
     v = lmul!(W.Q', W.UA' \ x)
     k = minimum(size(W.B))
     @views ldiv!(W.UC', v[1:k, :])
-    colwise_sumsq!(r, v, true)
+    colwise_sumsq!(r, v)
     return r
 end
 
-function PDMats.unwhiten!(r::StridedVecOrMat, W::WoodburyPDMat, x::StridedVecOrMat)
+function PDMats.unwhiten!(
+    r::StridedVecOrMat{T}, W::WoodburyPDMat, x::StridedVecOrMat{T}
+) where {T}
     k = minimum(size(W.B))
     copyto!(r, x)
     @views lmul!(W.UC', x isa AbstractVector ? r[1:k] : r[1:k, :])
@@ -164,16 +162,16 @@ function PDMats.unwhiten!(r::StridedVecOrMat, W::WoodburyPDMat, x::StridedVecOrM
     return r
 end
 
-# duplicated from https://github.com/JuliaStats/PDMats.jl/blob/master/src/utils.jl
-function colwise_sumsq!(r::AbstractArray, a::AbstractMatrix, c::Real)
+# adapted from https://github.com/JuliaStats/PDMats.jl/blob/master/src/utils.jl
+function colwise_sumsq!(r::AbstractArray, a::AbstractMatrix)
     n = length(r)
     @assert n == size(a, 2)
-    for j in 1:n
+    @inbounds for j in 1:n
         v = zero(eltype(a))
-        @simd for i in 1:size(a, 1)
-            @inbounds v += abs2(a[i, j])
+        @simd for i in axes(a, 1)
+            v += abs2(a[i, j])
         end
-        r[j] = v * c
+        r[j] = v
     end
     return r
 end

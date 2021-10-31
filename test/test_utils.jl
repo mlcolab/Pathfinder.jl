@@ -1,4 +1,5 @@
 using LinearAlgebra
+using Pathfinder
 
 function rand_pd_mat(T, n)
     U = qr(randn(T, n, n)).Q
