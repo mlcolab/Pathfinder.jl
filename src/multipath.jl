@@ -79,7 +79,7 @@ function multipathfinder(
     q = Distributions.MixtureModel(qs)
     ϕ = ϕs[:, sample_inds]
 
-    # get component ids (i) of draws in ϕ
+    # get component ids (k) of draws in ϕ
     component_ids = cld.(sample_inds, ndraws_per_run)
 
     return q, ϕ, component_ids
