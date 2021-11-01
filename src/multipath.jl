@@ -10,12 +10,20 @@
 Filter samples from a mixture of multivariate normal distributions fit using `pathfinder`.
 
 For `nruns=length(θ₀s)`, `nruns` parallel runs of pathfinder produce `nruns` multivariate
-normal approximations of the posterior. These are combined to a mixture model with uniform
-weights.
+normal approximations ``q_k = q(\\phi | \\mu_k, \\Sigma_k)`` of the posterior. These are
+combined to a mixture model ``q`` with uniform weights.
 
-Draws from the components are then resampled with replacement. If `importance=true`, then
-Pareto smoothed importance resampling is used, so that the resulting draws better
-approximate draws from the target distribution.
+``q`` is augmented with the component index to generate random samples, that is, elements
+``(k, \\phi)`` are drawn from the augmented mixture model
+```math
+\\tilde{q}(\\phi, k | \\mu, \\Sigma) = K^{-1} q(\\phi | \\mu_k, \\Sigma_k),
+```
+where ``k`` is a component index, and ``K=`` `nruns`. These draws are then resampled with
+replacement. Discarding ``k`` from the samples would reproduce draws from ``q``.
+
+If `importance=true`, then Pareto smoothed importance resampling is used, so that the
+resulting draws better approximate draws from the target distribution ``p`` instead of
+``q``.
 
 # Arguments
 - `logp`: a callable that computes the log-density of the target distribution.
@@ -33,6 +41,8 @@ approximate draws from the target distribution.
     multivariate normal distributions
 - `ϕ::AbstractMatrix{<:Real}`: approximate draws from target distribution with size
     `(dim, ndraws)`
+- `component_inds::Vector{Int}`: Indices ``k`` of components in ``q`` from which each column
+in `ϕ` was drawn.
 """
 function multipathfinder(
     logp,
@@ -56,7 +66,7 @@ function multipathfinder(
     qs = reduce(vcat, first.(res))
     ϕs = reduce(hcat, getindex.(res, 2))
 
-    # draw samples from mixture of multivariate normal distributions
+    # draw samples from augmented mixture model
     inds = axes(ϕs, 2)
     sample_inds = if importance
         logqϕs = reduce(vcat, last.(res))
@@ -69,5 +79,8 @@ function multipathfinder(
     q = Distributions.MixtureModel(qs)
     ϕ = ϕs[:, sample_inds]
 
-    return q, ϕ
+    # get component ids (i) of draws in ϕ
+    component_ids = cld.(sample_inds, ndraws_per_run)
+
+    return q, ϕ, component_ids
 end
