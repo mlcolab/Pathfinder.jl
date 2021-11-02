@@ -17,6 +17,7 @@ makedocs(;
         "Home" => "index.md",
         "Single-path Pathfinder" => "pathfinder.md",
         "Multi-path Pathfinder" => "multipathfinder.md",
+        "Using Pathfinder with Turing" => "turing.md",
     ],
 )
 
