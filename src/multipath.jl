@@ -66,9 +66,7 @@ function multipathfinder(
     ϕs = similar(ϕ, size(ϕ, 1), nruns * ndraws_per_run)
     logqϕs = similar(logqϕ, nruns * ndraws_per_run)
     index_range = 1:ndraws_per_run
-    qs[1] = q
-    ϕs[:, index_range] .= ϕ
-    logqϕs[index_range] .= logqϕ
+    qs[1], ϕs[:, index_range], logqϕs[index_range] = q, ϕ, logqϕ
     if nruns > 1
         thread_range = 1:min(nruns - 1, Threads.nthreads())
         # deepcopy logp and ∇logp in case it's a callable that mutates inner state
@@ -81,15 +79,16 @@ function multipathfinder(
 
         Threads.@threads for i in 2:nruns
             thread = Threads.threadid()
+            θᵢ = θ₀s[i]
             rngᵢ = rngs[thread]
             Random.seed!(rngᵢ, seeds[i - 1])
             last_index = i * ndraws_per_run
             index_range = (last_index - ndraws_per_run + 1):last_index
-            qs[i], ϕ, logqϕ = pathfinder(
-                logps[thread], ∇logps[thread], θ₀s[i], ndraws_per_run; rng=rngᵢ, kwargs...
-            )
-            ϕs[:, index_range] .= ϕ
-            logqϕs[index_range] .= logqϕ
+            @async begin
+                qs[i], ϕs[:, index_range], logqϕs[index_range] = pathfinder(
+                    logps[thread], ∇logps[thread], θᵢ, ndraws_per_run; rng=rngᵢ, kwargs...
+                )
+            end
         end
     end
 
