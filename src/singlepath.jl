@@ -57,6 +57,9 @@ function pathfinder(
         ϕnew, logqϕnew = rand_and_logpdf(rng, q, ndraws - ndraws_elbo)
         ϕ = hcat(ϕ, ϕnew)
         append!(logqϕ, logqϕnew)
+    elseif ndraws < ndraws_elbo
+        ϕ = ϕ[:, 1:ndraws]
+        logqϕ = logqϕ[1:ndraws]
     end
 
     return q, ϕ, logqϕ
