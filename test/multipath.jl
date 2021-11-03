@@ -4,6 +4,8 @@ using ForwardDiff
 using Pathfinder
 using Test
 
+include("test_utils.jl")
+
 @testset "multi path pathfinder" begin
     @testset "MvNormal" begin
         n = 10
