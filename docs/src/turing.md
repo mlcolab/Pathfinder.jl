@@ -1,12 +1,12 @@
 # Using Pathfinder to initializing sampling with Turing
 
-If you have a _differentiable_ Turing model, then you can use Pathfinder to initialize its parameters.
-To demonstrate this, we'll use the linear regression tutorial from the Turing docs.
+If your Turing model as only continuous parameters, and the log-density is differentiable, then you can use Pathfinder to initialize its parameters.
+To demonstrate this, we'll use the [linear regression tutorial](https://turing.ml/stable/tutorials/05-linear-regression/) from the Turing docs.
 
 First, we load the packages.
 
 ```@example 1
-using Pathfinder, Random, RDatasets, Turing
+using ForwardDiff, Pathfinder, Random, RDatasets, Turing
 using MLDataUtils: shuffleobs, splitobs, rescale!
 Turing.setprogress!(false);
 nothing # hide
@@ -61,40 +61,34 @@ end
 model = linear_regression(train, train_target)
 ```
 
-Pathfinder expects the parameters to be in an unconstrained space, so for now we need to get into some Turing internals.
+Pathfinder expects the parameters to be in an unconstrained space.
+We can use Turing's mode estimation machinery to get the functions we need.
 
 ```@example 1
 rng = MersenneTwister(42)
-sampler = NUTS()
-spl = DynamicPPL.Sampler(sampler)
-vi = DynamicPPL.VarInfo(rng, model)
-DynamicPPL.link!(vi, spl)
-nparams = length(vi[spl])
-model(rng, vi, spl)
-
-logπ = Turing.Inference.gen_logπ(vi, spl, model)
-∂logπ∂θ = last ∘ Turing.Inference.gen_∂logπ∂θ(vi, spl, model)
+obj = optim_objective(model, MAP(); constrained=false)
+θ₀ = obj.init() # θ₀ is in unconstrained space
+logp(x) = -obj.obj(x)
+∇logp(x) = ForwardDiff.gradient(logp, x);
+nothing # hide
 ```
 
 Now we have what we need to run Pathfinder.
 We'll initialize with ``\theta_0 \sim \operatorname{Uniform}(-2, 2)`` as recommended by the Pathfinder paper.
 
-
 ```@example 1
-θ₀ = rand(rng, nparams) .* 4 .- 2
-θ = pathfinder(logπ, ∂logπ∂θ, θ₀, 1; rng)[2][:, 1]
+@. θ₀ = rand(rng) * 4 - 2
+q, ϕs = pathfinder(logp, ∇logp, θ₀, 1; rng)
 ```
 
 Then we transform the parameters back to the original (constrained) parameter space.
 
 ```@example 1
-vi[spl] = θ
-DynamicPPL.invlink!(vi, spl)
-x₀ = vi[spl]
+x₀ = obj.transform(ϕs[:, 1])
 ```
 
-Finally, we use this as the initial parameters for sampling.
+Finally, we use these as the initial parameters for sampling.
 
 ```@example 1
-chns = sample(rng, model, sampler, 3_000; init_params=x₀)
+chns = sample(rng, model, NUTS(), 3_000; init_params=x₀)
 ```
