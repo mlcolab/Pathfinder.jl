@@ -70,23 +70,23 @@ function multipathfinder(
     ϕs[:, index_range] .= ϕ
     logqϕs[index_range] .= logqϕ
     if nruns > 1
-        interval = 1:min(nruns - 1, Threads.nthreads())
+        thread_range = 1:min(nruns - 1, Threads.nthreads())
         # deepcopy logp and ∇logp in case it's a callable that mutates inner state
-        logps = [deepcopy(logp) for _ in interval]
-        ∇logps = [deepcopy(∇logp) for _ in interval]
+        logps = [deepcopy(logp) for _ in thread_range]
+        ∇logps = [deepcopy(∇logp) for _ in thread_range]
         # copy of RNG for each thread
-        rngs = [deepcopy(rng) for _ in interval]
+        rngs = [deepcopy(rng) for _ in thread_range]
         # individual seeds for each run
         seeds = rand(rng, UInt, nruns - 1)
 
         Threads.@threads for i in 2:nruns
-            id = Threads.threadid()
-            rngᵢ = rngs[id]
+            thread = Threads.threadid()
+            rngᵢ = rngs[thread]
             Random.seed!(rngᵢ, seeds[i - 1])
             last_index = i * ndraws_per_run
             index_range = (last_index - ndraws_per_run + 1):last_index
             qs[i], ϕ, logqϕ = pathfinder(
-                logps[id], ∇logps[id], θ₀s[i], ndraws_per_run; rng=rngᵢ, kwargs...
+                logps[thread], ∇logps[thread], θ₀s[i], ndraws_per_run; rng=rngᵢ, kwargs...
             )
             ϕs[:, index_range] .= ϕ
             logqϕs[index_range] .= logqϕ
