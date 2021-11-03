@@ -61,11 +61,14 @@ function multipathfinder(
     # run pathfinder independently from each starting point
     nruns = length(θ₀s)
     # run pathfinder once to get output types
-    q₁, ϕ₁, logqϕ₁ = pathfinder(logp, ∇logp, first(θ₀s), ndraws_per_run; rng=rng, kwargs...)
-    qs = Vector{typeof(q₁)}(undef, nruns)
-    ϕs = Vector{typeof(ϕ₁)}(undef, nruns)
-    logqϕs = Vector{typeof(logqϕ₁)}(undef, nruns)
-    qs[1], ϕs[1], logqϕs[1] = q₁, ϕ₁, logqϕ₁
+    q, ϕ, logqϕ = pathfinder(logp, ∇logp, first(θ₀s), ndraws_per_run; rng=rng, kwargs...)
+    qs = Vector{typeof(q)}(undef, nruns)
+    ϕs = similar(ϕ, size(ϕ, 1), nruns * ndraws_per_run)
+    logqϕs = similar(logqϕ, nruns * ndraws_per_run)
+    index_range = 1:ndraws_per_run
+    qs[1] = q
+    ϕs[:, index_range] .= ϕ
+    logqϕs[index_range] .= logqϕ
     if nruns > 1
         interval = 1:min(nruns - 1, Threads.nthreads())
         # deepcopy logp and ∇logp in case it's a callable that mutates inner state
@@ -80,29 +83,28 @@ function multipathfinder(
             id = Threads.threadid()
             rngᵢ = rngs[id]
             Random.seed!(rngᵢ, seeds[i - 1])
-            qs[i], ϕs[i], logqϕs[i] = pathfinder(
+            last_index = i * ndraws_per_run
+            index_range = (last_index - ndraws_per_run + 1):last_index
+            qs[i], ϕ, logqϕ = pathfinder(
                 logps[id], ∇logps[id], θ₀s[i], ndraws_per_run; rng=rngᵢ, kwargs...
             )
+            ϕs[:, index_range] .= ϕ
+            logqϕs[index_range] .= logqϕ
         end
     end
-    qs = reduce(vcat, first.(res))
-    ϕs = reduce(hcat, getindex.(res, 2))
 
     # draw samples from augmented mixture model
     inds = axes(ϕs, 2)
     sample_inds = if importance
-        logqϕs = reduce(vcat, last.(res))
-        log_ratios = map(((ϕ, logqϕ),) -> logp(ϕ) - logqϕ, zip(eachcol(ϕs), logqϕs))
+        log_ratios = logp.(eachcol(ϕs)) .- logqϕs
         resample(rng, inds, log_ratios, ndraws)
     else
         resample(rng, inds, ndraws)
     end
 
-    q = Distributions.MixtureModel(qs)
-    ϕ = ϕs[:, sample_inds]
-
+    qmix = Distributions.MixtureModel(qs)
     # get component ids (k) of draws in ϕ
     component_ids = cld.(sample_inds, ndraws_per_run)
 
-    return q, ϕ, component_ids
+    return qmix, ϕs[:, sample_inds], component_ids
 end
