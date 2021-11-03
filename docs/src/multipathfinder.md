@@ -47,7 +47,8 @@ Next, we create initial points for the Pathfinder runs.
 Now we run multi-path Pathfinder.
 
 ```@repl 1
-@time q, ϕ = multipathfinder(logp, ∇logp, θ₀s, ndraws; ndraws_per_run=ndraws ÷ nruns);
+ndraws_per_run = ndraws ÷ nruns
+@time q, ϕ, component_ids = multipathfinder(logp, ∇logp, θ₀s, ndraws; ndraws_per_run);
 ```
 
 The first return value is a uniformly-weighted `Distributions.MixtureModel`.
@@ -79,3 +80,10 @@ plt
 ```
 
 Here we can see that the mixture model (`q`) places too much probability mass on the lower part of the funnel, which is corrected by the importance resampling.
+
+We can check how much each component contributed to the returned sample.
+
+```@example 1
+histogram(component_ids; bins=(0:nruns) .+ 0.5, bar_width=0.8, xticks=1:nruns,
+          xlabel="Component index", ylabel="Count", legend=false)
+```

@@ -16,7 +16,7 @@ using Test
         logp(x) = logpdf(d, x)
         ∇logp(x) = ForwardDiff.gradient(logp, x)
         x₀s = [rand(Uniform(-2, 2), n) for _ in 1:nruns]
-        q, ϕ = multipathfinder(
+        q, ϕ, component_ids = multipathfinder(
             logp, ∇logp, x₀s, ndraws; ndraws_elbo=100, ndraws_per_run=ndraws_per_run
         )
         @test q isa MixtureModel
@@ -24,6 +24,9 @@ using Test
         @test Distributions.component_type(q) <: MvNormal
         @test ϕ isa AbstractMatrix
         @test size(ϕ) == (n, ndraws)
+        @test component_ids isa Vector{Int}
+        @test length(component_ids) == ndraws
+        @test extrema(component_ids) == (1, nruns)
         μ_hat = mean(ϕ; dims=2)
         Σ_hat = cov(ϕ .- μ_hat; dims=2, corrected=false)
         # adapted from the MvNormal tests
