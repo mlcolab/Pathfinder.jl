@@ -60,42 +60,33 @@ function multipathfinder(
 
     # run pathfinder independently from each starting point
     nruns = length(θ₀s)
-    # run pathfinder once to get output types
-    q, ϕ, logqϕ = pathfinder(logp, ∇logp, first(θ₀s), ndraws_per_run; rng=rng, kwargs...)
-    qs = Vector{typeof(q)}(undef, nruns)
-    ϕs = similar(ϕ, size(ϕ, 1), nruns * ndraws_per_run)
-    logqϕs = similar(logqϕ, nruns * ndraws_per_run)
-    index_range = 1:ndraws_per_run
-    qs[1], ϕs[:, index_range], logqϕs[index_range] = q, ϕ, logqϕ
-    if nruns > 1
-        thread_range = 1:min(nruns - 1, Threads.nthreads())
-        # deepcopy logp and ∇logp in case it's a callable that mutates inner state
-        logps = [deepcopy(logp) for _ in thread_range]
-        ∇logps = [deepcopy(∇logp) for _ in thread_range]
-        # copy of RNG for each thread
-        rngs = [deepcopy(rng) for _ in thread_range]
-        # individual seeds for each run
-        seeds = rand(rng, UInt, nruns - 1)
+    q₁, ϕ₁, logqϕ₁ = pathfinder(logp, ∇logp, θ₀s[1], ndraws_per_run; rng=rng, kwargs...)
+    qs = Vector{typeof(q₁)}(undef, nruns)
+    ϕs = Vector{typeof(ϕ₁)}(undef, nruns)
+    logqϕs = Vector{typeof(logqϕ₁)}(undef, nruns)
+    qs[1], ϕs[1], logqϕs[1] = q₁, ϕ₁, logqϕ₁
 
-        @sync Threads.@threads for i in 2:nruns
-            thread = Threads.threadid()
-            θᵢ = θ₀s[i]
-            rngᵢ = rngs[thread]
-            Random.seed!(rngᵢ, seeds[i - 1])
-            last_index = i * ndraws_per_run
-            index_range = (last_index - ndraws_per_run + 1):last_index
-            @async begin
-                qs[i], ϕs[:, index_range], logqϕs[index_range] = pathfinder(
-                    logps[thread], ∇logps[thread], θᵢ, ndraws_per_run; rng=rngᵢ, kwargs...
-                )
-            end
-        end
+    thread_range = 1:min(Threads.nthreads(), nruns)
+    rngs = [deepcopy(rng) for _ in thread_range]
+    logps = [deepcopy(logp) for _ in thread_range]
+    ∇logps = [deepcopy(∇logp) for _ in thread_range]
+    seeds = rand(rng, UInt, nruns - 1)
+
+    Threads.@threads for i in 2:nruns
+        id = Threads.threadid()
+        rngᵢ = rngs[id]
+        Random.seed!(rngᵢ, seeds[i - 1])
+        qs[i], ϕs[i], logqϕs[i] = pathfinder(
+            logps[id], ∇logps[id], θ₀s[i], ndraws_per_run; rng=rngᵢ, kwargs...
+        )
     end
+    ϕ = reduce(hcat, ϕs)
 
     # draw samples from augmented mixture model
-    inds = axes(ϕs, 2)
+    inds = axes(ϕ, 2)
     sample_inds = if importance
-        log_ratios = logp.(eachcol(ϕs)) .- logqϕs
+        logqϕ = reduce(vcat, logqϕs)
+        log_ratios = logp.(eachcol(ϕ)) .- logqϕ
         resample(rng, inds, log_ratios, ndraws)
     else
         resample(rng, inds, ndraws)
@@ -105,5 +96,5 @@ function multipathfinder(
     # get component ids (k) of draws in ϕ
     component_ids = cld.(sample_inds, ndraws_per_run)
 
-    return qmix, ϕs[:, sample_inds], component_ids
+    return qmix, ϕ[:, sample_inds], component_ids
 end
