@@ -82,7 +82,7 @@ We'll initialize with ``\theta_0 \sim \operatorname{Uniform}(-2, 2)`` as recomme
 
 ```@example 1
 θ₀ = rand(rng, nparams) .* 4 .- 2
-θ = pathfinder(logπ, ∂logπ∂θ, θ₀, 1; rng)[2][1, :]
+θ = pathfinder(logπ, ∂logπ∂θ, θ₀, 1; rng)[2][:, 1]
 ```
 
 Then we transform the parameters back to the original (constrained) parameter space.
