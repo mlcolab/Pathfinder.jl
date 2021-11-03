@@ -9,4 +9,7 @@ Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
 [compat]
 ForwardDiff = "0.10"
+MLDataUtils = "0.5"
 Plots = "1"
+RDatasets = "0.7"
+Turing = "0.19"
