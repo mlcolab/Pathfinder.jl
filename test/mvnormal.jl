@@ -35,7 +35,7 @@ include("test_utils.jl")
             rng = MersenneTwister(42)
             x2 = rand(rng, dist, ndraws)
             logpx2 = logpdf(dist, x2)
-            @test x ≈ collect(eachcol(x2))
+            @test x ≈ x2
             @test logpx ≈ logpx2
         end
 
@@ -55,7 +55,7 @@ include("test_utils.jl")
             rng = MersenneTwister(42)
             x2 = rand(rng, dist, ndraws)
             logpx2 = logpdf(dist, x2)
-            @test x ≈ collect(eachcol(x2))
+            @test x ≈ x2
             @test logpx ≈ logpx2
         end
 
@@ -69,7 +69,7 @@ include("test_utils.jl")
             rng = MersenneTwister(42)
             x2 = rand(rng, dist, ndraws)
             logpx2 = logpdf.(dist, x2)
-            @test x ≈ x2
+            @test x ≈ x2'
             @test logpx ≈ logpx2
         end
     end

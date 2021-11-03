@@ -65,8 +65,8 @@ using Plots
 
 τ = randn(ndraws) * 3
 β₁ = @. randn() * exp(τ / 2)
-τ_approx = first.(ϕ)
-β₁_approx = getindex.(ϕ, 2)
+τ_approx = ϕ[1, :]
+β₁_approx = ϕ[2, :]
 ϕ2 = rand(q, ndraws)
 τ_approx2 = ϕ2[1, :]
 β₁_approx2 = ϕ2[2, :]
