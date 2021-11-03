@@ -77,7 +77,7 @@ function multipathfinder(
         # individual seeds for each run
         seeds = rand(rng, UInt, nruns - 1)
 
-        Threads.@threads for i in 2:nruns
+        @sync Threads.@threads for i in 2:nruns
             thread = Threads.threadid()
             θᵢ = θ₀s[i]
             rngᵢ = rngs[thread]
