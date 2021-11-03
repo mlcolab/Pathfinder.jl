@@ -51,3 +51,8 @@ q
 q.μ
 q.Σ
 ```
+
+`ϕ` is a `Matrix` whose columns are the requested draws from `q`:
+```@repl 1
+ϕ
+```

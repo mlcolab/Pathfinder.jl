@@ -9,7 +9,7 @@ bound (ELBO), or equivalently, minimizes the KL divergence between
 # Arguments
 - `logp`: a callable that computes the log-density of the target distribution.
 - `∇logp`: a callable that computes the gradient of `logp`.
-- `θ₀`: initial point from which to begin optimization
+- `θ₀`: initial point of length `dim` from which to begin optimization
 - `ndraws`: number of approximate draws to return
 
 # Keywords
@@ -23,8 +23,8 @@ This should only be set when `optimizer` is not an `Optim.LBFGS`.
 
 # Returns
 - `q::Distributions.MvNormal`: ELBO-maximizing multivariate normal distribution
-- `ϕ::Vector{<:AbstractVector{<:Real}}`: `ndraws` draws from multivariate normal
-- `logqϕ::Vector{<:Real}`: log-density of multivariate normal at `ϕ` values
+- `ϕ::AbstractMatrix{<:Real}`: draws from multivariate normal with size `(dim, ndraws)`
+- `logqϕ::Vector{<:Real}`: log-density of multivariate normal at columns of `ϕ`
 """
 function pathfinder(
     logp,
@@ -39,8 +39,8 @@ function pathfinder(
 )
     # compute trajectory
     θs, logpθs, ∇logpθs = maximize_with_trace(logp, ∇logp, θ₀, optimizer; kwargs...)
-    @assert length(logpθs) == length(∇logpθs)
     L = length(θs) - 1
+    @assert L + 1 == length(logpθs) == length(∇logpθs)
 
     # fit mv-normal distributions to trajectory
     qs = fit_mvnormals(θs, ∇logpθs; history_length=history_length)
@@ -55,7 +55,7 @@ function pathfinder(
     # reuse existing draws; draw additional ones if necessary
     if ndraws_elbo < ndraws
         ϕnew, logqϕnew = rand_and_logpdf(rng, q, ndraws - ndraws_elbo)
-        append!(ϕ, ϕnew)
+        ϕ = hcat(ϕ, ϕnew)
         append!(logqϕ, logqϕnew)
     end
 
