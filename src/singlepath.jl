@@ -15,9 +15,9 @@ bound (ELBO), or equivalently, minimizes the KL divergence between
 # Keywords
 - `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
 - `optimizer::Optim.AbstractOptimizer`: Optimizer to be used for constructing trajectory.
-Defaults to `Optim.LBFGS(; m=5, linesearch=LineSearches.MoreThuente())`.
-- `history_length::Int=5`: Size of the history used to approximate the inverse Hessian.
-This should only be set when `optimizer` is not an `Optim.LBFGS`.
+Defaults to `Optim.LBFGS(; m=$DEFAULT_HISTORY_LENGTH, linesearch=$DEFAULT_LINE_SEARCH)`.
+- `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
+inverse Hessian. This should only be set when `optimizer` is not an `Optim.LBFGS`.
 - `ndraws_elbo::Int=5`: Number of draws used to estimate the ELBO
 - `kwargs...` : Remaining keywords are forwarded to `Optim.Options`.
 
@@ -33,7 +33,7 @@ function pathfinder(
     ndraws;
     rng::Random.AbstractRNG=Random.default_rng(),
     optimizer::Optim.AbstractOptimizer=DEFAULT_OPTIMIZER,
-    history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : 5,
+    history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
     ndraws_elbo::Int=5,
     kwargs...,
 )
