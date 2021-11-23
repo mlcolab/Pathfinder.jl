@@ -1,7 +1,7 @@
 name = "Pathfinder"
 uuid = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
 authors = ["Seth Axen <seth.axen@gmail.com> and contributors"]
-version = "0.2.2"
+version = "0.2.3"
 
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -18,7 +18,7 @@ StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 Distributions = "0.25"
 Optim = "1.4"
 PDMats = "0.11"
-PSIS = "0.1"
+PSIS = "0.2"
 StatsBase = "0.33"
 StatsFuns = "0.9"
 julia = "1"

@@ -30,8 +30,8 @@ using Test
         μ_hat = mean(ϕ; dims=2)
         Σ_hat = cov(ϕ .- μ_hat; dims=2, corrected=false)
         # adapted from the MvNormal tests
-        # allow for 10x disagreement in atol, since this method is approximate
-        multiplier = 10
+        # allow for 15x disagreement in atol, since this method is approximate
+        multiplier = 15
         for i in 1:n
             atol = sqrt(Σ[i, i] / ndraws) * 8 * multiplier
             @test μ_hat[i] ≈ μ[i] atol = atol
