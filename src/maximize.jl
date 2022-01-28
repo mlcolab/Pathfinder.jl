@@ -1,21 +1,42 @@
-function maximize_with_trace(f, ∇f, x₀, optimizer; kwargs...)
-    negf(x) = -f(x)
-    g!(y, x) = (y .= .-∇f(x))
-
-    function callback(states)
-        # terminate if optimization encounters NaNs
-        s = states[end]
-        md = s.metadata
-        return isnan(s.value) || any(isnan, md["x"]) || any(isnan, md["g(x)"])
+function build_optim_function(f, ∇f)
+    fun(x, _) = -f(x)
+    function grad!(n∇fx, x, _...)
+        n∇fx .= .-∇f(x)
+        return n∇fx
     end
-    options = Optim.Options(;
-        store_trace=true, extended_trace=true, callback=callback, kwargs...
+    # TODO: use AbstractDifferentiation to provide Hessian, etc in case needed
+    return GalacticOptim.OptimizationFunction(
+        fun, GalacticOptim.AutoForwardDiff(); grad=grad!
     )
-    res = Optim.optimize(negf, g!, x₀, optimizer, options)
+end
 
-    xs = Optim.x_trace(res)::Vector{typeof(Optim.minimizer(res))}
-    fxs = -Optim.f_trace(res)
-    ∇fxs = map(tr -> -tr.metadata["g(x)"], Optim.trace(res))::typeof(xs)
+function build_optim_problem(optim_fun, x₀; kwargs...)
+    return GalacticOptim.OptimizationProblem(optim_fun, x₀; kwargs...)
+end
 
+function optimize_with_trace(prob, optimizer; kwargs...)
+    u0 = prob.u0
+    fun = prob.f
+    grad! = fun.grad
+    function ∇f(x)
+        ∇fx = similar(x)
+        grad!(∇fx, x)
+        rmul!(∇fx, -1)
+        return ∇fx
+    end
+    # caches for the trace of x, f(x), and ∇f(x)
+    xs = typeof(u0)[]
+    fxs = typeof(fun.f(u0, Any))[]
+    ∇fxs = typeof(similar(u0))[]
+    function callback(x, nfx, args...)
+        ∇fx = ∇f(x)
+        # terminate if optimization encounters NaNs
+        (isnan(nfx) || any(isnan, x) || any(isnan, ∇fx)) && return true
+        push!(xs, x)
+        push!(fxs, -nfx)
+        push!(∇fxs, ∇fx)
+        return false
+    end
+    GalacticOptim.solve(prob, optimizer; cb=callback)
     return xs, fxs, ∇fxs
 end
