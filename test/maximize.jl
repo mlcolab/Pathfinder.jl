@@ -1,6 +1,7 @@
 using ForwardDiff
 using GalacticOptim
 using LinearAlgebra
+using NLopt
 using Optim
 using Pathfinder
 using Test
@@ -22,19 +23,24 @@ include("test_utils.jl")
     @test prob.f === fun
     @test prob.u0 == x0
 
-    @testset "$Topt" for Topt in (Optim.BFGS, Optim.LBFGS, Optim.ConjugateGradient)
-        optimizer = Topt()
+    optimizers = [
+        Optim.BFGS(), Optim.LBFGS(), Optim.ConjugateGradient(), NLopt.Opt(:LD_LBFGS, n)
+    ]
+    @testset "$(typeof(optimizer))" for optimizer in optimizers
         xs, fxs, ∇fxs = Pathfinder.optimize_with_trace(prob, optimizer)
-        options = Optim.Options(; store_trace=true, extended_trace=true)
-        res = Optim.optimize(
-            x -> -f(x), (y, x) -> copyto!(y, -∇f(x)), x0, optimizer, options
-        )
-        @test Optim.iterations(res) == length(xs) - 1
-        @test Optim.x_trace(res) ≈ xs
-        @test Optim.minimizer(res) ≈ xs[end]
         @test xs[1] ≈ x0
         @test xs[end] ≈ μ
         @test fxs ≈ f.(xs)
-        @test ∇fxs ≈ ∇f.(xs)
+        @test ∇fxs ≈ ∇f.(xs) atol = 1e-4
+
+        if !(optimizer isa NLopt.Opt)
+            options = Optim.Options(; store_trace=true, extended_trace=true)
+            res = Optim.optimize(
+                x -> -f(x), (y, x) -> copyto!(y, -∇f(x)), x0, optimizer, options
+            )
+            @test Optim.iterations(res) == length(xs) - 1
+            @test Optim.x_trace(res) ≈ xs
+            @test Optim.minimizer(res) ≈ xs[end]
+        end
     end
 end
