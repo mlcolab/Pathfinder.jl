@@ -14,8 +14,10 @@ bound (ELBO), or equivalently, minimizes the KL divergence between
 
 # Keywords
 - `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
-- `optimizer::Optim.AbstractOptimizer`: Optimizer to be used for constructing trajectory.
-Defaults to `Optim.LBFGS(; m=$DEFAULT_HISTORY_LENGTH, linesearch=$DEFAULT_LINE_SEARCH)`.
+- `optimizer`: Optimizer to be used for constructing trajectory. Can be any optimizer
+compatible with GalacticOptim, so long as it supports callbacks. Defaults to
+`Optim.LBFGS(; m=$DEFAULT_HISTORY_LENGTH, linesearch=$DEFAULT_LINE_SEARCH)`. See
+https://galacticoptim.sciml.ai/stable for details.
 - `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
 inverse Hessian. This should only be set when `optimizer` is not an `Optim.LBFGS`.
 - `ndraws_elbo::Int=5`: Number of draws used to estimate the ELBO
