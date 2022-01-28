@@ -1,7 +1,7 @@
 """
     pathfinder(logp, ∇logp, θ₀::AbstractVector{<:Real}, ndraws::Int; kwargs...)
 
-Find the best multivariate normal approximation encountered while optimizing `logp`.
+Find the best multivariate normal approximation encountered while minimizing `logp`.
 
 The multivariate normal approximation returned is the one that maximizes the evidence lower
 bound (ELBO), or equivalently, minimizes the KL divergence between
@@ -26,19 +26,73 @@ inverse Hessian. This should only be set when `optimizer` is not an `Optim.LBFGS
 - `ϕ::AbstractMatrix{<:Real}`: draws from multivariate normal with size `(dim, ndraws)`
 - `logqϕ::Vector{<:Real}`: log-density of multivariate normal at columns of `ϕ`
 """
+function pathfinder end
+function pathfinder(logp, ∇logp, θ₀, ndraws; kwargs...)
+    optim_fun = build_optim_function(logp, ∇logp)
+    return pathfinder(optim_fun, θ₀, ndraws; kwargs...)
+end
+
+"""
+    pathfinder(
+        f::GalacticOptim.OptimizationFunction,
+        θ₀::AbstractVector{<:Real},
+        ndraws::Int;
+        kwargs...,
+    )
+
+Find the best multivariate normal approximation encountered while maximizing `f`.
+
+`f` is a user-created optimization function that represents the negative log density and
+must have the necessary features (e.g. a gradient function or specified automatic
+differentiation type) for the chosen optimization algorithm. For details, see
+https://galacticoptim.sciml.ai/stable/API/optimization_function/.
+
+See [`pathfinder`](@ref) for a description of remaining arguments.
+"""
 function pathfinder(
-    logp,
-    ∇logp,
+    optim_fun::GalacticOptim.OptimizationFunction,
     θ₀,
     ndraws;
     rng::Random.AbstractRNG=Random.default_rng(),
-    optimizer::Optim.AbstractOptimizer=DEFAULT_OPTIMIZER,
+    optimizer=DEFAULT_OPTIMIZER,
     history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
     ndraws_elbo::Int=5,
     kwargs...,
 )
+    optim_prob = build_optim_problem(optim_fun, θ₀; kwargs...)
+    return pathfinder(
+        optim_prob,
+        ndraws;
+        rng=rng,
+        optimizer=optimizer,
+        history_length=history_length,
+        ndraws_elbo=ndraws_elbo,
+    )
+end
+
+"""
+    pathfinder(prob::GalacticOptim.OptimizationProblem, ndraws::Int; kwargs...)
+
+Find the best multivariate normal approximation encountered while solving `prob`.
+
+`prob` is a user-created optimization problem that represents the negative log density and
+an initial position and must have the necessary features (e.g. a gradient function or
+specified automatic differentiation type) for the chosen optimization algorithm. For
+details, see https://galacticoptim.sciml.ai/stable/API/optimization_problem/.
+
+See [`pathfinder`](@ref) for a description of remaining arguments.
+"""
+function pathfinder(
+    optim_prob::GalacticOptim.OptimizationProblem,
+    ndraws;
+    rng::Random.AbstractRNG=Random.default_rng(),
+    optimizer=DEFAULT_OPTIMIZER,
+    history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
+    ndraws_elbo::Int=5,
+)
+    logp(x) = -optim_prob.f.f(x, Any)
     # compute trajectory
-    θs, logpθs, ∇logpθs = maximize_with_trace(logp, ∇logp, θ₀, optimizer; kwargs...)
+    θs, logpθs, ∇logpθs = optimize_with_trace(optim_prob, optimizer)
     L = length(θs) - 1
     @assert L + 1 == length(logpθs) == length(∇logpθs)
 
