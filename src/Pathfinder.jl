@@ -3,12 +3,16 @@ module Pathfinder
 using Distributions: Distributions
 using LinearAlgebra
 using Optim: Optim, LineSearches
+using GalacticOptim: GalacticOptim
 using PDMats: PDMats
 using PSIS: PSIS
 using Random
 using Statistics: Statistics
 using StatsBase: StatsBase
 using StatsFuns: log2π
+
+# ensure that ForwardDiff is conditionally loaded by GalacticOptim
+using ForwardDiff: ForwardDiff
 
 export pathfinder, multipathfinder
 
