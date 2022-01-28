@@ -24,7 +24,7 @@ const DEFAULT_OPTIMIZER = Optim.LBFGS(;
 )
 
 include("woodbury.jl")
-include("maximize.jl")
+include("optimize.jl")
 include("inverse_hessian.jl")
 include("mvnormal.jl")
 include("elbo.jl")
