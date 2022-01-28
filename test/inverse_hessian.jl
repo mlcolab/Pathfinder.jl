@@ -52,10 +52,12 @@ end
         nocedal_wright_scaling(α, s, y) = fill!(similar(α), dot(y, s) / sum(abs2, y))
         θ₀ = 10 * randn(n)
 
+        fun = Pathfinder.build_optim_function(logp, ∇logp)
+        prob = Pathfinder.build_optim_problem(fun, θ₀)
         optimizer = Optim.LBFGS(;
             m=history_length, linesearch=Optim.LineSearches.MoreThuente()
         )
-        θs, logpθs, ∇logpθs = Pathfinder.maximize_with_trace(logp, ∇logp, θ₀, optimizer)
+        θs, logpθs, ∇logpθs = Pathfinder.optimize_with_trace(prob, optimizer)
 
         # run lbfgs_inverse_hessians with the same initialization as Optim.LBFGS
         Hs = Pathfinder.lbfgs_inverse_hessians(
