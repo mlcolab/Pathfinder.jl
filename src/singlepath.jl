@@ -16,19 +16,18 @@ bound (ELBO), or equivalently, minimizes the KL divergence between
 - `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
 - `optimizer`: Optimizer to be used for constructing trajectory. Can be any optimizer
 compatible with GalacticOptim, so long as it supports callbacks. Defaults to
-`Optim.LBFGS(; m=$DEFAULT_HISTORY_LENGTH, linesearch=$DEFAULT_LINE_SEARCH)`. See
-https://galacticoptim.sciml.ai/stable for details.
+`Optim.LBFGS(; m=$DEFAULT_HISTORY_LENGTH, linesearch=LineSearches.MoreThuente())`. See the
+[GalacticOptim.jl documentation](https://galacticoptim.sciml.ai/stable) for details.
 - `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
 inverse Hessian. This should only be set when `optimizer` is not an `Optim.LBFGS`.
 - `ndraws_elbo::Int=5`: Number of draws used to estimate the ELBO
-- `kwargs...` : Remaining keywords are forwarded to `Optim.Options`.
+- `kwargs...` : Remaining keywords are forwarded to `GalacticOptim.OptimizationProblem`.
 
 # Returns
 - `q::Distributions.MvNormal`: ELBO-maximizing multivariate normal distribution
 - `ϕ::AbstractMatrix{<:Real}`: draws from multivariate normal with size `(dim, ndraws)`
 - `logqϕ::Vector{<:Real}`: log-density of multivariate normal at columns of `ϕ`
 """
-function pathfinder end
 function pathfinder(logp, ∇logp, θ₀, ndraws; kwargs...)
     optim_fun = build_optim_function(logp, ∇logp)
     return pathfinder(optim_fun, θ₀, ndraws; kwargs...)
@@ -47,7 +46,7 @@ Find the best multivariate normal approximation encountered while maximizing `f`
 `f` is a user-created optimization function that represents the negative log density and
 must have the necessary features (e.g. a gradient function or specified automatic
 differentiation type) for the chosen optimization algorithm. For details, see
-https://galacticoptim.sciml.ai/stable/API/optimization_function/.
+[GalacticOptim.jl: OptimizationFunction](https://galacticoptim.sciml.ai/stable/API/optimization_function/).
 
 See [`pathfinder`](@ref) for a description of remaining arguments.
 """
@@ -80,7 +79,8 @@ Find the best multivariate normal approximation encountered while solving `prob`
 `prob` is a user-created optimization problem that represents the negative log density and
 an initial position and must have the necessary features (e.g. a gradient function or
 specified automatic differentiation type) for the chosen optimization algorithm. For
-details, see https://galacticoptim.sciml.ai/stable/API/optimization_problem/.
+details, see
+[GalacticOptim.jl: Defining OptimizationProblems](https://galacticoptim.sciml.ai/stable/API/optimization_problem/).
 
 See [`pathfinder`](@ref) for a description of remaining arguments.
 """

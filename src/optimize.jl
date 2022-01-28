@@ -14,7 +14,7 @@ function build_optim_problem(optim_fun, x₀; kwargs...)
     return GalacticOptim.OptimizationProblem(optim_fun, x₀; kwargs...)
 end
 
-function optimize_with_trace(prob, optimizer; kwargs...)
+function optimize_with_trace(prob, optimizer)
     u0 = prob.u0
     fun = prob.f
     grad! = fun.grad
