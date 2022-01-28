@@ -29,6 +29,9 @@ function optimize_with_trace(prob, optimizer; kwargs...)
     fxs = typeof(fun.f(u0, Any))[]
     ∇fxs = typeof(similar(u0))[]
     function callback(x, nfx, args...)
+        # NOTE: GalacticOptim doesn't have an interface for accessing the gradient trace,
+        # so we need to recompute it ourselves
+        # see https://github.com/SciML/GalacticOptim.jl/issues/149
         ∇fx = ∇f(x)
         # terminate if optimization encounters NaNs
         (isnan(nfx) || any(isnan, x) || any(isnan, ∇fx)) && return true
