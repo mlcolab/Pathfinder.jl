@@ -94,7 +94,7 @@ function pathfinder(
     if optim_prob.f.grad === nothing || optim_prob.f.grad isa Bool
         throw(ArgumentError("optimization function must define a gradient function."))
     end
-    logp(x) = -optim_prob.f.f(x, Any)
+    logp(x) = -optim_prob.f.f(x, nothing)
     # compute trajectory
     θs, logpθs, ∇logpθs = optimize_with_trace(optim_prob, optimizer)
     L = length(θs) - 1
