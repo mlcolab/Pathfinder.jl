@@ -67,14 +67,7 @@ function pathfinder(
     kwargs...,
 )
     optim_prob = build_optim_problem(optim_fun, θ₀; kwargs...)
-    return pathfinder(
-        optim_prob,
-        ndraws;
-        rng=rng,
-        optimizer=optimizer,
-        history_length=history_length,
-        ndraws_elbo=ndraws_elbo,
-    )
+    return pathfinder(optim_prob, ndraws; rng, optimizer, history_length, ndraws_elbo)
 end
 
 """
@@ -108,7 +101,7 @@ function pathfinder(
     @assert L + 1 == length(logpθs) == length(∇logpθs)
 
     # fit mv-normal distributions to trajectory
-    qs = fit_mvnormals(θs, ∇logpθs; history_length=history_length)
+    qs = fit_mvnormals(θs, ∇logpθs; history_length)
 
     # find ELBO-maximizing distribution
     lopt, elbo, ϕ, logqϕ = maximize_elbo(rng, logp, qs[2:end], ndraws_elbo)

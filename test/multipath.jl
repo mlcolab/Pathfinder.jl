@@ -17,7 +17,7 @@ using Test
         ∇logp(x) = ForwardDiff.gradient(logp, x)
         x₀s = [rand(Uniform(-2, 2), n) for _ in 1:nruns]
         q, ϕ, component_ids = multipathfinder(
-            logp, ∇logp, x₀s, ndraws; ndraws_elbo=100, ndraws_per_run=ndraws_per_run
+            logp, ∇logp, x₀s, ndraws; ndraws_elbo=100, ndraws_per_run
         )
         @test q isa MixtureModel
         @test ncomponents(q) == nruns

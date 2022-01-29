@@ -61,7 +61,7 @@ function multipathfinder(
     # run pathfinder independently from each starting point
     # TODO: allow to be parallelized
     res = map(θ₀s) do θ₀
-        return pathfinder(logp, ∇logp, θ₀, ndraws_per_run; rng=rng, kwargs...)
+        return pathfinder(logp, ∇logp, θ₀, ndraws_per_run; rng, kwargs...)
     end
     qs = reduce(vcat, first.(res))
     ϕs = reduce(hcat, getindex.(res, 2))

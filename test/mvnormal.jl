@@ -17,9 +17,10 @@ include("test_utils.jl")
         fun = Pathfinder.build_optim_function(logp; ad_backend)
         prob = Pathfinder.build_optim_problem(fun, θ₀)
         optimizer = Optim.LBFGS()
+        history_length = optimizer.m
         θs, logpθs, ∇logpθs = Pathfinder.optimize_with_trace(prob, optimizer)
-        Σs = Pathfinder.lbfgs_inverse_hessians(θs, ∇logpθs; history_length=optimizer.m)
-        dists = @inferred Pathfinder.fit_mvnormals(θs, ∇logpθs; history_length=optimizer.m)
+        Σs = Pathfinder.lbfgs_inverse_hessians(θs, ∇logpθs; history_length)
+        dists = @inferred Pathfinder.fit_mvnormals(θs, ∇logpθs; history_length)
         @test dists isa Vector{<:MvNormal{Float64,<:Pathfinder.WoodburyPDMat}}
         @test Σs ≈ getproperty.(dists, :Σ)
         @test θs .+ Σs .* ∇logpθs ≈ getproperty.(dists, :μ)

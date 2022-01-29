@@ -61,7 +61,7 @@ end
 
         # run lbfgs_inverse_hessians with the same initialization as Optim.LBFGS
         Hs = Pathfinder.lbfgs_inverse_hessians(
-            θs, ∇logpθs; history_length=history_length, Hinit=nocedal_wright_scaling
+            θs, ∇logpθs; history_length, Hinit=nocedal_wright_scaling
         )
         ss = diff(θs)
         ps = (Hs .* ∇logpθs)[1:(end - 1)]
