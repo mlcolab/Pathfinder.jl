@@ -48,11 +48,11 @@ end
         n = 10
         history_length = 5
         logp(x) = logp_banana(x)
-        ∇logp(x) = ForwardDiff.gradient(logp, x)
         nocedal_wright_scaling(α, s, y) = fill!(similar(α), dot(y, s) / sum(abs2, y))
         θ₀ = 10 * randn(n)
 
-        fun = Pathfinder.build_optim_function(logp, ∇logp)
+        ad_backend = AD.ForwardDiffBackend()
+        fun = Pathfinder.build_optim_function(logp; ad_backend)
         prob = Pathfinder.build_optim_problem(fun, θ₀)
         optimizer = Optim.LBFGS(;
             m=history_length, linesearch=Optim.LineSearches.MoreThuente()

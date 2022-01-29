@@ -1,3 +1,4 @@
+using AbstractDifferentiation
 using Distributions
 using ForwardDiff
 using Optim
@@ -11,9 +12,9 @@ include("test_utils.jl")
     @testset "fit_mvnormals" begin
         n = 10
         logp(x) = logp_banana(x)
-        ∇logp(x) = ForwardDiff.gradient(logp, x)
         θ₀ = 10 * randn(n)
-        fun = Pathfinder.build_optim_function(logp, ∇logp)
+        ad_backend = AD.ForwardDiffBackend()
+        fun = Pathfinder.build_optim_function(logp; ad_backend)
         prob = Pathfinder.build_optim_problem(fun, θ₀)
         optimizer = Optim.LBFGS()
         θs, logpθs, ∇logpθs = Pathfinder.optimize_with_trace(prob, optimizer)

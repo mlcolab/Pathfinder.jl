@@ -50,9 +50,7 @@ using Test
         x0 = randn(5)
         prob = GalacticOptim.OptimizationProblem(logp, x0, nothing)
         @test_throws ArgumentError pathfinder(prob, 10)
-        fun = GalacticOptim.OptimizationFunction(
-            logp, GalacticOptim.AutoForwardDiff(); grad=true
-        )
+        fun = GalacticOptim.OptimizationFunction(logp, GalacticOptim.AutoForwardDiff())
         prob = GalacticOptim.OptimizationProblem(fun, x0, nothing)
         @test_throws ArgumentError pathfinder(prob, 10)
     end
