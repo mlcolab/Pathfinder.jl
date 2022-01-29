@@ -1,5 +1,6 @@
 module Pathfinder
 
+using AbstractDifferentiation: AD
 using Distributions: Distributions
 # ensure that ForwardDiff is conditionally loaded by GalacticOptim
 using ForwardDiff: ForwardDiff
