@@ -30,12 +30,12 @@ inverse Hessian. This should only be set when `optimizer` is not an `Optim.LBFGS
 - `ϕ::AbstractMatrix{<:Real}`: draws from multivariate normal with size `(dim, ndraws)`
 - `logqϕ::Vector{<:Real}`: log-density of multivariate normal at columns of `ϕ`
 """
-function pathfinder(logp, ∇logp, θ₀, ndraws; ad_backend=AD.ForwardDiffBackend(), kwargs...)
-    optim_fun = build_optim_function(logp, ∇logp; ad_backend)
-    return pathfinder(optim_fun, θ₀, ndraws; kwargs...)
-end
 function pathfinder(logp, θ₀, ndraws; ad_backend=AD.ForwardDiffBackend(), kwargs...)
     optim_fun = build_optim_function(logp; ad_backend)
+    return pathfinder(optim_fun, θ₀, ndraws; kwargs...)
+end
+function pathfinder(logp, ∇logp, θ₀, ndraws; ad_backend=AD.ForwardDiffBackend(), kwargs...)
+    optim_fun = build_optim_function(logp, ∇logp; ad_backend)
     return pathfinder(optim_fun, θ₀, ndraws; kwargs...)
 end
 
