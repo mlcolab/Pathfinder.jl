@@ -9,7 +9,7 @@ bound (ELBO), or equivalently, minimizes the KL divergence between
 # Arguments
 - `logp`: a callable that computes the log-density of the target distribution.
 - `∇logp`: a callable that computes the gradient of `logp`. If not provided, `logp` is
-automatically differentiated using the backend specified in `ad_backend`.
+    automatically differentiated using the backend specified in `ad_backend`.
 - `θ₀`: initial point of length `dim` from which to begin optimization
 - `ndraws`: number of approximate draws to return
 
@@ -17,11 +17,11 @@ automatically differentiated using the backend specified in `ad_backend`.
 - `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend.
 - `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
 - `optimizer`: Optimizer to be used for constructing trajectory. Can be any optimizer
-compatible with GalacticOptim, so long as it supports callbacks. Defaults to
-`Optim.LBFGS(; m=$DEFAULT_HISTORY_LENGTH, linesearch=LineSearches.MoreThuente())`. See the
-[GalacticOptim.jl documentation](https://galacticoptim.sciml.ai/stable) for details.
+    compatible with GalacticOptim, so long as it supports callbacks. Defaults to
+    `Optim.LBFGS(; m=$DEFAULT_HISTORY_LENGTH, linesearch=LineSearches.MoreThuente())`. See
+    the [GalacticOptim.jl documentation](https://galacticoptim.sciml.ai/stable) for details.
 - `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
-inverse Hessian. This should only be set when `optimizer` is not an `Optim.LBFGS`.
+    inverse Hessian. This should only be set when `optimizer` is not an `Optim.LBFGS`.
 - `ndraws_elbo::Int=5`: Number of draws used to estimate the ELBO
 - `kwargs...` : Remaining keywords are forwarded to `GalacticOptim.OptimizationProblem`.
 

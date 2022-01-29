@@ -28,7 +28,7 @@ resulting draws better approximate draws from the target distribution ``p`` inst
 # Arguments
 - `logp`: a callable that computes the log-density of the target distribution.
 - `∇logp`: a callable that computes the gradient of `logp`. If not provided, `logp` is
-automatically differentiated using the backend specified in `ad_backend`.
+    automatically differentiated using the backend specified in `ad_backend`.
 - `θ₀s::AbstractVector{AbstractVector{<:Real}}`: vector of length `nruns` of initial points
     of length `dim` from which each single-path Pathfinder run will begin
 - `ndraws::Int`: number of approximate draws to return
@@ -45,7 +45,7 @@ automatically differentiated using the backend specified in `ad_backend`.
 - `ϕ::AbstractMatrix{<:Real}`: approximate draws from target distribution with size
     `(dim, ndraws)`
 - `component_inds::Vector{Int}`: Indices ``k`` of components in ``q`` from which each column
-in `ϕ` was drawn.
+    in `ϕ` was drawn.
 """
 function multipathfinder(logp, θ₀s, ndraws; ad_backend=AD.ForwardDiffBackend(), kwargs...)
     optim_fun = build_optim_function(logp; ad_backend)
