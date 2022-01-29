@@ -1,5 +1,5 @@
 """
-    pathfinder(logp, ∇logp, θ₀::AbstractVector{<:Real}, ndraws::Int; kwargs...)
+    pathfinder(logp[, ∇logp], θ₀::AbstractVector{<:Real}, ndraws::Int; kwargs...)
 
 Find the best multivariate normal approximation encountered while minimizing `logp`.
 
@@ -8,11 +8,13 @@ bound (ELBO), or equivalently, minimizes the KL divergence between
 
 # Arguments
 - `logp`: a callable that computes the log-density of the target distribution.
-- `∇logp`: a callable that computes the gradient of `logp`.
+- `∇logp`: a callable that computes the gradient of `logp`. If not provided, `logp` is
+automatically differentiated using the backend specified in `ad_backend`.
 - `θ₀`: initial point of length `dim` from which to begin optimization
 - `ndraws`: number of approximate draws to return
 
 # Keywords
+- `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend.
 - `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
 - `optimizer`: Optimizer to be used for constructing trajectory. Can be any optimizer
 compatible with GalacticOptim, so long as it supports callbacks. Defaults to
@@ -28,8 +30,12 @@ inverse Hessian. This should only be set when `optimizer` is not an `Optim.LBFGS
 - `ϕ::AbstractMatrix{<:Real}`: draws from multivariate normal with size `(dim, ndraws)`
 - `logqϕ::Vector{<:Real}`: log-density of multivariate normal at columns of `ϕ`
 """
-function pathfinder(logp, ∇logp, θ₀, ndraws; kwargs...)
-    optim_fun = build_optim_function(logp, ∇logp)
+function pathfinder(logp, ∇logp, θ₀, ndraws; ad_backend=AD.ForwardDiffBackend(), kwargs...)
+    optim_fun = build_optim_function(logp, ∇logp; ad_backend)
+    return pathfinder(optim_fun, θ₀, ndraws; kwargs...)
+end
+function pathfinder(logp, θ₀, ndraws; ad_backend=AD.ForwardDiffBackend(), kwargs...)
+    optim_fun = build_optim_function(logp; ad_backend)
     return pathfinder(optim_fun, θ₀, ndraws; kwargs...)
 end
 
