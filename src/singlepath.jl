@@ -43,9 +43,9 @@ end
 
 Find the best multivariate normal approximation encountered while maximizing `f`.
 
-`f` is a user-created optimization function that represents the negative log density and
-must have the necessary features (e.g. a gradient function or specified automatic
-differentiation type) for the chosen optimization algorithm. For details, see
+`f` is a user-created optimization function that represents the negative log density with
+its gradient and must have the necessary features (e.g. a Hessian function or specified
+automatic differentiation type) for the chosen optimization algorithm. For details, see
 [GalacticOptim.jl: OptimizationFunction](https://galacticoptim.sciml.ai/stable/API/optimization_function/).
 
 See [`pathfinder`](@ref) for a description of remaining arguments.
@@ -76,10 +76,10 @@ end
 
 Find the best multivariate normal approximation encountered while solving `prob`.
 
-`prob` is a user-created optimization problem that represents the negative log density and
-an initial position and must have the necessary features (e.g. a gradient function or
-specified automatic differentiation type) for the chosen optimization algorithm. For
-details, see
+`prob` is a user-created optimization problem that represents the negative log density with
+its gradient, an initial position and must have the necessary features (e.g. a Hessian
+function or specified automatic differentiation type) for the chosen optimization algorithm.
+For details, see
 [GalacticOptim.jl: Defining OptimizationProblems](https://galacticoptim.sciml.ai/stable/API/optimization_problem/).
 
 See [`pathfinder`](@ref) for a description of remaining arguments.
@@ -92,6 +92,9 @@ function pathfinder(
     history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
     ndraws_elbo::Int=5,
 )
+    if optim_prob.f.grad === nothing || optim_prob.f.grad isa Bool
+        throw(ArgumentError("optimization function must define a gradient function."))
+    end
     logp(x) = -optim_prob.f.f(x, Any)
     # compute trajectory
     θs, logpθs, ∇logpθs = optimize_with_trace(optim_prob, optimizer)

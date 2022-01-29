@@ -1,5 +1,7 @@
 using LinearAlgebra
 using Distributions
+using ForwardDiff
+using GalacticOptim
 using Pathfinder
 using Test
 
@@ -42,5 +44,16 @@ using Test
         rng = MersenneTwister(38)
         q, _, _ = pathfinder(logp, ∇logp, x₀, 10; rng=rng, ndraws_elbo=100)
         @test q.Σ ≈ Σ rtol = 1e-1
+    end
+    @testset "errors if no gradient provided" begin
+        logp(x) = -sum(abs2, x) / 2
+        x0 = randn(5)
+        prob = GalacticOptim.OptimizationProblem(logp, x0, nothing)
+        @test_throws ArgumentError pathfinder(prob, 10)
+        fun = GalacticOptim.OptimizationFunction(
+            logp, GalacticOptim.AutoForwardDiff(); grad=true
+        )
+        prob = GalacticOptim.OptimizationProblem(fun, x0, nothing)
+        @test_throws ArgumentError pathfinder(prob, 10)
     end
 end
