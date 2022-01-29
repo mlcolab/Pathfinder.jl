@@ -1,6 +1,6 @@
 function build_optim_function(f, ∇f)
     fun(x, _) = -f(x)
-    function grad!(n∇fx, x, _...)
+    function grad!(n∇fx, x, p...)
         n∇fx .= .-∇f(x)
         return n∇fx
     end
@@ -11,7 +11,7 @@ function build_optim_function(f, ∇f)
 end
 
 function build_optim_problem(optim_fun, x₀; kwargs...)
-    return GalacticOptim.OptimizationProblem(optim_fun, x₀; kwargs...)
+    return GalacticOptim.OptimizationProblem(optim_fun, x₀, nothing; kwargs...)
 end
 
 function optimize_with_trace(prob, optimizer)
@@ -20,13 +20,13 @@ function optimize_with_trace(prob, optimizer)
     grad! = fun.grad
     function ∇f(x)
         ∇fx = similar(x)
-        grad!(∇fx, x)
+        grad!(∇fx, x, nothing)
         rmul!(∇fx, -1)
         return ∇fx
     end
     # caches for the trace of x, f(x), and ∇f(x)
     xs = typeof(u0)[]
-    fxs = typeof(fun.f(u0, Any))[]
+    fxs = typeof(fun.f(u0, nothing))[]
     ∇fxs = typeof(similar(u0))[]
     function callback(x, nfx, args...)
         # NOTE: GalacticOptim doesn't have an interface for accessing the gradient trace,
