@@ -41,4 +41,10 @@ using Test
             @test isapprox(Σ_hat[i, j], Σ[i, j], atol=atol)
         end
     end
+    @testset "errors if no gradient provided" begin
+        logp(x) = -sum(abs2, x) / 2
+        x0s = [randn(5) for _ in 1:10]
+        fun = GalacticOptim.OptimizationFunction(logp, GalacticOptim.AutoForwardDiff())
+        @test_throws ArgumentError multipathfinder(fun, x0s, 10)
+    end
 end
