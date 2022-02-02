@@ -1,10 +1,15 @@
 """
     pathfinder(logp[, ∇logp], θ₀::AbstractVector{<:Real}, ndraws::Int; kwargs...)
 
-Find the best multivariate normal approximation encountered while minimizing `logp`.
+Find the best multivariate normal approximation encountered while maximizing `logp`.
 
-The multivariate normal approximation returned is the one that maximizes the evidence lower
-bound (ELBO), or equivalently, minimizes the KL divergence between
+From an optimization trajectory, Pathfinder constructs a sequence of (multivariate normal)
+approximations to the distribution specified by `logp`. The approximation that maximizes the
+evidence lower bound (ELBO), or equivalently, minimizes the KL divergence between the
+approximation and the true distribution, is returned.
+
+The covariance of the multivariate normal distribution is an inverse Hessian approximation
+constructed using at most the previous `history_length` steps.
 
 # Arguments
 - `logp`: a callable that computes the log-density of the target distribution.
@@ -47,7 +52,7 @@ end
         kwargs...,
     )
 
-Find the best multivariate normal approximation encountered while maximizing `f`.
+Find the best multivariate normal approximation encountered while minimizing `f`.
 
 `f` is a user-created optimization function that represents the negative log density with
 its gradient and must have the necessary features (e.g. a Hessian function or specified
