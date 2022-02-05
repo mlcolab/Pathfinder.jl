@@ -1,23 +1,28 @@
-using LinearAlgebra
+using AbstractDifferentiation
 using Distributions
 using ForwardDiff
+using LinearAlgebra
+using GalacticOptim
 using Pathfinder
+using ReverseDiff
 using Test
 
 @testset "multi path pathfinder" begin
     @testset "MvNormal" begin
+        rng = MersenneTwister(42)
         n = 10
         nruns = 20
         ndraws = 1000_000
         ndraws_per_run = ndraws ÷ nruns
-        Σ = rand_pd_mat(Float64, n)
-        μ = randn(n)
+        Σ = rand_pd_mat(rng, Float64, n)
+        μ = randn(rng, n)
         d = MvNormal(μ, Σ)
         logp(x) = logpdf(d, x)
         ∇logp(x) = ForwardDiff.gradient(logp, x)
-        x₀s = [rand(Uniform(-2, 2), n) for _ in 1:nruns]
+        x₀s = [rand(rng, Uniform(-2, 2), n) for _ in 1:nruns]
+        rng = MersenneTwister(76)
         q, ϕ, component_ids = multipathfinder(
-            logp, ∇logp, x₀s, ndraws; ndraws_elbo=100, ndraws_per_run
+            logp, ∇logp, x₀s, ndraws; ndraws_elbo=100, ndraws_per_run, rng
         )
         @test q isa MixtureModel
         @test ncomponents(q) == nruns
@@ -39,6 +44,15 @@ using Test
         for i in 1:n, j in 1:n
             atol = sqrt(Σ[i, i] * Σ[j, j] / ndraws) * 10 * multiplier
             @test isapprox(Σ_hat[i, j], Σ[i, j], atol=atol)
+        end
+
+        rng = MersenneTwister(76)
+        ad_backend = AD.ReverseDiffBackend()
+        q2, ϕ2, component_ids2 = multipathfinder(
+            logp, x₀s, ndraws; ndraws_elbo=100, ndraws_per_run, rng, ad_backend
+        )
+        for (c1, c2) in zip(q.components, q2.components)
+            @test c1 ≈ c2 atol = 1e-6
         end
     end
     @testset "errors if no gradient provided" begin
