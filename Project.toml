@@ -1,7 +1,7 @@
 name = "Pathfinder"
 uuid = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
 authors = ["Seth Axen <seth.axen@gmail.com> and contributors"]
-version = "0.3.0-DEV"
+version = "0.3.0"
 
 [deps]
 AbstractDifferentiation = "c29ec348-61ec-40c8-8164-b8c60e9d9f3d"
