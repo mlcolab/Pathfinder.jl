@@ -48,8 +48,6 @@ function optimize_with_trace(prob, optimizer)
         # so we need to recompute it ourselves
         # see https://github.com/SciML/GalacticOptim.jl/issues/149
         ∇fx = ∇f(x)
-        # terminate if optimization encounters NaNs
-        (isnan(nfx) || any(isnan, x) || any(isnan, ∇fx)) && return true
         # some backends mutate x, so we must copy it
         push!(xs, copy(x))
         push!(fxs, -nfx)
