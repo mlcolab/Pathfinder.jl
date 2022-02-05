@@ -1,3 +1,4 @@
+using AbstractDifferentiation
 using Distributions
 using ForwardDiff
 using Optim
@@ -11,12 +12,15 @@ include("test_utils.jl")
     @testset "fit_mvnormals" begin
         n = 10
         logp(x) = logp_banana(x)
-        ∇logp(x) = ForwardDiff.gradient(logp, x)
         θ₀ = 10 * randn(n)
+        ad_backend = AD.ForwardDiffBackend()
+        fun = Pathfinder.build_optim_function(logp; ad_backend)
+        prob = Pathfinder.build_optim_problem(fun, θ₀)
         optimizer = Optim.LBFGS()
-        θs, logpθs, ∇logpθs = Pathfinder.maximize_with_trace(logp, ∇logp, θ₀, optimizer)
-        Σs = Pathfinder.lbfgs_inverse_hessians(θs, ∇logpθs; history_length=optimizer.m)
-        dists = @inferred Pathfinder.fit_mvnormals(θs, ∇logpθs; history_length=optimizer.m)
+        history_length = optimizer.m
+        θs, logpθs, ∇logpθs = Pathfinder.optimize_with_trace(prob, optimizer)
+        Σs = Pathfinder.lbfgs_inverse_hessians(θs, ∇logpθs; history_length)
+        dists = @inferred Pathfinder.fit_mvnormals(θs, ∇logpθs; history_length)
         @test dists isa Vector{<:MvNormal{Float64,<:Pathfinder.WoodburyPDMat}}
         @test Σs ≈ getproperty.(dists, :Σ)
         @test θs .+ Σs .* ∇logpθs ≈ getproperty.(dists, :μ)

@@ -48,18 +48,20 @@ end
         n = 10
         history_length = 5
         logp(x) = logp_banana(x)
-        ∇logp(x) = ForwardDiff.gradient(logp, x)
         nocedal_wright_scaling(α, s, y) = fill!(similar(α), dot(y, s) / sum(abs2, y))
         θ₀ = 10 * randn(n)
 
+        ad_backend = AD.ForwardDiffBackend()
+        fun = Pathfinder.build_optim_function(logp; ad_backend)
+        prob = Pathfinder.build_optim_problem(fun, θ₀)
         optimizer = Optim.LBFGS(;
             m=history_length, linesearch=Optim.LineSearches.MoreThuente()
         )
-        θs, logpθs, ∇logpθs = Pathfinder.maximize_with_trace(logp, ∇logp, θ₀, optimizer)
+        θs, logpθs, ∇logpθs = Pathfinder.optimize_with_trace(prob, optimizer)
 
         # run lbfgs_inverse_hessians with the same initialization as Optim.LBFGS
         Hs = Pathfinder.lbfgs_inverse_hessians(
-            θs, ∇logpθs; history_length=history_length, Hinit=nocedal_wright_scaling
+            θs, ∇logpθs; history_length, Hinit=nocedal_wright_scaling
         )
         ss = diff(θs)
         ps = (Hs .* ∇logpθs)[1:(end - 1)]

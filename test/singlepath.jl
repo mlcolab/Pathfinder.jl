@@ -1,6 +1,10 @@
-using LinearAlgebra
+using AbstractDifferentiation
 using Distributions
+using ForwardDiff
+using GalacticOptim
+using LinearAlgebra
 using Pathfinder
+using ReverseDiff
 using Test
 
 @testset "single path pathfinder" begin
@@ -40,7 +44,17 @@ using Test
         ∇logp(x) = -(P * x)
         x₀ = [2.08, 3.77, -1.26, -0.97, -3.91]
         rng = MersenneTwister(38)
-        q, _, _ = pathfinder(logp, ∇logp, x₀, 10; rng=rng, ndraws_elbo=100)
+        ad_backend = AD.ReverseDiffBackend()
+        q, _, _ = @inferred pathfinder(logp, x₀, 10; rng, ndraws_elbo=100, ad_backend)
         @test q.Σ ≈ Σ rtol = 1e-1
+    end
+    @testset "errors if no gradient provided" begin
+        logp(x) = -sum(abs2, x) / 2
+        x0 = randn(5)
+        prob = GalacticOptim.OptimizationProblem(logp, x0, nothing)
+        @test_throws ArgumentError pathfinder(prob, 10)
+        fun = GalacticOptim.OptimizationFunction(logp, GalacticOptim.AutoForwardDiff())
+        prob = GalacticOptim.OptimizationProblem(fun, x0, nothing)
+        @test_throws ArgumentError pathfinder(prob, 10)
     end
 end

@@ -1,7 +1,11 @@
 module Pathfinder
 
+using AbstractDifferentiation: AD
 using Distributions: Distributions
+# ensure that ForwardDiff is conditionally loaded by GalacticOptim
+using ForwardDiff: ForwardDiff
 using LinearAlgebra
+using GalacticOptim: GalacticOptim
 using Optim: Optim, LineSearches
 using PDMats: PDMats
 using PSIS: PSIS
@@ -21,7 +25,7 @@ const DEFAULT_OPTIMIZER = Optim.LBFGS(;
 )
 
 include("woodbury.jl")
-include("maximize.jl")
+include("optimize.jl")
 include("inverse_hessian.jl")
 include("mvnormal.jl")
 include("elbo.jl")
