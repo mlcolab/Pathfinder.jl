@@ -28,6 +28,11 @@ constructed using at most the previous `history_length` steps.
 - `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
     inverse Hessian. This should only be set when `optimizer` is not an `Optim.LBFGS`.
 - `ndraws_elbo::Int=5`: Number of draws used to estimate the ELBO
+- `nretries::Int=5`: Number of times to retry the optimization if it fails. Before every
+    restart, a new initial point is drawn using `resample_fun`.
+- `resample_fun`: A callable with the signature `resample_fun(rng, θ₀)` that updates a copy
+    of `θ₀` in-place to generate a new initial point. Defaults to drawing all elements from
+    the `Uniform(-2, 2)` distribution.
 - `kwargs...` : Remaining keywords are forwarded to `GalacticOptim.OptimizationProblem`.
 
 # Returns
@@ -95,22 +100,37 @@ function pathfinder(
     optimizer=DEFAULT_OPTIMIZER,
     history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
     ndraws_elbo::Int=5,
+    nretries::Int=5,
+    resample_fun=(rng, x) -> rand!(rng, Distributions.Uniform(-2, 2), x),
 )
     if optim_prob.f.grad === nothing || optim_prob.f.grad isa Bool
         throw(ArgumentError("optimization function must define a gradient function."))
     end
     logp(x) = -optim_prob.f.f(x, nothing)
-    # compute trajectory
-    θs, logpθs, ∇logpθs = optimize_with_trace(optim_prob, optimizer)
-    L = length(θs) - 1
-    @assert L + 1 == length(logpθs) == length(∇logpθs)
+    elbo = convert(float(eltype(optim_prob.u0)), NaN)
+    itry = 0
+    local θs, logpθs, ∇logpθs, L, qs, lopt, elbo, ϕ, logqϕ
+    while isnan(elbo) && itry < nretries
+        if itry > 0
+            θ₀ = resample_fun(rng, similar(optim_prob.u0))
+            optim_prob = build_optim_problem(optim_prob.f, θ₀)
+        end
 
-    # fit mv-normal distributions to trajectory
-    qs = fit_mvnormals(θs, ∇logpθs; history_length)
+        # compute trajectory
+        θs, logpθs, ∇logpθs = optimize_with_trace(optim_prob, optimizer)
+        L = length(θs) - 1
+        @assert L + 1 == length(logpθs) == length(∇logpθs)
 
-    # find ELBO-maximizing distribution
-    lopt, elbo, ϕ, logqϕ = maximize_elbo(rng, logp, qs[2:end], ndraws_elbo)
-    @info "Optimized for $L iterations. Maximum ELBO of $(round(elbo; digits=2)) reached at iteration $lopt."
+        # fit mv-normal distributions to trajectory
+        qs = fit_mvnormals(θs, ∇logpθs; history_length)
+
+        # find ELBO-maximizing distribution
+        lopt, elbo, ϕ, logqϕ = maximize_elbo(rng, logp, qs[2:end], ndraws_elbo)
+
+        itry += 1
+    end
+
+    @info "Optimized for $L iterations (tries: $itry). Maximum ELBO of $(round(elbo; digits=2)) reached at iteration $lopt."
 
     # get parameters of ELBO-maximizing distribution
     q = qs[lopt + 1]
