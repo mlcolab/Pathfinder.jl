@@ -111,10 +111,7 @@ function pathfinder(
     itry = 0
     local θs, logpθs, ∇logpθs, L, qs, lopt, elbo, ϕ, logqϕ
     while isnan(elbo) && itry < nretries
-        if itry > 0
-            θ₀ = resample_fun(rng, similar(optim_prob.u0))
-            optim_prob = build_optim_problem(optim_prob.f, θ₀)
-        end
+        itry > 0 && Setfield.@set optim_prob.u0 = resample_fun(rng, similar(optim_prob.u0))
 
         # compute trajectory
         θs, logpθs, ∇logpθs = optimize_with_trace(optim_prob, optimizer)
