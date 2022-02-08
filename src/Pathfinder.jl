@@ -10,7 +10,6 @@ using Optim: Optim, LineSearches
 using PDMats: PDMats
 using PSIS: PSIS
 using Random
-using Setfield: Setfield
 using Statistics: Statistics
 using StatsBase: StatsBase
 using StatsFuns: log2π
