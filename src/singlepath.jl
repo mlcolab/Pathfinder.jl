@@ -110,18 +110,19 @@ function pathfinder(
     elbo = convert(float(eltype(optim_prob.u0)), NaN)
     itry = 0
     local θs, logpθs, ∇logpθs, L, qs, lopt, elbo, ϕ, logqϕ
+    prob = optim_prob
     while !isfinite(elbo) && itry < nretries
         if itry > 0
             if !GalacticOptim.isinplace(optim_prob)
                 @warn "Will not re-initialize optimization problem because it is not in-placeable."
                 break
             end
-            optim_prob = deepcopy(optim_prob)  # avoid mutating user-provided object
-            resample_fun(rng, optim_prob.u0)
+            prob = deepcopy(optim_prob)  # avoid mutating user-provided object
+            resample_fun(rng, prob.u0)
         end
 
         # compute trajectory
-        θs, logpθs, ∇logpθs = optimize_with_trace(optim_prob, optimizer)
+        θs, logpθs, ∇logpθs = optimize_with_trace(prob, optimizer)
         L = length(θs) - 1
         @assert L + 1 == length(logpθs) == length(∇logpθs)
 
