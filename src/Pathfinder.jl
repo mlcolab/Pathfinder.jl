@@ -38,6 +38,9 @@ function __init__()
     Requires.@require DynamicHMC = "bbc10e6e-7c05-544b-b16e-64fede858acb" begin
         include("integration/dynamichmc.jl")
     end
+    Requires.@require AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d" begin
+        include("integration/advancedhmc.jl")
+    end
 end
 
 end
