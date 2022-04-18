@@ -154,13 +154,13 @@ end
             @test @inferred(quad(W, x)) ≈ dot(x, Wmat, x)
 
             u = randn(T, n)
-            @test quad(W, unwhiten(inv(W), u)) ≈ dot(u, u)
+            @test quad(W, Pathfinder.invunwhiten!(similar(u), W, u)) ≈ dot(u, u)
 
             X = randn(T, n, 100)
             @test @inferred(quad(W, X)) ≈ quad(PDMats.PDMat(Symmetric(Wmat)), X)
 
             U = randn(T, n, 100)
-            @test quad(W, unwhiten(inv(W), U)) ≈ vec(sum(abs2, U; dims=1))
+            @test quad(W, Pathfinder.invunwhiten!(similar(U), W, U)) ≈ vec(sum(abs2, U; dims=1))
         end
 
         @testset "PDMats.invquad" begin
