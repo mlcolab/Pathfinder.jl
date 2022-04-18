@@ -1,7 +1,7 @@
 name: IntegrationTest
 on:
   push:
-    branches: [master]
+    branches: [main]
     tags: [v*]
   pull_request:
 jobs:
@@ -16,6 +16,7 @@ jobs:
         arch: [x64]
         package:
           - DynamicHMC
+          - AdvancedHMC
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
