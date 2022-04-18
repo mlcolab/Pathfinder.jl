@@ -139,6 +139,30 @@ end
             @test @inferred(unwhiten(W, X)) ≈ M * X
         end
 
+        @testset "invunwhiten!" begin
+            M = decompose(W)
+
+            x = randn(T, n)
+            @test @inferred(Pathfinder.invunwhiten!(similar(x), W, x)) ≈ M' \ x
+
+            X = randn(T, n, 100)
+            @test @inferred(Pathfinder.invunwhiten!(similar(X), W, X)) ≈ M' \ X
+        end
+
+        @testset "PDMats.quad" begin
+            x = randn(T, n)
+            @test @inferred(quad(W, x)) ≈ dot(x, Wmat, x)
+
+            u = randn(T, n)
+            @test quad(W, unwhiten(inv(W), u)) ≈ dot(u, u)
+
+            X = randn(T, n, 100)
+            @test @inferred(quad(W, X)) ≈ quad(PDMats.PDMat(Symmetric(Wmat)), X)
+
+            U = randn(T, n, 100)
+            @test quad(W, unwhiten(inv(W), U)) ≈ vec(sum(abs2, U; dims=1))
+        end
+
         @testset "PDMats.invquad" begin
             x = randn(T, n)
             @test @inferred(invquad(W, x)) ≈ dot(x, inv(Wmat), x)
