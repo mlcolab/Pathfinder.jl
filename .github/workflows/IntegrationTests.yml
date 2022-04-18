@@ -27,7 +27,7 @@ jobs:
           julia --project=docs -e '
             using Pkg
             test_path = joinpath(pwd(), "test", "integration", "${{ matrix.package }}")
-            Pkg.activate(PackageSpec(path=test_path))
+            Pkg.activate(test_path)
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()
             include(joinpath(test_path, "runtests.jl"))'
