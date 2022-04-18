@@ -38,7 +38,7 @@ end
         A = Atype === :diag ? rand_pd_diag_mat(T, n) : rand_pd_mat(T, n)
         B = randn(T, n, k)
         D = Dtype === :diag ? rand_pd_diag_mat(T, k) : rand_pd_mat(T, k)
-        W = @inferred WoodburyPDMat(A, B, D)
+        W = @inferred WoodburyPDMat{T} WoodburyPDMat(A, B, D)
         Wmat = A + B * D * B'
 
         @testset "basic" begin
@@ -61,7 +61,7 @@ end
         end
 
         @testset "inv" begin
-            invW = @inferred inv(W)
+            invW = @inferred WoodburyPDMat{T} inv(W)
             @test eltype(invW) === T
             invWmat = inv(Matrix(W))
             @test invW isa WoodburyPDMat
