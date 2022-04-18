@@ -34,4 +34,10 @@ include("resample.jl")
 include("singlepath.jl")
 include("multipath.jl")
 
+function __init__()
+    Requires.@require DynamicHMC = "bbc10e6e-7c05-544b-b16e-64fede858acb" begin
+        include("integration/dynamichmc.jl")
+    end
+end
+
 end
