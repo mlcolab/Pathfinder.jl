@@ -139,7 +139,7 @@ end
                 reporter=NoProgressReport(),
             )
             @test result_hmc4.κ.M⁻¹ === result_pf[1].Σ
-            compare_estimates(identity, result_hmc4.chain, result_hmc4.chain)
+            compare_estimates(identity, result_hmc4.chain, result_hmc1.chain)
         end
     end
 end
