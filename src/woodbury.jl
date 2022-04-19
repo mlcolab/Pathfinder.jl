@@ -151,6 +151,21 @@ function PDMats.invquad!(r::AbstractArray, W::WoodburyPDMat, x::StridedMatrix{T}
     return r
 end
 
+function PDMats.quad!(r::AbstractArray, W::WoodburyPDMat, x::StridedMatrix{T}) where {T}
+    v = lmul!(W.Q', W.UA * x)
+    k = minimum(size(W.B))
+    @views lmul!(W.UC, v[1:k, :])
+    colwise_sumsq!(r, v)
+    return r
+end
+
+function PDMats.quad(W::WoodburyPDMat, x::AbstractVector{T}) where {T}
+    v = W.Q' * (W.UA * x)
+    n, m = size(W.B)
+    k = min(m, n)
+    return @views sum(abs2, W.UC * v[1:k]) + sum(abs2, v[(k + 1):n])
+end
+
 function PDMats.unwhiten!(
     r::StridedVecOrMat{T}, W::WoodburyPDMat, x::StridedVecOrMat{T}
 ) where {T}
@@ -159,6 +174,17 @@ function PDMats.unwhiten!(
     @views lmul!(W.UC', x isa AbstractVector ? r[1:k] : r[1:k, :])
     lmul!(W.Q, r)
     lmul!(W.UA', r)
+    return r
+end
+
+function invunwhiten!(
+    r::StridedVecOrMat{T}, W::WoodburyPDMat, x::StridedVecOrMat{T}
+) where {T}
+    k = minimum(size(W.B))
+    copyto!(r, x)
+    @views ldiv!(W.UC, x isa AbstractVector ? r[1:k] : r[1:k, :])
+    lmul!(W.Q, r)
+    ldiv!(W.UA, r)
     return r
 end
 

@@ -10,6 +10,7 @@ using Optim: Optim, LineSearches
 using PDMats: PDMats
 using PSIS: PSIS
 using Random
+using Requires: Requires
 using Statistics: Statistics
 using StatsBase: StatsBase
 using StatsFuns: log2π
@@ -32,5 +33,14 @@ include("elbo.jl")
 include("resample.jl")
 include("singlepath.jl")
 include("multipath.jl")
+
+function __init__()
+    Requires.@require DynamicHMC = "bbc10e6e-7c05-544b-b16e-64fede858acb" begin
+        include("integration/dynamichmc.jl")
+    end
+    Requires.@require AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d" begin
+        include("integration/advancedhmc.jl")
+    end
+end
 
 end
