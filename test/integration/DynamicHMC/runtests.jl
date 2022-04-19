@@ -30,6 +30,17 @@ function (prob::RegressionProblem)(θ)
     return lp
 end
 
+function compare_estimates(f, post1, post2, α=0.9)
+    p = (1 - α) / 2
+    m1, v1 = mean_and_var(f.(post1))
+    m2, v2 = mean_and_var(f.(post2))
+    # NOTE: a more strict test would compute MCSE here
+    s = sqrt.(v1 .+ v2)
+    m = m1 - m2
+    bounds = quantile.(Normal.(0, s), p)
+    @test all(bounds .< m .< -bounds)
+end
+
 @testset "DynamicHMC integration" begin
     A = Diagonal(rand(5))
     B = randn(5, 2)
@@ -87,23 +98,48 @@ end
         ∇logp(x) = LogDensityProblems.logdensity_and_gradient(∇P, x)[2]
         θ₀ = rand(rng, Uniform(-2, 2), LogDensityProblems.dimension(P))
         result_pf = pathfinder(logp, ∇logp, θ₀, 1; rng)
-        result_hmc2 = mcmc_with_warmup(
-            rng,
-            ∇P,
-            ndraws;
-            initialization=(;
-                q=result_pf[2][:, 1], κ=GaussianKineticEnergy(result_pf[1].Σ)
-            ),
-            warmup_stages=default_warmup_stages(; middle_steps=0, doubling_stages=0),
-            reporter=NoProgressReport(),
-        )
-        # check that the posterior means are approximately equal
         m1, v1 = mean_and_var(result_hmc1.chain)
-        m2, v2 = mean_and_var(result_hmc2.chain)
-        # NOTE: a more strict test would compute MCSE here
-        s = sqrt.(v1 .+ v2)
-        m = m1 - m2
-        bounds = quantile.(Normal.(0, s), 0.05)
-        @test all(bounds .< m .< -bounds)
+
+        @testset "Initial point" begin
+            result_hmc2 = mcmc_with_warmup(
+                rng,
+                ∇P,
+                ndraws;
+                initialization=(; q=result_pf[2][:, 1]),
+                reporter=NoProgressReport(),
+            )
+            @test result_hmc2.κ.M⁻¹ isa Diagonal
+            compare_estimates(identity, result_hmc2.chain, result_hmc1.chain)
+        end
+
+        @testset "Initial point and metric" begin
+            result_hmc3 = mcmc_with_warmup(
+                rng,
+                ∇P,
+                ndraws;
+                initialization=(;
+                    q=result_pf[2][:, 1], κ=GaussianKineticEnergy(result_pf[1].Σ)
+                ),
+                warmup_stages=default_warmup_stages(; M=Symmetric),
+                reporter=NoProgressReport(),
+            )
+            @test result_hmc3.κ.M⁻¹ isa Symmetric
+            compare_estimates(identity, result_hmc3.chain, result_hmc1.chain)
+        end
+
+        @testset "Initial point and final metric" begin
+            result_hmc4 = mcmc_with_warmup(
+                rng,
+                ∇P,
+                ndraws;
+                initialization=(;
+                    q=result_pf[2][:, 1], κ=GaussianKineticEnergy(result_pf[1].Σ)
+                ),
+                warmup_stages=default_warmup_stages(; middle_steps=0, doubling_stages=0),
+                reporter=NoProgressReport(),
+            )
+            @test result_hmc4.κ.M⁻¹ === result_pf[1].Σ
+            compare_estimates(identity, result_hmc4.chain, result_hmc1.chain)
+        end
     end
 end
