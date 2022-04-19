@@ -23,6 +23,17 @@ function (m::RegressionModel)(θ)
     return lp
 end
 
+function compare_estimates(f, post1, post2, α=0.9)
+    p = (1 - α) / 2
+    m1, v1 = mean_and_var(f.(post1))
+    m2, v2 = mean_and_var(f.(post2))
+    # NOTE: a more strict test would compute MCSE here
+    s = sqrt.(v1 .+ v2)
+    m = m1 - m2
+    bounds = quantile.(Normal.(0, s), p)
+    @test all(bounds .< m .< -bounds)
+end
+
 @testset "AdvancedHMC integration" begin
     A = Diagonal(rand(5))
     B = randn(5, 2)
@@ -101,32 +112,68 @@ end
 
         θ₀ = rand(rng, Uniform(-2, 2), nparams)
         result_pf = pathfinder(ℓπ, θ₀, 1; rng, optimizer=Optim.LBFGS(; m=6))
-        θ₀ = result_pf[2][:, 1]
-        metric = Pathfinder.RankUpdateEuclideanMetric(result_pf[1].Σ)
-        hamiltonian = Hamiltonian(metric, ℓπ, ForwardDiff)
-        ϵ = find_good_stepsize(hamiltonian, θ₀)
-        integrator = Leapfrog(ϵ)
-        proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
-        adaptor = StepSizeAdaptor(0.8, integrator)
-        samples2, stats2 = sample(
-            rng,
-            hamiltonian,
-            proposal,
-            θ₀,
-            ndraws,
-            adaptor,
-            nadapts;
-            drop_warmup=true,
-            progress=false,
-        )
 
-        # check that the posterior means are approximately equal
-        m1, v1 = mean_and_var(samples1)
-        m2, v2 = mean_and_var(samples2)
-        # NOTE: a more strict test would compute MCSE here
-        s = sqrt.(v1 .+ v2)
-        m = m1 - m2
-        bounds = quantile.(Normal.(0, s), 0.05)
-        @test all(bounds .< m .< -bounds)
+        @testset "Initial point" begin
+            metric = DiagEuclideanMetric(nparams)
+            hamiltonian = Hamiltonian(metric, ℓπ, ForwardDiff)
+            ϵ = find_good_stepsize(hamiltonian, θ₀)
+            integrator = Leapfrog(ϵ)
+            proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+            adaptor = StepSizeAdaptor(0.8, integrator)
+            samples2, stats2 = sample(
+                rng,
+                hamiltonian,
+                proposal,
+                result_pf[2][:, 1],
+                ndraws,
+                adaptor,
+                nadapts;
+                drop_warmup=true,
+                progress=false,
+            )
+            compare_estimates(identity, samples2, samples1)
+        end
+
+        @testset "Initial point and metric" begin
+            metric = DiagEuclideanMetric(diag(result_pf[1].Σ))
+            hamiltonian = Hamiltonian(metric, ℓπ, ForwardDiff)
+            ϵ = find_good_stepsize(hamiltonian, θ₀)
+            integrator = Leapfrog(ϵ)
+            proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+            adaptor = StepSizeAdaptor(0.8, integrator)
+            samples3, stats3 = sample(
+                rng,
+                hamiltonian,
+                proposal,
+                result_pf[2][:, 1],
+                ndraws,
+                adaptor,
+                nadapts;
+                drop_warmup=true,
+                progress=false,
+            )
+            compare_estimates(identity, samples3, samples1)
+        end
+
+        @testset "Initial point and final metric" begin
+            metric = Pathfinder.RankUpdateEuclideanMetric(result_pf[1].Σ)
+            hamiltonian = Hamiltonian(metric, ℓπ, ForwardDiff)
+            ϵ = find_good_stepsize(hamiltonian, θ₀)
+            integrator = Leapfrog(ϵ)
+            proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+            adaptor = StepSizeAdaptor(0.8, integrator)
+            samples4, stats4 = sample(
+                rng,
+                hamiltonian,
+                proposal,
+                result_pf[2][:, 1],
+                ndraws,
+                adaptor,
+                nadapts;
+                drop_warmup=true,
+                progress=false,
+            )
+            compare_estimates(identity, samples4, samples1)
+        end
     end
 end
