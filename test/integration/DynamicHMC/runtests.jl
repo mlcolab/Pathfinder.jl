@@ -1,10 +1,11 @@
 using DynamicHMC,
     LinearAlgebra,
     LogDensityProblems,
+    MCMCDiagnosticTools,
     Optim,
     Pathfinder,
     Random,
-    StatsBase,
+    Statistics,
     StatsFuns,
     Test,
     TransformVariables
@@ -30,15 +31,21 @@ function (prob::RegressionProblem)(θ)
     return lp
 end
 
-function compare_estimates(f, post1, post2, α=0.9)
-    p = (1 - α) / 2
-    m1, v1 = mean_and_var(f.(post1))
-    m2, v2 = mean_and_var(f.(post2))
-    # NOTE: a more strict test would compute MCSE here
-    s = sqrt.(v1 .+ v2)
-    m = m1 - m2
-    bounds = quantile.(Normal.(0, s), p)
-    @test all(bounds .< m .< -bounds)
+function mean_and_mcse(f, θs)
+    zs = map(f, θs)
+    ms = mean(zs)
+    ses = map(mcse, eachrow(reduce(hcat, zs)))
+    return ms, ses
+end
+
+function compare_estimates(f, xs1, xs2, α=0.05)
+    nparams = length(first(xs1))
+    α /= nparams  # bonferroni correction
+    p = α / 2
+    m1, s1 = mean_and_mcse(f, xs1)
+    m2, s2 = mean_and_mcse(f, xs2)
+    zs = @. (m1 - m2) / sqrt(s1^2 + s2^2)
+    @test all(norminvcdf(p) .< zs .< norminvccdf(p))
 end
 
 @testset "DynamicHMC integration" begin
@@ -98,7 +105,6 @@ end
         ∇logp(x) = LogDensityProblems.logdensity_and_gradient(∇P, x)[2]
         θ₀ = rand(rng, LogDensityProblems.dimension(P)) .* 4 .- 2
         result_pf = pathfinder(logp, ∇logp, θ₀, 1; rng)
-        m1, v1 = mean_and_var(result_hmc1.chain)
 
         @testset "Initial point" begin
             result_hmc2 = mcmc_with_warmup(
