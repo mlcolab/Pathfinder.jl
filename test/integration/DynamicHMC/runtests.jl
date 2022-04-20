@@ -1,11 +1,11 @@
-using Distributions,
-    DynamicHMC,
+using DynamicHMC,
     LinearAlgebra,
     LogDensityProblems,
     Optim,
     Pathfinder,
     Random,
     StatsBase,
+    StatsFuns,
     Test,
     TransformVariables
 
@@ -20,12 +20,12 @@ function (prob::RegressionProblem)(θ)
     β = θ.β
     x = prob.x
     y = prob.y
-    lp = logpdf(truncated(Normal(); lower=0), σ)
-    lp += logpdf(Normal(), α)
-    lp += sum(b -> logpdf(Normal(), b), β)
+    lp = normlogpdf(σ) + logtwo
+    lp += normlogpdf(α)
+    lp += sum(normlogpdf, β)
     y_hat = muladd(x, β, α)
     lp += sum(eachindex(y_hat, y)) do i
-        return loglikelihood(Normal(y_hat[i], σ), y[i])
+        return normlogpdf(y_hat[i], σ, y[i])
     end
     return lp
 end
@@ -96,7 +96,7 @@ end
 
         logp(x) = LogDensityProblems.logdensity(P, x)
         ∇logp(x) = LogDensityProblems.logdensity_and_gradient(∇P, x)[2]
-        θ₀ = rand(rng, Uniform(-2, 2), LogDensityProblems.dimension(P))
+        θ₀ = rand(rng, LogDensityProblems.dimension(P)) .* 4 .- 2
         result_pf = pathfinder(logp, ∇logp, θ₀, 1; rng)
         m1, v1 = mean_and_var(result_hmc1.chain)
 
