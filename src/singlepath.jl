@@ -69,7 +69,7 @@ function pathfinder(
     optim_fun::GalacticOptim.OptimizationFunction,
     θ₀,
     ndraws;
-    rng::Random.AbstractRNG=Random.default_rng(),
+    rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     executor::Transducers.Executor=_default_executor(rng),
     optimizer=DEFAULT_OPTIMIZER,
     history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
@@ -96,7 +96,7 @@ See [`pathfinder`](@ref) for a description of remaining arguments.
 function pathfinder(
     optim_prob::GalacticOptim.OptimizationProblem,
     ndraws;
-    rng::Random.AbstractRNG=Random.default_rng(),
+    rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     executor::Transducers.Executor=_default_executor(rng),
     optimizer=DEFAULT_OPTIMIZER,
     history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,

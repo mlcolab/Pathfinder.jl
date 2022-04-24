@@ -37,6 +37,8 @@ resulting draws better approximate draws from the target distribution ``p`` inst
 - `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend.
 - `ndraws_per_run::Int=5`: The number of draws to take for each component before resampling.
 - `importance::Bool=true`: Perform Pareto smoothed importance resampling of draws.
+- `rng::AbstractRNG=Random.GLOBAL_RNG`: Pseudorandom number generator. It is recommended to
+    use a parallelization-friendly PRNG like the default PRNG on Julia 1.7 and up.
 - `executor::Transducers.Executor`: Transducers.jl executor that determines if and how
     to run the single-path runs in parallel. If `rng` is known to be thread-safe, the
     default is `Transducers.PreferParallel(; basesize=1)` (parallel executation, defaulting
@@ -86,7 +88,7 @@ function multipathfinder(
     θ₀s,
     ndraws;
     ndraws_per_run::Int=5,
-    rng::Random.AbstractRNG=Random.default_rng(),
+    rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     executor::Transducers.Executor=_default_executor(rng; basesize=1),
     executor_per_run=_default_executor(rng),
     importance::Bool=true,
