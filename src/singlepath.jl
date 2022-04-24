@@ -77,7 +77,9 @@ function pathfinder(
     kwargs...,
 )
     optim_prob = build_optim_problem(optim_fun, θ₀; kwargs...)
-    return pathfinder(optim_prob, ndraws; rng, optimizer, history_length, ndraws_elbo)
+    return pathfinder(
+        optim_prob, ndraws; rng, executor, optimizer, history_length, ndraws_elbo
+    )
 end
 
 """
