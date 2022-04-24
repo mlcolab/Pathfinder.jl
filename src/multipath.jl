@@ -109,16 +109,18 @@ function multipathfinder(
             optim_fun, θ₀, ndraws_per_run; rng, executor=executor_per_run, kwargs...
         )
     end
-    qs = reduce(vcat, first.(res))
-    ϕs = reduce(hcat, getindex.(res, 2))
     iter_sp = Transducers.withprogress(θ₀s; interval=1e-3) |> trans
     res = Folds.collect(iter_sp, executor)
+    qs = res |> Transducers.Map(first) |> collect
+    ϕs = reduce(hcat, res |> Transducers.Map(x -> x[2]))
 
     # draw samples from augmented mixture model
     inds = axes(ϕs, 2)
     sample_inds = if importance
-        logqϕs = reduce(vcat, last.(res))
-        log_ratios = map(((ϕ, logqϕ),) -> logp(ϕ) - logqϕ, zip(eachcol(ϕs), logqϕs))
+        logqϕs = res |> Transducers.MapCat(last) |> collect
+        iter_logp = eachcol(ϕs) |> Transducers.Map(logp)
+        logpϕs = Folds.collect(iter_logp, executor)
+        log_ratios = logpϕs - logqϕs
         resample(rng, inds, log_ratios, ndraws)
     else
         resample(rng, inds, ndraws)

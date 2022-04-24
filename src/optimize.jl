@@ -52,6 +52,6 @@ function optimize_with_trace(prob, optimizer)
     # NOTE: GalacticOptim doesn't have an interface for accessing the gradient trace,
     # so we need to recompute it ourselves
     # see https://github.com/SciML/GalacticOptim.jl/issues/149
-    ∇fxs = ∇f.(xs)
+    ∇fxs = xs |> Transducers.Map(∇f) |> Transducers.tcollect
     return xs, fxs, ∇fxs
 end

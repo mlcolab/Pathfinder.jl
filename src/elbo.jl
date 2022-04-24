@@ -9,7 +9,7 @@ end
 
 function elbo_and_samples(rng, logp, dist, ndraws)
     ϕ, logqϕ = rand_and_logpdf(rng, dist, ndraws)
-    logpϕ = logp.(eachcol(ϕ))
+    logpϕ = eachcol(ϕ) |> Transducers.Map(logp) |> Transducers.tcollect
     elbo = elbo_from_logpdfs(logpϕ, logqϕ)
     return elbo, ϕ, logqϕ
 end
