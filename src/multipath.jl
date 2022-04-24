@@ -37,6 +37,10 @@ resulting draws better approximate draws from the target distribution ``p`` inst
 - `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend.
 - `ndraws_per_run::Int=5`: The number of draws to take for each component before resampling.
 - `importance::Bool=true`: Perform Pareto smoothed importance resampling of draws.
+- `executor::Transducers.Executor`: Transducers.jl executor that determines if and how
+    to run the single-path runs in parallel. If `rng` is known to be thread-safe, the
+    default is `Transducers.PreferParallel(; basesize=1)` (parallel executation, defaulting
+    to multi-threading). Otherwise, it is `Transducers.SerialEx()` (no parallelization).
 - `kwargs...` : Remaining keywords are forwarded to [`pathfinder`](@ref).
 
 # Returns
@@ -81,6 +85,7 @@ function multipathfinder(
     ndraws;
     ndraws_per_run::Int=5,
     rng::Random.AbstractRNG=Random.default_rng(),
+    executor::Transducers.Executor=_default_executor(rng; basesize=1),
     importance::Bool=true,
     kwargs...,
 )
@@ -94,11 +99,14 @@ function multipathfinder(
 
     # run pathfinder independently from each starting point
     # TODO: allow to be parallelized
-    res = map(θ₀s) do θ₀
-        return pathfinder(optim_fun, θ₀, ndraws_per_run; rng, kwargs...)
+    trans = Transducers.Map() do θ₀
+        return pathfinder(
+            optim_fun, θ₀, ndraws_per_run; rng, executor=executor_per_run, kwargs...
+        )
     end
     qs = reduce(vcat, first.(res))
     ϕs = reduce(hcat, getindex.(res, 2))
+    res = Folds.collect(iter_sp, executor)
 
     # draw samples from augmented mixture model
     inds = axes(ϕs, 2)
