@@ -111,6 +111,7 @@ function multipathfinder(
     end
     qs = reduce(vcat, first.(res))
     ϕs = reduce(hcat, getindex.(res, 2))
+    iter_sp = Transducers.withprogress(θ₀s; interval=1e-3) |> trans
     res = Folds.collect(iter_sp, executor)
 
     # draw samples from augmented mixture model
