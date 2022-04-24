@@ -1,7 +1,7 @@
 name = "Pathfinder"
 uuid = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
 authors = ["Seth Axen <seth.axen@gmail.com> and contributors"]
-version = "0.3.4"
+version = "0.3.5"
 
 [deps]
 AbstractDifferentiation = "c29ec348-61ec-40c8-8164-b8c60e9d9f3d"
@@ -25,7 +25,7 @@ ForwardDiff = "0.10"
 GalacticOptim = "2"
 Optim = "1.4"
 PDMats = "0.11"
-PSIS = "0.2, 0.3"
+PSIS = "0.2, 0.3, 0.4"
 Requires = "1"
 StatsBase = "0.33"
 StatsFuns = "0.9"
