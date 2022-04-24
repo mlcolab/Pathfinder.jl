@@ -31,7 +31,7 @@ using Transducers
         σs = [1e-3, 0.05, σ_target, 1.0, 1.1, 1.2, 5.0, 10.0]
         dists = Normal.(0, σs)
         rng = MersenneTwister(42)
-        executor = SerialEx()
+        executor = Transducers.SequentialEx()
         lopt, elbo, ϕ, logqϕ = @inferred Pathfinder.maximize_elbo(rng, logp, dists, 100, executor)
         @test lopt == 3
         @test elbo ≈ 0
