@@ -41,6 +41,8 @@ resulting draws better approximate draws from the target distribution ``p`` inst
     to run the single-path runs in parallel. If `rng` is known to be thread-safe, the
     default is `Transducers.PreferParallel(; basesize=1)` (parallel executation, defaulting
     to multi-threading). Otherwise, it is `Transducers.SerialEx()` (no parallelization).
+- `executor_per_run::Transducers.Executor`: Transducers.jl executor used within each run to
+    parallelize PRNG calls. See [`pathfinder`](@ref) for a description.
 - `kwargs...` : Remaining keywords are forwarded to [`pathfinder`](@ref).
 
 # Returns
@@ -86,6 +88,7 @@ function multipathfinder(
     ndraws_per_run::Int=5,
     rng::Random.AbstractRNG=Random.default_rng(),
     executor::Transducers.Executor=_default_executor(rng; basesize=1),
+    executor_per_run=_default_executor(rng),
     importance::Bool=true,
     kwargs...,
 )
