@@ -21,6 +21,10 @@ constructed using at most the previous `history_length` steps.
 # Keywords
 - `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend.
 - `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
+- `executor::Transducers.Executor`: Transducers.jl executor that determines if and how
+    to perform ELBO computation in parallel. If `rng` is known to be thread-safe, the
+    default is `Transducers.PreferParallel()` (parallel executation, defaulting to
+    multi-threading). Otherwise, it is `Transducers.SerialEx()` (no parallelization).
 - `optimizer`: Optimizer to be used for constructing trajectory. Can be any optimizer
     compatible with GalacticOptim, so long as it supports callbacks. Defaults to
     `Optim.LBFGS(; m=$DEFAULT_HISTORY_LENGTH, linesearch=LineSearches.MoreThuente())`. See
@@ -66,6 +70,7 @@ function pathfinder(
     θ₀,
     ndraws;
     rng::Random.AbstractRNG=Random.default_rng(),
+    executor::Transducers.Executor=_default_executor(rng),
     optimizer=DEFAULT_OPTIMIZER,
     history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
     ndraws_elbo::Int=5,
@@ -92,6 +97,7 @@ function pathfinder(
     optim_prob::GalacticOptim.OptimizationProblem,
     ndraws;
     rng::Random.AbstractRNG=Random.default_rng(),
+    executor::Transducers.Executor=_default_executor(rng),
     optimizer=DEFAULT_OPTIMIZER,
     history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
     ndraws_elbo::Int=5,
@@ -109,7 +115,7 @@ function pathfinder(
     qs = fit_mvnormals(θs, ∇logpθs; history_length)
 
     # find ELBO-maximizing distribution
-    lopt, elbo, ϕ, logqϕ = maximize_elbo(rng, logp, qs[2:end], ndraws_elbo)
+    lopt, elbo, ϕ, logqϕ = maximize_elbo(rng, logp, qs[2:end], ndraws_elbo, executor)
     @info "Optimized for $L iterations. Maximum ELBO of $(round(elbo; digits=2)) reached at iteration $lopt."
 
     # get parameters of ELBO-maximizing distribution

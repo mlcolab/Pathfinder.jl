@@ -1,8 +1,9 @@
-function maximize_elbo(rng, logp, dists, ndraws)
-    elbo_ϕ_logqϕ = map(dists) do dist
+function maximize_elbo(rng, logp, dists, ndraws, executor)
+    iter = dists |> Transducers.Map() do dist
         elbo_and_samples(rng, logp, dist, ndraws)
     end
-    lopt = argmax(first.(elbo_ϕ_logqϕ))
+    elbo_ϕ_logqϕ = Folds.collect(iter, executor)
+    _, lopt = _findmax(elbo_ϕ_logqϕ |> Transducers.Map(first))
     return (lopt, elbo_ϕ_logqϕ[lopt]...)
 end
 
