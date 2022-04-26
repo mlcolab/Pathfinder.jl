@@ -42,9 +42,10 @@ resulting draws better approximate draws from the target distribution ``p`` inst
 - `executor::Transducers.Executor`: Transducers.jl executor that determines if and how
     to run the single-path runs in parallel. If `rng` is known to be thread-safe, the
     default is `Transducers.PreferParallel(; basesize=1)` (parallel executation, defaulting
-    to multi-threading). Otherwise, it is `Transducers.SerialEx()` (no parallelization).
-- `executor_per_run::Transducers.Executor`: Transducers.jl executor used within each run to
-    parallelize PRNG calls. See [`pathfinder`](@ref) for a description.
+    to multi-threading). Otherwise, it is `Transducers.SequentialEx()` (no parallelization).
+- `executor_per_run::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl
+    executor used within each run to parallelize PRNG calls. Defaults to no parallelization.
+    See [`pathfinder`](@ref) for a description.
 - `kwargs...` : Remaining keywords are forwarded to [`pathfinder`](@ref).
 
 # Returns
@@ -90,7 +91,7 @@ function multipathfinder(
     ndraws_per_run::Int=5,
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     executor::Transducers.Executor=_default_executor(rng; basesize=1),
-    executor_per_run=_default_executor(rng),
+    executor_per_run=Transducers.SequentialEx(),
     importance::Bool=true,
     kwargs...,
 )
@@ -103,7 +104,6 @@ function multipathfinder(
     logp(x) = -optim_fun.f(x, nothing)
 
     # run pathfinder independently from each starting point
-    # TODO: allow to be parallelized
     trans = Transducers.Map() do θ₀
         return pathfinder(
             optim_fun, θ₀, ndraws_per_run; rng, executor=executor_per_run, kwargs...
