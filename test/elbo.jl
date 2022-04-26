@@ -2,6 +2,7 @@ using Distributions
 using Pathfinder
 using Random
 using Test
+using Transducers
 
 @testset "ELBO estimation" begin
     @testset "elbo_and_samples" begin
@@ -29,9 +30,26 @@ using Test
         logp(x) = logpdf(target_dist, x[1])
         σs = [1e-3, 0.05, σ_target, 1.0, 1.1, 1.2, 5.0, 10.0]
         dists = Normal.(0, σs)
-        rng = MersenneTwister(42)
-        lopt, elbo, ϕ, logqϕ = @inferred Pathfinder.maximize_elbo(rng, logp, dists, 100)
-        @test lopt == 3
-        @test elbo ≈ 0
+        if VERSION ≥ v"1.7.0"
+            executors = [SequentialEx(), ThreadedEx()]
+        else
+            executors = [SequentialEx()]
+        end
+        @testset "$executor" for executor in executors
+            rng = Random.seed!(42)
+            lopt, elbo, ϕ, logqϕ = @inferred Pathfinder.maximize_elbo(
+                rng, logp, dists, 100, executor
+            )
+            @test lopt == 3
+            @test elbo ≈ 0
+            rng = Random.seed!(42)
+            lopt2, elbo2, ϕ2, logqϕ2 = Pathfinder.maximize_elbo(
+                rng, logp, dists, 100, executor
+            )
+            @test lopt2 == lopt
+            @test elbo2 == elbo
+            @test ϕ2 ≈ ϕ
+            @test logqϕ ≈ logqϕ2
+        end
     end
 end

@@ -21,6 +21,12 @@ constructed using at most the previous `history_length` steps.
 # Keywords
 - `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend.
 - `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
+- `executor::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl executor that
+    determines if and how to perform ELBO computation in parallel. The default
+    (`SequentialEx()`) performs no parallelization. If `rng` is known to be thread-safe, and
+    the log-density function is known to have no internal state, then
+    `Transducers.PreferParallel()` may be used to parallelize log-density evaluation.
+    This is generally only faster for expensive log density functions.
 - `optimizer`: Optimizer to be used for constructing trajectory. Can be any optimizer
     compatible with GalacticOptim, so long as it supports callbacks. Defaults to
     `Optim.LBFGS(; m=$DEFAULT_HISTORY_LENGTH, linesearch=LineSearches.MoreThuente())`. See
@@ -65,14 +71,17 @@ function pathfinder(
     optim_fun::GalacticOptim.OptimizationFunction,
     θ₀,
     ndraws;
-    rng::Random.AbstractRNG=Random.default_rng(),
+    rng::Random.AbstractRNG=Random.GLOBAL_RNG,
+    executor::Transducers.Executor=Transducers.SequentialEx(),
     optimizer=DEFAULT_OPTIMIZER,
     history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
     ndraws_elbo::Int=5,
     kwargs...,
 )
     optim_prob = build_optim_problem(optim_fun, θ₀; kwargs...)
-    return pathfinder(optim_prob, ndraws; rng, optimizer, history_length, ndraws_elbo)
+    return pathfinder(
+        optim_prob, ndraws; rng, executor, optimizer, history_length, ndraws_elbo
+    )
 end
 
 """
@@ -91,7 +100,8 @@ See [`pathfinder`](@ref) for a description of remaining arguments.
 function pathfinder(
     optim_prob::GalacticOptim.OptimizationProblem,
     ndraws;
-    rng::Random.AbstractRNG=Random.default_rng(),
+    rng::Random.AbstractRNG=Random.GLOBAL_RNG,
+    executor::Transducers.Executor=Transducers.SequentialEx(),
     optimizer=DEFAULT_OPTIMIZER,
     history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
     ndraws_elbo::Int=5,
@@ -101,7 +111,7 @@ function pathfinder(
     end
     logp(x) = -optim_prob.f.f(x, nothing)
     # compute trajectory
-    θs, logpθs, ∇logpθs = optimize_with_trace(optim_prob, optimizer)
+    θs, logpθs, ∇logpθs = optimize_with_trace(optim_prob, optimizer, executor)
     L = length(θs) - 1
     @assert L + 1 == length(logpθs) == length(∇logpθs)
 
@@ -109,7 +119,7 @@ function pathfinder(
     qs = fit_mvnormals(θs, ∇logpθs; history_length)
 
     # find ELBO-maximizing distribution
-    lopt, elbo, ϕ, logqϕ = maximize_elbo(rng, logp, qs[2:end], ndraws_elbo)
+    lopt, elbo, ϕ, logqϕ = maximize_elbo(rng, logp, qs[2:end], ndraws_elbo, executor)
     @info "Optimized for $L iterations. Maximum ELBO of $(round(elbo; digits=2)) reached at iteration $lopt."
 
     # get parameters of ELBO-maximizing distribution

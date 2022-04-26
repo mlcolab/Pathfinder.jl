@@ -160,7 +160,8 @@ end
             @test @inferred(quad(W, X)) ≈ quad(PDMats.PDMat(Symmetric(Wmat)), X)
 
             U = randn(T, n, 100)
-            @test quad(W, Pathfinder.invunwhiten!(similar(U), W, U)) ≈ vec(sum(abs2, U; dims=1))
+            @test quad(W, Pathfinder.invunwhiten!(similar(U), W, U)) ≈
+                vec(sum(abs2, U; dims=1))
         end
 
         @testset "PDMats.invquad" begin

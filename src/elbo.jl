@@ -1,14 +1,20 @@
-function maximize_elbo(rng, logp, dists, ndraws)
-    elbo_ϕ_logqϕ = map(dists) do dist
-        elbo_and_samples(rng, logp, dist, ndraws)
+function maximize_elbo(rng, logp, dists, ndraws, executor)
+    elbo_ϕ_logqϕ1 = elbo_and_samples(rng, logp, dists[begin], ndraws)
+    elbo_ϕ_logqϕ = similar(dists, typeof(elbo_ϕ_logqϕ1))
+    elbo_ϕ_logqϕ[begin] = elbo_ϕ_logqϕ1
+    @views Folds.map!(
+        elbo_ϕ_logqϕ[(begin + 1):end], dists[(begin + 1):end], executor
+    ) do dist
+        return elbo_and_samples(rng, logp, dist, ndraws)
     end
-    lopt = argmax(first.(elbo_ϕ_logqϕ))
+    _, lopt = _findmax(elbo_ϕ_logqϕ |> Transducers.Map(first))
     return (lopt, elbo_ϕ_logqϕ[lopt]...)
 end
 
 function elbo_and_samples(rng, logp, dist, ndraws)
     ϕ, logqϕ = rand_and_logpdf(rng, dist, ndraws)
-    logpϕ = logp.(eachcol(ϕ))
+    logpϕ = similar(logqϕ)
+    logpϕ .= logp.(eachcol(ϕ))
     elbo = elbo_from_logpdfs(logpϕ, logqϕ)
     return elbo, ϕ, logqϕ
 end
