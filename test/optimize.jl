@@ -6,6 +6,7 @@ using NLopt
 using Optim
 using Pathfinder
 using Test
+using Transducers
 
 include("test_utils.jl")
 
@@ -65,7 +66,7 @@ end
         Optim.BFGS(), Optim.LBFGS(), Optim.ConjugateGradient(), NLopt.Opt(:LD_LBFGS, n)
     ]
     @testset "$(typeof(optimizer))" for optimizer in optimizers
-        xs, fxs, ∇fxs = Pathfinder.optimize_with_trace(prob, optimizer)
+        xs, fxs, ∇fxs = Pathfinder.optimize_with_trace(prob, optimizer, SequentialEx())
         @test xs[1] ≈ x0
         @test xs[end] ≈ μ
         @test fxs ≈ f.(xs)
@@ -80,5 +81,10 @@ end
             @test Optim.x_trace(res) ≈ xs
             @test Optim.minimizer(res) ≈ xs[end]
         end
+
+        xs2, fxs2, ∇fxs2 = Pathfinder.optimize_with_trace(prob, optimizer, ThreadedEx())
+        @test xs2 ≈ xs
+        @test fxs2 ≈ fxs
+        @test ∇fxs2 ≈ ∇fxs
     end
 end
