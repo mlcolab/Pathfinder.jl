@@ -4,8 +4,10 @@ using ForwardDiff
 using GalacticOptim
 using LinearAlgebra
 using Pathfinder
+using Random
 using ReverseDiff
 using Test
+using Transducers
 
 @testset "single path pathfinder" begin
     @testset "IsoNormal" begin
@@ -13,9 +15,17 @@ using Test
         logp(x) = -sum(abs2, x) / 2
         ∇logp(x) = -x
         ndraws = 100
-        @testset for n in [1, 5, 10, 100]
+        rngs = if VERSION ≥ v"1.7"
+            [MersenneTwister(), Random.default_rng()]
+        else
+            [MersenneTwister()]
+        end
+        @testset for n in [1, 5, 10, 100], rng in rngs
+            executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
+
             x0 = randn(n)
-            q, ϕ, logqϕ = @inferred pathfinder(logp, ∇logp, x0, ndraws)
+            Random.seed!(rng, 42)
+            q, ϕ, logqϕ = @inferred pathfinder(logp, ∇logp, x0, ndraws; rng, executor)
             @test q isa MvNormal
             @test q.μ ≈ zeros(n)
             @test q.Σ isa Pathfinder.WoodburyPDMat
@@ -25,8 +35,14 @@ using Test
             @test size(ϕ) == (n, ndraws)
             @test logqϕ ≈ logpdf(q, ϕ)
 
-            q2, ϕ2, logqϕ2 = pathfinder(logp, ∇logp, x0, 2)
-            @test size(ϕ2) == (n, 2)
+            Random.seed!(rng, 42)
+            q2, ϕ2, logqϕ2 = pathfinder(logp, ∇logp, x0, ndraws; rng, executor)
+            @test q2 == q
+            @test ϕ2 == ϕ
+            @test logqϕ2 == logqϕ
+
+            q3, ϕ3, logqϕ3 = pathfinder(logp, ∇logp, x0, 2; executor)
+            @test size(ϕ3) == (n, 2)
         end
     end
     @testset "MvNormal" begin
@@ -43,10 +59,29 @@ using Test
         logp(x) = -dot(x, P, x) / 2
         ∇logp(x) = -(P * x)
         x₀ = [2.08, 3.77, -1.26, -0.97, -3.91]
-        rng = MersenneTwister(38)
         ad_backend = AD.ReverseDiffBackend()
-        q, _, _ = @inferred pathfinder(logp, x₀, 10; rng, ndraws_elbo=100, ad_backend)
-        @test q.Σ ≈ Σ rtol = 1e-1
+        ndraws_elbo = 100
+        rngs = if VERSION ≥ v"1.7"
+            [MersenneTwister(), Random.default_rng()]
+        else
+            [MersenneTwister()]
+        end
+        @testset for rng in rngs
+            executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
+
+            Random.seed!(rng, 38)
+            q, ϕ, logqϕ = @inferred pathfinder(
+                logp, x₀, 10; rng, ndraws_elbo, ad_backend, executor
+            )
+            @test q.Σ ≈ Σ rtol = 1e-1
+            Random.seed!(rng, 38)
+            q2, ϕ2, logqϕ2 = pathfinder(
+                logp, x₀, 10; rng, ndraws_elbo, ad_backend, executor
+            )
+            @test q2 == q
+            @test ϕ2 == ϕ
+            @test logqϕ2 == logqϕ
+        end
     end
     @testset "errors if no gradient provided" begin
         logp(x) = -sum(abs2, x) / 2

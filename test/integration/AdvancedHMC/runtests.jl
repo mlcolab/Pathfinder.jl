@@ -1,5 +1,13 @@
 using AdvancedHMC,
-    Distributions, ForwardDiff, LinearAlgebra, Optim, Pathfinder, Random, StatsBase, Test
+    ForwardDiff,
+    LinearAlgebra,
+    MCMCDiagnosticTools,
+    Optim,
+    Pathfinder,
+    Random,
+    Statistics,
+    StatsFuns,
+    Test
 
 struct RegressionModel{X,Y}
     x::X
@@ -13,25 +21,31 @@ function (m::RegressionModel)(θ)
     β = θ[3:end]
     x = m.x
     y = m.y
-    lp = logpdf(truncated(Normal(); lower=0), σ) + logσ
-    lp += logpdf(Normal(), α)
-    lp += sum(b -> logpdf(Normal(), b), β)
+    lp = normlogpdf(σ) + logtwo
+    lp += normlogpdf(α)
+    lp += sum(normlogpdf, β)
     y_hat = muladd(x, β, α)
     lp += sum(eachindex(y_hat, y)) do i
-        return loglikelihood(Normal(y_hat[i], σ), y[i])
+        return normlogpdf(y_hat[i], σ, y[i])
     end
     return lp
 end
 
-function compare_estimates(f, post1, post2, α=0.9)
-    p = (1 - α) / 2
-    m1, v1 = mean_and_var(f.(post1))
-    m2, v2 = mean_and_var(f.(post2))
-    # NOTE: a more strict test would compute MCSE here
-    s = sqrt.(v1 .+ v2)
-    m = m1 - m2
-    bounds = quantile.(Normal.(0, s), p)
-    @test all(bounds .< m .< -bounds)
+function mean_and_mcse(f, θs)
+    zs = map(f, θs)
+    ms = mean(zs)
+    ses = map(mcse, eachrow(reduce(hcat, zs)))
+    return ms, ses
+end
+
+function compare_estimates(f, xs1, xs2, α=0.05)
+    nparams = length(first(xs1))
+    α /= nparams  # bonferroni correction
+    p = α / 2
+    m1, s1 = mean_and_mcse(f, xs1)
+    m2, s2 = mean_and_mcse(f, xs2)
+    zs = @. (m1 - m2) / sqrt(s1^2 + s2^2)
+    @test all(norminvcdf(p) .< zs .< norminvccdf(p))
 end
 
 @testset "AdvancedHMC integration" begin
@@ -71,12 +85,11 @@ end
         @test sprint(show, metric) == "RankUpdateEuclideanMetric(diag=$(diag(metric.M⁻¹)))"
         @test AdvancedHMC.neg_energy(h, r, θ) ≈ AdvancedHMC.neg_energy(h_dense, r, θ)
         @test AdvancedHMC.∂H∂r(h, r) ≈ AdvancedHMC.∂H∂r(h_dense, r)
-        m, v = mean_and_var([rand(metric) for _ in 1:10_000])
-        m_dense, v_dense = mean_and_var([rand(metric_dense) for _ in 1:10_000])
-        # NOTE: a more strict test would compute MCSE here
-        s = sqrt.(v .+ v_dense)
-        bounds = quantile.(Normal.(0, s), 0.05)
-        @test all(bounds .< m - m_dense .< -bounds)
+        compare_estimates(
+            identity,
+            [rand(metric) for _ in 1:10_000],
+            [rand(metric_dense) for _ in 1:10_000],
+        )
     end
 
     @testset "sample" begin
@@ -110,7 +123,7 @@ end
             progress=false,
         )
 
-        θ₀ = rand(rng, Uniform(-2, 2), nparams)
+        θ₀ = rand(rng, nparams) .* 4 .- 2
         result_pf = pathfinder(ℓπ, θ₀, 1; rng, optimizer=Optim.LBFGS(; m=6))
 
         @testset "Initial point" begin

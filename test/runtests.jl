@@ -2,6 +2,7 @@ using Pathfinder
 using Test
 
 @testset "Pathfinder.jl" begin
+    include("transducers.jl")
     include("woodbury.jl")
     include("optimize.jl")
     include("inverse_hessian.jl")

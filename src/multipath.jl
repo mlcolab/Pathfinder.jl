@@ -37,6 +37,15 @@ resulting draws better approximate draws from the target distribution ``p`` inst
 - `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend.
 - `ndraws_per_run::Int=5`: The number of draws to take for each component before resampling.
 - `importance::Bool=true`: Perform Pareto smoothed importance resampling of draws.
+- `rng::AbstractRNG=Random.GLOBAL_RNG`: Pseudorandom number generator. It is recommended to
+    use a parallelization-friendly PRNG like the default PRNG on Julia 1.7 and up.
+- `executor::Transducers.Executor`: Transducers.jl executor that determines if and how
+    to run the single-path runs in parallel. If `rng` is known to be thread-safe, the
+    default is `Transducers.PreferParallel(; basesize=1)` (parallel executation, defaulting
+    to multi-threading). Otherwise, it is `Transducers.SequentialEx()` (no parallelization).
+- `executor_per_run::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl
+    executor used within each run to parallelize PRNG calls. Defaults to no parallelization.
+    See [`pathfinder`](@ref) for a description.
 - `kwargs...` : Remaining keywords are forwarded to [`pathfinder`](@ref).
 
 # Returns
@@ -80,7 +89,9 @@ function multipathfinder(
     θ₀s,
     ndraws;
     ndraws_per_run::Int=5,
-    rng::Random.AbstractRNG=Random.default_rng(),
+    rng::Random.AbstractRNG=Random.GLOBAL_RNG,
+    executor::Transducers.Executor=_default_executor(rng; basesize=1),
+    executor_per_run=Transducers.SequentialEx(),
     importance::Bool=true,
     kwargs...,
 )
@@ -93,18 +104,23 @@ function multipathfinder(
     logp(x) = -optim_fun.f(x, nothing)
 
     # run pathfinder independently from each starting point
-    # TODO: allow to be parallelized
-    res = map(θ₀s) do θ₀
-        return pathfinder(optim_fun, θ₀, ndraws_per_run; rng, kwargs...)
+    trans = Transducers.Map() do θ₀
+        return pathfinder(
+            optim_fun, θ₀, ndraws_per_run; rng, executor=executor_per_run, kwargs...
+        )
     end
-    qs = reduce(vcat, first.(res))
-    ϕs = reduce(hcat, getindex.(res, 2))
+    iter_sp = Transducers.withprogress(θ₀s; interval=1e-3) |> trans
+    res = Folds.collect(iter_sp, executor)
+    qs = res |> Transducers.Map(first) |> collect
+    ϕs = reduce(hcat, res |> Transducers.Map(x -> x[2]))
 
     # draw samples from augmented mixture model
     inds = axes(ϕs, 2)
     sample_inds = if importance
-        logqϕs = reduce(vcat, last.(res))
-        log_ratios = map(((ϕ, logqϕ),) -> logp(ϕ) - logqϕ, zip(eachcol(ϕs), logqϕs))
+        logqϕs = res |> Transducers.MapCat(last) |> collect
+        iter_logp = eachcol(ϕs) |> Transducers.Map(logp)
+        logpϕs = Folds.collect(iter_logp, executor)
+        log_ratios = logpϕs - logqϕs
         resample(rng, inds, log_ratios, ndraws)
     else
         resample(rng, inds, ndraws)

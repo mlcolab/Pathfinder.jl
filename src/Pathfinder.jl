@@ -2,6 +2,7 @@ module Pathfinder
 
 using AbstractDifferentiation: AD
 using Distributions: Distributions
+using Folds: Folds
 # ensure that ForwardDiff is conditionally loaded by GalacticOptim
 using ForwardDiff: ForwardDiff
 using LinearAlgebra
@@ -14,6 +15,7 @@ using Requires: Requires
 using Statistics: Statistics
 using StatsBase: StatsBase
 using StatsFuns: log2π
+using Transducers: Transducers
 
 export pathfinder, multipathfinder
 
@@ -25,6 +27,7 @@ const DEFAULT_OPTIMIZER = Optim.LBFGS(;
     m=DEFAULT_HISTORY_LENGTH, linesearch=DEFAULT_LINE_SEARCH
 )
 
+include("transducers.jl")
 include("woodbury.jl")
 include("optimize.jl")
 include("inverse_hessian.jl")

@@ -10,9 +10,12 @@ point are returned.
 """
 function fit_mvnormals(θs, ∇logpθs; kwargs...)
     Σs = lbfgs_inverse_hessians(θs, ∇logpθs; kwargs...)
+    trans = Transducers.MapSplat() do Σ, ∇logpθ, θ
+        μ = muladd(Σ, ∇logpθ, θ)
+        return Distributions.MvNormal(μ, Σ)
+    end
     l = length(Σs)
-    μs = @views map(muladd, Σs, ∇logpθs[1:l], θs[1:l])
-    return Distributions.MvNormal.(μs, Σs)
+    return @views(zip(Σs, ∇logpθs[1:l], θs[1:l])) |> trans |> collect
 end
 
 # faster than computing `logpdf` and `rand` independently
