@@ -2,12 +2,11 @@ function maximize_elbo(rng, logp, dists, ndraws, executor)
     elbo_ϕ_logqϕ1 = elbo_and_samples(rng, logp, dists[begin], ndraws)
     elbo_ϕ_logqϕ = similar(dists, typeof(elbo_ϕ_logqϕ1))
     elbo_ϕ_logqϕ[begin] = elbo_ϕ_logqϕ1
-    iter =
-        eachindex(dists, elbo_ϕ_logqϕ)[(begin + 1):end] |> Transducers.Map() do i
-            elbo_ϕ_logqϕ[i] = elbo_and_samples(rng, logp, dists[i], ndraws)
-            return nothing
-        end
-    Folds.collect(iter, executor)
+    @views Folds.map!(
+        elbo_ϕ_logqϕ[(begin + 1):end], dists[(begin + 1):end], executor
+    ) do dist
+        return elbo_and_samples(rng, logp, dist, ndraws)
+    end
     _, lopt = _findmax(elbo_ϕ_logqϕ |> Transducers.Map(first))
     return (lopt, elbo_ϕ_logqϕ[lopt]...)
 end

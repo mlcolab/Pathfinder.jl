@@ -52,6 +52,6 @@ function optimize_with_trace(prob, optimizer, executor=Transducers.SequentialEx(
         rmul!(∇fx, -1)
         return nothing
     end
-    Folds.collect(zip(∇fxs, xs) |> trans, executor)
+    Transducers.transduce(trans, (_...,) -> nothing, nothing, zip(∇fxs, xs), executor)
     return xs, fxs, ∇fxs
 end
