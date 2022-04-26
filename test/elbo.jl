@@ -37,11 +37,15 @@ using Transducers
         end
         @testset "$executor" for executor in executors
             rng = Random.seed!(42)
-            lopt, elbo, ϕ, logqϕ = @inferred Pathfinder.maximize_elbo(rng, logp, dists, 100, executor)
+            lopt, elbo, ϕ, logqϕ = @inferred Pathfinder.maximize_elbo(
+                rng, logp, dists, 100, executor
+            )
             @test lopt == 3
             @test elbo ≈ 0
             rng = Random.seed!(42)
-            lopt2, elbo2, ϕ2, logqϕ2 = Pathfinder.maximize_elbo(rng, logp, dists, 100, executor)
+            lopt2, elbo2, ϕ2, logqϕ2 = Pathfinder.maximize_elbo(
+                rng, logp, dists, 100, executor
+            )
             @test lopt2 == lopt
             @test elbo2 == elbo
             @test ϕ2 ≈ ϕ
