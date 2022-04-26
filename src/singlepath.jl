@@ -21,10 +21,12 @@ constructed using at most the previous `history_length` steps.
 # Keywords
 - `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend.
 - `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
-- `executor::Transducers.Executor`: Transducers.jl executor that determines if and how
-    to perform ELBO computation in parallel. If `rng` is known to be thread-safe, the
-    default is `Transducers.PreferParallel()` (parallel executation, defaulting to
-    multi-threading). Otherwise, it is `Transducers.SerialEx()` (no parallelization).
+- `executor::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl executor that
+    determines if and how to perform ELBO computation in parallel. The default
+    (`SequentialEx()`) performs no parallelization. If `rng` is known to be thread-safe, and
+    the log-density function is known to have no internal state, then
+    `Transducers.PreferParallel()` may be used to parallelize log-density evaluation.
+    This is generally only faster for expensive log density functions.
 - `optimizer`: Optimizer to be used for constructing trajectory. Can be any optimizer
     compatible with GalacticOptim, so long as it supports callbacks. Defaults to
     `Optim.LBFGS(; m=$DEFAULT_HISTORY_LENGTH, linesearch=LineSearches.MoreThuente())`. See
@@ -70,7 +72,7 @@ function pathfinder(
     θ₀,
     ndraws;
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
-    executor::Transducers.Executor=_default_executor(rng),
+    executor::Transducers.Executor=Transducers.SequentialEx(),
     optimizer=DEFAULT_OPTIMIZER,
     history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
     ndraws_elbo::Int=5,
@@ -99,7 +101,7 @@ function pathfinder(
     optim_prob::GalacticOptim.OptimizationProblem,
     ndraws;
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
-    executor::Transducers.Executor=_default_executor(rng),
+    executor::Transducers.Executor=Transducers.SequentialEx(),
     optimizer=DEFAULT_OPTIMIZER,
     history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
     ndraws_elbo::Int=5,
