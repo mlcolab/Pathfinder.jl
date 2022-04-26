@@ -29,7 +29,7 @@ function build_optim_problem(optim_fun, x₀; kwargs...)
     return GalacticOptim.OptimizationProblem(optim_fun, x₀, nothing; kwargs...)
 end
 
-function optimize_with_trace(prob, optimizer, executor=Transducers.SequentialEx())
+function optimize_with_trace(prob, optimizer; maxiters=1_000)
     u0 = prob.u0
     fun = prob.f
     grad! = fun.grad
@@ -40,18 +40,18 @@ function optimize_with_trace(prob, optimizer, executor=Transducers.SequentialEx(
     ProgressLogging.@withprogress name="Optimizing" begin
         iterations = 1
         ProgressLogging.@logprogress 0
-    function callback(x, nfx, args...)
+        function callback(x, nfx, args...)
             ProgressLogging.@logprogress iterations/maxiters
             iterations += 1
-        # some backends mutate x, so we must copy it
-        push!(xs, copy(x))
-        push!(fxs, -nfx)
-    # NOTE: GalacticOptim doesn't have an interface for accessing the gradient trace,
-    # so we need to recompute it ourselves
-    # see https://github.com/SciML/GalacticOptim.jl/issues/149
+            # some backends mutate x, so we must copy it
+            push!(xs, copy(x))
+            push!(fxs, -nfx)
+            # NOTE: GalacticOptim doesn't have an interface for accessing the gradient trace,
+            # so we need to recompute it ourselves
+            # see https://github.com/SciML/GalacticOptim.jl/issues/149
             push!(∇fxs, rmul!(grad!(similar(x), x, nothing), -1))
             return false
-    end
+        end
         GalacticOptim.solve(prob, optimizer; cb=callback, maxiters)
         ProgressLogging.@logprogress 1
     end

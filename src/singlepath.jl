@@ -111,7 +111,7 @@ function pathfinder(
     end
     logp(x) = -optim_prob.f.f(x, nothing)
     # compute trajectory
-    θs, logpθs, ∇logpθs = optimize_with_trace(optim_prob, optimizer, executor)
+    θs, logpθs, ∇logpθs = optimize_with_trace(optim_prob, optimizer)
     L = length(θs) - 1
     @assert L + 1 == length(logpθs) == length(∇logpθs)
 
