@@ -36,22 +36,24 @@ function optimize_with_trace(prob, optimizer, executor=Transducers.SequentialEx(
     # caches for the trace of x and f(x)
     xs = typeof(u0)[]
     fxs = typeof(fun.f(u0, nothing))[]
+    ∇fxs = typeof(u0)[]
+    ProgressLogging.@withprogress name="Optimizing" begin
+        iterations = 1
+        ProgressLogging.@logprogress 0
     function callback(x, nfx, args...)
+            ProgressLogging.@logprogress iterations/maxiters
+            iterations += 1
         # some backends mutate x, so we must copy it
         push!(xs, copy(x))
         push!(fxs, -nfx)
-        return false
-    end
-    GalacticOptim.solve(prob, optimizer; cb=callback)
     # NOTE: GalacticOptim doesn't have an interface for accessing the gradient trace,
     # so we need to recompute it ourselves
     # see https://github.com/SciML/GalacticOptim.jl/issues/149
-    ∇fxs = [similar(u0) for _ in xs]
-    trans = Transducers.Map() do (∇fx, x)
-        grad!(∇fx, x, nothing)
-        rmul!(∇fx, -1)
-        return nothing
+            push!(∇fxs, rmul!(grad!(similar(x), x, nothing), -1))
+            return false
     end
-    Transducers.transduce(trans, (_...,) -> nothing, nothing, zip(∇fxs, xs), executor)
+        GalacticOptim.solve(prob, optimizer; cb=callback, maxiters)
+        ProgressLogging.@logprogress 1
+    end
     return xs, fxs, ∇fxs
 end
