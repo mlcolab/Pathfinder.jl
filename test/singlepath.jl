@@ -15,7 +15,12 @@ using Transducers
         logp(x) = -sum(abs2, x) / 2
         ∇logp(x) = -x
         ndraws = 100
-        @testset for n in [1, 5, 10, 100], rng in [MersenneTwister(), Random.default_rng()]
+        rngs = if VERSION ≥ v"1.7"
+            [MersenneTwister(), Random.default_rng()]
+        else
+            [MersenneTwister()]
+        end
+        @testset for n in [1, 5, 10, 100], rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
 
             x0 = randn(n)
@@ -56,7 +61,12 @@ using Transducers
         x₀ = [2.08, 3.77, -1.26, -0.97, -3.91]
         ad_backend = AD.ReverseDiffBackend()
         ndraws_elbo = 100
-        @testset for rng in [MersenneTwister(), Random.default_rng()]
+        rngs = if VERSION ≥ v"1.7"
+            [MersenneTwister(), Random.default_rng()]
+        else
+            [MersenneTwister()]
+        end
+        @testset for rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
 
             Random.seed!(rng, 38)

@@ -21,7 +21,12 @@ using Test
         logp(x) = logpdf(d, x)
         ∇logp(x) = ForwardDiff.gradient(logp, x)
         x₀s = [rand(rng, Uniform(-2, 2), n) for _ in 1:nruns]
-        @testset for rng in [MersenneTwister(), Random.default_rng()]
+        rngs = if VERSION ≥ v"1.7"
+            [MersenneTwister(), Random.default_rng()]
+        else
+            [MersenneTwister()]
+        end
+        @testset for rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
 
             Random.seed!(rng, 76)
