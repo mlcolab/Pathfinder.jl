@@ -34,7 +34,8 @@ constructed using at most the previous `history_length` steps.
 - `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
     inverse Hessian. This should only be set when `optimizer` is not an `Optim.LBFGS`.
 - `ndraws_elbo::Int=5`: Number of draws used to estimate the ELBO
-- `kwargs...` : Remaining keywords are forwarded to `GalacticOptim.solve`.
+- `kwargs...` : Remaining keywords are forwarded to
+    [`GalacticOptim.solve`](https://galacticoptim.sciml.ai/stable/API/solve).
 
 # Returns
 - `q::Distributions.MvNormal`: ELBO-maximizing multivariate normal distribution
