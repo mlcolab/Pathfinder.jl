@@ -39,7 +39,6 @@ function optimize_with_trace(prob, optimizer; maxiters=1_000, cb=nothing, kwargs
     ∇fxs = typeof(u0)[]
     ProgressLogging.@withprogress name = "Optimizing" begin
         iteration = 0
-        ProgressLogging.@logprogress 0
         function callback(x, nfx, args...)
             # prioritize any user-provided callback
             cb !== nothing && cb(x, nfx, args...) && return true
@@ -55,7 +54,6 @@ function optimize_with_trace(prob, optimizer; maxiters=1_000, cb=nothing, kwargs
             return false
         end
         GalacticOptim.solve(prob, optimizer; cb=callback, maxiters, kwargs...)
-        ProgressLogging.@logprogress 1
     end
     return xs, fxs, ∇fxs
 end
