@@ -30,7 +30,7 @@ function build_optim_problem(optim_fun, x₀)
 end
 
 function optimize_with_trace(
-    prob, optimizer, executor=Transducers.SequentialEx(); kwargs...
+    prob, optimizer, executor=Transducers.SequentialEx(); cb=nothing, kwargs...
 )
     u0 = prob.u0
     fun = prob.f
@@ -39,6 +39,8 @@ function optimize_with_trace(
     xs = typeof(u0)[]
     fxs = typeof(fun.f(u0, nothing))[]
     function callback(x, nfx, args...)
+        # prioritize any user-provided callback
+        cb !== nothing && cb(x, nfx, args...) && return true
         # some backends mutate x, so we must copy it
         push!(xs, copy(x))
         push!(fxs, -nfx)
