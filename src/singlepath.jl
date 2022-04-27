@@ -34,7 +34,7 @@ constructed using at most the previous `history_length` steps.
 - `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
     inverse Hessian. This should only be set when `optimizer` is not an `Optim.LBFGS`.
 - `ndraws_elbo::Int=5`: Number of draws used to estimate the ELBO
-- `kwargs...` : Remaining keywords are forwarded to `GalacticOptim.OptimizationProblem`.
+- `kwargs...` : Remaining keywords are forwarded to `GalacticOptim.solve`.
 
 # Returns
 - `q::Distributions.MvNormal`: ELBO-maximizing multivariate normal distribution
@@ -67,21 +67,9 @@ automatic differentiation type) for the chosen optimization algorithm. For detai
 
 See [`pathfinder`](@ref) for a description of remaining arguments.
 """
-function pathfinder(
-    optim_fun::GalacticOptim.OptimizationFunction,
-    θ₀,
-    ndraws;
-    rng::Random.AbstractRNG=Random.GLOBAL_RNG,
-    executor::Transducers.Executor=Transducers.SequentialEx(),
-    optimizer=DEFAULT_OPTIMIZER,
-    history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
-    ndraws_elbo::Int=5,
-    kwargs...,
-)
-    optim_prob = build_optim_problem(optim_fun, θ₀; kwargs...)
-    return pathfinder(
-        optim_prob, ndraws; rng, executor, optimizer, history_length, ndraws_elbo
-    )
+function pathfinder(optim_fun::GalacticOptim.OptimizationFunction, θ₀, ndraws; kwargs...)
+    optim_prob = build_optim_problem(optim_fun, θ₀)
+    return pathfinder(optim_prob, ndraws; kwargs...)
 end
 
 """
@@ -105,13 +93,14 @@ function pathfinder(
     optimizer=DEFAULT_OPTIMIZER,
     history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
     ndraws_elbo::Int=5,
+    kwargs...,
 )
     if optim_prob.f.grad === nothing || optim_prob.f.grad isa Bool
         throw(ArgumentError("optimization function must define a gradient function."))
     end
     logp(x) = -optim_prob.f.f(x, nothing)
     # compute trajectory
-    θs, logpθs, ∇logpθs = optimize_with_trace(optim_prob, optimizer, executor)
+    θs, logpθs, ∇logpθs = optimize_with_trace(optim_prob, optimizer, executor; kwargs...)
     L = length(θs) - 1
     @assert L + 1 == length(logpθs) == length(∇logpθs)
 

@@ -25,11 +25,13 @@ function build_optim_function(f, ∇f; ad_backend=AD.ForwardDiffBackend())
     return GalacticOptim.OptimizationFunction((x, p...) -> -f(x); grad, hess, hv)
 end
 
-function build_optim_problem(optim_fun, x₀; kwargs...)
-    return GalacticOptim.OptimizationProblem(optim_fun, x₀, nothing; kwargs...)
+function build_optim_problem(optim_fun, x₀)
+    return GalacticOptim.OptimizationProblem(optim_fun, x₀, nothing)
 end
 
-function optimize_with_trace(prob, optimizer, executor=Transducers.SequentialEx())
+function optimize_with_trace(
+    prob, optimizer, executor=Transducers.SequentialEx(); kwargs...
+)
     u0 = prob.u0
     fun = prob.f
     grad! = fun.grad
@@ -42,7 +44,7 @@ function optimize_with_trace(prob, optimizer, executor=Transducers.SequentialEx(
         push!(fxs, -nfx)
         return false
     end
-    GalacticOptim.solve(prob, optimizer; cb=callback)
+    GalacticOptim.solve(prob, optimizer; cb=callback, kwargs...)
     # NOTE: GalacticOptim doesn't have an interface for accessing the gradient trace,
     # so we need to recompute it ourselves
     # see https://github.com/SciML/GalacticOptim.jl/issues/149
