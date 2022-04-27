@@ -82,6 +82,18 @@ using Transducers
             @test ϕ2 == ϕ
             @test logqϕ2 == logqϕ
         end
+        @testset "kwargs forwarded to solve" begin
+            rng = MersenneTwister(42)
+            i = 0
+            cb = (args...,) -> (i += 1; false)
+            pathfinder(logp, x₀, 10; rng)
+            @test i ≠ 6
+
+            rng = MersenneTwister(42)
+            i = 0
+            pathfinder(logp, x₀, 10; rng, maxiters=5, cb)
+            @test i == 6
+        end
     end
     @testset "errors if no gradient provided" begin
         logp(x) = -sum(abs2, x) / 2

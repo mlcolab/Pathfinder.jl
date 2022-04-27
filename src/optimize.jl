@@ -25,11 +25,11 @@ function build_optim_function(f, ∇f; ad_backend=AD.ForwardDiffBackend())
     return GalacticOptim.OptimizationFunction((x, p...) -> -f(x); grad, hess, hv)
 end
 
-function build_optim_problem(optim_fun, x₀; kwargs...)
-    return GalacticOptim.OptimizationProblem(optim_fun, x₀, nothing; kwargs...)
+function build_optim_problem(optim_fun, x₀)
+    return GalacticOptim.OptimizationProblem(optim_fun, x₀, nothing)
 end
 
-function optimize_with_trace(prob, optimizer; maxiters=1_000)
+function optimize_with_trace(prob, optimizer; maxiters=1_000, cb=nothing, kwargs...)
     u0 = prob.u0
     fun = prob.f
     grad! = fun.grad
@@ -41,6 +41,8 @@ function optimize_with_trace(prob, optimizer; maxiters=1_000)
         iterations = 1
         ProgressLogging.@logprogress 0
         function callback(x, nfx, args...)
+            # prioritize any user-provided callback
+            cb !== nothing && cb(x, nfx, args...) && return true
             ProgressLogging.@logprogress iterations/maxiters
             iterations += 1
             # some backends mutate x, so we must copy it
