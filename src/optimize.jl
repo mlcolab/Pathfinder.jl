@@ -37,14 +37,14 @@ function optimize_with_trace(prob, optimizer; maxiters=1_000, cb=nothing, kwargs
     xs = typeof(u0)[]
     fxs = typeof(fun.f(u0, nothing))[]
     ∇fxs = typeof(u0)[]
-    ProgressLogging.@withprogress name="Optimizing" begin
-        iterations = 1
+    ProgressLogging.@withprogress name = "Optimizing" begin
+        iteration = 0
         ProgressLogging.@logprogress 0
         function callback(x, nfx, args...)
             # prioritize any user-provided callback
             cb !== nothing && cb(x, nfx, args...) && return true
-            ProgressLogging.@logprogress iterations/maxiters
-            iterations += 1
+            ProgressLogging.@logprogress iteration / maxiters
+            iteration += 1
             # some backends mutate x, so we must copy it
             push!(xs, copy(x))
             push!(fxs, -nfx)
@@ -54,7 +54,7 @@ function optimize_with_trace(prob, optimizer; maxiters=1_000, cb=nothing, kwargs
             push!(∇fxs, rmul!(grad!(similar(x), x, nothing), -1))
             return false
         end
-        GalacticOptim.solve(prob, optimizer; cb=callback, maxiters)
+        GalacticOptim.solve(prob, optimizer; cb=callback, maxiters, kwargs...)
         ProgressLogging.@logprogress 1
     end
     return xs, fxs, ∇fxs
