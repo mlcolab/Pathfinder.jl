@@ -5,6 +5,7 @@ using LinearAlgebra
 using NLopt
 using Optim
 using Pathfinder
+using ProgressLogging
 using Test
 
 include("test_utils.jl")
@@ -80,5 +81,16 @@ end
             @test Optim.x_trace(res) ≈ xs
             @test Optim.minimizer(res) ≈ xs[end]
         end
+    end
+
+    @testset "progress logging" begin
+        logs, = Test.collect_test_logs(; min_level=ProgressLogging.ProgressLevel) do
+            Pathfinder.optimize_with_trace(prob, Optim.LBFGS())
+        end
+        @test logs[1].kwargs[:progress] === nothing
+        @test logs[1].message.progress.name == "Optimizing"
+        @test logs[2].kwargs[:progress] == 0.0
+        @test logs[3].kwargs[:progress] == 0.001
+        @test logs[end].kwargs[:progress] == "done"
     end
 end
