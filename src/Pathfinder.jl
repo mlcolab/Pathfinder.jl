@@ -9,6 +9,7 @@ using LinearAlgebra
 using GalacticOptim: GalacticOptim
 using Optim: Optim, LineSearches
 using PDMats: PDMats
+using ProgressLogging: ProgressLogging
 using PSIS: PSIS
 using Random
 using Requires: Requires

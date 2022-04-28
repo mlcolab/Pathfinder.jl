@@ -5,8 +5,8 @@ using LinearAlgebra
 using NLopt
 using Optim
 using Pathfinder
+using ProgressLogging
 using Test
-using Transducers
 
 include("test_utils.jl")
 
@@ -66,7 +66,7 @@ end
         Optim.BFGS(), Optim.LBFGS(), Optim.ConjugateGradient(), NLopt.Opt(:LD_LBFGS, n)
     ]
     @testset "$(typeof(optimizer))" for optimizer in optimizers
-        xs, fxs, ∇fxs = Pathfinder.optimize_with_trace(prob, optimizer, SequentialEx())
+        xs, fxs, ∇fxs = Pathfinder.optimize_with_trace(prob, optimizer)
         @test xs[1] ≈ x0
         @test xs[end] ≈ μ
         @test fxs ≈ f.(xs)
@@ -81,10 +81,16 @@ end
             @test Optim.x_trace(res) ≈ xs
             @test Optim.minimizer(res) ≈ xs[end]
         end
+    end
 
-        xs2, fxs2, ∇fxs2 = Pathfinder.optimize_with_trace(prob, optimizer, ThreadedEx())
-        @test xs2 ≈ xs
-        @test fxs2 ≈ fxs
-        @test ∇fxs2 ≈ ∇fxs
+    @testset "progress logging" begin
+        logs, = Test.collect_test_logs(; min_level=ProgressLogging.ProgressLevel) do
+            Pathfinder.optimize_with_trace(prob, Optim.LBFGS())
+        end
+        @test logs[1].kwargs[:progress] === nothing
+        @test logs[1].message.progress.name == "Optimizing"
+        @test logs[2].kwargs[:progress] == 0.0
+        @test logs[3].kwargs[:progress] == 0.001
+        @test logs[end].kwargs[:progress] == "done"
     end
 end
