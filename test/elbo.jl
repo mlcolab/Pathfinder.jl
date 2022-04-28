@@ -10,7 +10,7 @@ using Transducers
         target_dist = Normal(0, σ_target)
         logp(x) = logpdf(target_dist, x[1])
         σs = [1e-3, 0.05, 0.8, 1.0, 1.1, 1.2, 5.0, 10.0]
-        rng = MersenneTwister(42)
+        rng = Random.seed!(Random.default_rng(), 42)
         @testset for σ in σs
             dist = Normal(0, σ)
             elbo, ϕ, logqϕ = @inferred Pathfinder.elbo_and_samples(
@@ -36,13 +36,13 @@ using Transducers
             executors = [SequentialEx()]
         end
         @testset "$executor" for executor in executors
-            rng = Random.seed!(42)
+            rng = Random.seed!(Random.default_rng(), 42)
             lopt, elbo, ϕ, logqϕ = @inferred Pathfinder.maximize_elbo(
                 rng, logp, dists, 100, executor
             )
             @test lopt == 3
             @test elbo ≈ 0
-            rng = Random.seed!(42)
+            rng = Random.seed!(Random.default_rng(), 42)
             lopt2, elbo2, ϕ2, logqϕ2 = Pathfinder.maximize_elbo(
                 rng, logp, dists, 100, executor
             )

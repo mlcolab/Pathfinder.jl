@@ -34,9 +34,10 @@ include("test_utils.jl")
             μ = randn(n)
             dist = MvNormal(μ, Σ)
 
-            rng = MersenneTwister(42)
+            seed = 42
+            rng = Random.seed!(Random.default_rng(), seed)
             x, logpx = @inferred Pathfinder.rand_and_logpdf(rng, dist, ndraws)
-            rng = MersenneTwister(42)
+            Random.seed!(rng, seed)
             x2 = rand(rng, dist, ndraws)
             logpx2 = logpdf(dist, x2)
             @test x ≈ x2
@@ -54,9 +55,10 @@ include("test_utils.jl")
             μ = randn(n)
             dist = MvNormal(μ, Σ)
 
-            rng = MersenneTwister(42)
+            seed = 42
+            rng = Random.seed!(Random.default_rng(), seed)
             x, logpx = @inferred Pathfinder.rand_and_logpdf(rng, dist, ndraws)
-            rng = MersenneTwister(42)
+            Random.seed!(rng, seed)
             x2 = rand(rng, dist, ndraws)
             logpx2 = logpdf(dist, x2)
             @test x ≈ x2
@@ -68,9 +70,10 @@ include("test_utils.jl")
             μ = randn()
             dist = Normal(μ, σ)
 
-            rng = MersenneTwister(42)
+            seed = 42
+            rng = Random.seed!(Random.default_rng(), seed)
             x, logpx = @inferred Pathfinder.rand_and_logpdf(rng, dist, ndraws)
-            rng = MersenneTwister(42)
+            Random.seed!(rng, seed)
             x2 = rand(rng, dist, ndraws)
             logpx2 = logpdf.(dist, x2)
             @test x ≈ x2'
