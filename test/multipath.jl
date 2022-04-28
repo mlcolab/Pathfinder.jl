@@ -6,6 +6,7 @@ using GalacticOptim
 using Pathfinder
 using ReverseDiff
 using Test
+using Transducers
 
 @testset "multi path pathfinder" begin
     @testset "MvNormal" begin
