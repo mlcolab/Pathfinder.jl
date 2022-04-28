@@ -1,5 +1,8 @@
 using Pathfinder
+using Random
 using Test
+
+Random.seed!(0)
 
 @testset "Pathfinder.jl" begin
     include("transducers.jl")
