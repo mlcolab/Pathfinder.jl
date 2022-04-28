@@ -96,6 +96,19 @@ using Transducers
             @test i == 6
         end
     end
+    @testset "UniformSampler" begin
+        @testset for scale in [1, 2], seed in [42, 38]
+            sampler_fun = Pathfinder.UniformSampler(scale)
+            rng = Random.seed!(Random.default_rng(), seed)
+            x = zeros(100)
+            sampler_fun(rng, x)
+            @test all(-scale .≤ x .≤ scale)
+            Random.seed!(rng, seed)
+            x2 = zeros(100)
+            x2 .= rand.(rng) .* 2scale .- scale
+            @test x2 == x
+        end
+    end
     @testset "errors if no gradient provided" begin
         logp(x) = -sum(abs2, x) / 2
         init = randn(5)
