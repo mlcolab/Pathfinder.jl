@@ -97,6 +97,8 @@ using Transducers
         end
     end
     @testset "UniformSampler" begin
+        @test_throws DomainError Pathfinder.UniformSampler(-1.0)
+        @test_throws DomainError Pathfinder.UniformSampler(0.0)
         @testset for scale in [1, 2], seed in [42, 38]
             sampler_fun = Pathfinder.UniformSampler(scale)
             rng = Random.seed!(Random.default_rng(), seed)

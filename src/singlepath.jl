@@ -150,6 +150,10 @@ Sampler that in-place modifies an array to be IID uniformly distributed on `[-sc
 struct UniformSampler{T<:Real}
     scale::T
 end
+function UniformSampler(scale::T) where {T<:Real}
+    scale > 0 || throw(DomainError(scale, "scale of uniform sampler must be positive."))
+    return UniformSampler{T}(scale)
+end
 
 function (s::UniformSampler)(rng::Random.AbstractRNG, point)
     scale = s.scale
