@@ -1,15 +1,11 @@
 """
-    multipathfinder(
-        logp,
-        [∇logp,]
-        θ₀s::AbstractVector{AbstractVector{<:Real}},
-        ndraws::Int;
-        kwargs...
-    )
+    multipathfinder(logp, ndraws; kwargs...)
+    multipathfinder(logp, ∇logp, ndraws; kwargs...)
+    multipathfinder(fun::GalacticOptim.OptimizationFunction, ndraws; kwargs...)
 
-Filter samples from a mixture of multivariate normal distributions fit using `pathfinder`.
+Run [`pathfinder`](@ref) multiple times to fit a multivariate normal mixture model.
 
-For `nruns=length(θ₀s)`, `nruns` parallel runs of pathfinder produce `nruns` multivariate
+For `nruns=length(init)`, `nruns` parallel runs of pathfinder produce `nruns` multivariate
 normal approximations ``q_k = q(\\phi | \\mu_k, \\Sigma_k)`` of the posterior. These are
 combined to a mixture model ``q`` with uniform weights.
 
@@ -23,19 +19,28 @@ replacement. Discarding ``k`` from the samples would reproduce draws from ``q``.
 
 If `importance=true`, then Pareto smoothed importance resampling is used, so that the
 resulting draws better approximate draws from the target distribution ``p`` instead of
-``q``.
+``q``. This also prints a warning message if the importance weighted draws are unsuitable
+for approximating expectations with respect to ``p``.
 
 # Arguments
 - `logp`: a callable that computes the log-density of the target distribution.
 - `∇logp`: a callable that computes the gradient of `logp`. If not provided, `logp` is
     automatically differentiated using the backend specified in `ad_backend`.
-- `θ₀s::AbstractVector{AbstractVector{<:Real}}`: vector of length `nruns` of initial points
-    of length `dim` from which each single-path Pathfinder run will begin
+- `fun::GalacticOptim.OptimizationFunction`: an optimization function that represents
+    `-logp(x)` with its gradient. It must have the necessary features (e.g. a Hessian
+    function) for the chosen optimization algorithm. For details, see
+    [GalacticOptim.jl: OptimizationFunction](https://galacticoptim.sciml.ai/stable/API/optimization_function/).
 - `ndraws::Int`: number of approximate draws to return
 
 # Keywords
-- `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend.
-- `ndraws_per_run::Int=5`: The number of draws to take for each component before resampling.
+- `init`: iterator of length `nruns` of initial points of length `dim` from which each
+    single-path Pathfinder run will begin. `length(init)` must be implemented. If `init` is
+    not provided, `dim` and `nruns` must be.
+- `nruns::Int`: number of runs of Pathfinder to perform. Ignored if `init` is provided.
+- `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend used to
+    differentiate `logp` if `∇logp` is not provided.
+- `ndraws_per_run::Int`: The number of draws to take for each component before resampling.
+    Defaults to a number such that `ndraws_per_run * nruns > ndraws`.
 - `importance::Bool=true`: Perform Pareto smoothed importance resampling of draws.
 - `rng::AbstractRNG=Random.GLOBAL_RNG`: Pseudorandom number generator. It is recommended to
     use a parallelization-friendly PRNG like the default PRNG on Julia 1.7 and up.
@@ -56,6 +61,8 @@ resulting draws better approximate draws from the target distribution ``p`` inst
 - `component_inds::Vector{Int}`: Indices ``k`` of components in ``q`` from which each column
     in `ϕ` was drawn.
 """
+function multipathfinder end
+
 function multipathfinder(logp, ndraws::Int; ad_backend=AD.ForwardDiffBackend(), kwargs...)
     return multipathfinder(build_optim_function(logp; ad_backend), ndraws; kwargs...)
 end
@@ -64,24 +71,6 @@ function multipathfinder(
 )
     return multipathfinder(build_optim_function(logp, ∇logp; ad_backend), ndraws; kwargs...)
 end
-
-"""
-    multipathfinder(
-        f::GalacticOptim.OptimizationFunction,
-        θ₀s::AbstractVector{<:Real},
-        ndraws::Int;
-        kwargs...,
-    )
-
-Filter samples from a mixture of multivariate normal distributions fit using `pathfinder`.
-
-`f` is a user-created optimization function that represents the negative log density with
-its gradient and must have the necessary features (e.g. a Hessian function or specified
-automatic differentiation type) for the chosen optimization algorithm. For details, see
-[GalacticOptim.jl: OptimizationFunction](https://galacticoptim.sciml.ai/stable/API/optimization_function/).
-
-See [`multipathfinder`](@ref) for a description of remaining arguments.
-"""
 function multipathfinder(
     optim_fun::GalacticOptim.OptimizationFunction,
     ndraws::Int;

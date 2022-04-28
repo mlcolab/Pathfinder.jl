@@ -1,5 +1,7 @@
 """
-    pathfinder(logp[, ∇logp], θ₀::AbstractVector{<:Real}, ndraws::Int; kwargs...)
+    pathfinder(logp; kwargs...)
+    pathfinder(logp, ∇logp; kwargs...)
+    pathfinder(fun::GalacticOptim::OptimizationFunction; kwargs...)
 
 Find the best multivariate normal approximation encountered while maximizing `logp`.
 
@@ -15,11 +17,26 @@ constructed using at most the previous `history_length` steps.
 - `logp`: a callable that computes the log-density of the target distribution.
 - `∇logp`: a callable that computes the gradient of `logp`. If not provided, `logp` is
     automatically differentiated using the backend specified in `ad_backend`.
-- `θ₀`: initial point of length `dim` from which to begin optimization
-- `ndraws`: number of approximate draws to return
+- `fun::GalacticOptim.OptimizationFunction`: an optimization function that represents
+    `-logp(x)` with its gradient. It must have the necessary features (e.g. a Hessian
+    function) for the chosen optimization algorithm. For details, see
+    [GalacticOptim.jl: OptimizationFunction](https://galacticoptim.sciml.ai/stable/API/optimization_function/).
+- `prob::GalacticOptim.OptimizationProblem`: an optimization problem containing a function with
+    the same properties as `fun`, as well as an initial point, in which case `init` and
+    `dim` are ignored.
 
 # Keywords
+- `dim::Int`: dimension of the target distribution. If not provided, `init` or must be.
+    Ignored if `init` is provided.
+- `init::AbstractVector{<:Real}`: initial point of length `dim` from which to begin
+    optimization. If not provided, an initial point of type `Vector{Float64}` and length
+    `dim` is created and filled using `sample_init_fun`.
+- `sample_init_scale::Real`: scale factor ``s`` such that the default `sample_init_fun`
+    samples entries uniformly in the range ``[-s, s]``
+- `sample_init_fun`: function with the signature `(rng, x) -> x` that modifies a vector
+    of length `dims` in-place
 - `ndraws_elbo::Int=$DEFAULT_NDRAWS_ELBO`: Number of draws used to estimate the ELBO
+- `ndraws::Int=ndraws_elbo`: number of approximate draws to return
 - `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend.
 - `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
 - `executor::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl executor that
@@ -42,30 +59,14 @@ constructed using at most the previous `history_length` steps.
 - `ϕ::AbstractMatrix{<:Real}`: draws from multivariate normal with size `(dim, ndraws)`
 - `logqϕ::Vector{<:Real}`: log-density of multivariate normal at columns of `ϕ`
 """
+function pathfinder end
+
 function pathfinder(logp; ad_backend=AD.ForwardDiffBackend(), kwargs...)
     return pathfinder(build_optim_function(logp; ad_backend); kwargs...)
 end
 function pathfinder(logp, ∇logp; ad_backend=AD.ForwardDiffBackend(), kwargs...)
     return pathfinder(build_optim_function(logp, ∇logp; ad_backend); kwargs...)
 end
-
-"""
-    pathfinder(
-        f::GalacticOptim.OptimizationFunction,
-        θ₀::AbstractVector{<:Real},
-        ndraws::Int;
-        kwargs...,
-    )
-
-Find the best multivariate normal approximation encountered while minimizing `f`.
-
-`f` is a user-created optimization function that represents the negative log density with
-its gradient and must have the necessary features (e.g. a Hessian function or specified
-automatic differentiation type) for the chosen optimization algorithm. For details, see
-[GalacticOptim.jl: OptimizationFunction](https://galacticoptim.sciml.ai/stable/API/optimization_function/).
-
-See [`pathfinder`](@ref) for a description of remaining arguments.
-"""
 function pathfinder(
     optim_fun::GalacticOptim.OptimizationFunction;
     rng=Random.GLOBAL_RNG,
@@ -86,20 +87,6 @@ function pathfinder(
     optim_prob = build_optim_problem(optim_fun, _init)
     return pathfinder(optim_prob; rng, kwargs...)
 end
-
-"""
-    pathfinder(prob::GalacticOptim.OptimizationProblem, ndraws::Int; kwargs...)
-
-Find the best multivariate normal approximation encountered while solving `prob`.
-
-`prob` is a user-created optimization problem that represents the negative log density with
-its gradient, an initial position and must have the necessary features (e.g. a Hessian
-function or specified automatic differentiation type) for the chosen optimization algorithm.
-For details, see
-[GalacticOptim.jl: Defining OptimizationProblems](https://galacticoptim.sciml.ai/stable/API/optimization_problem/).
-
-See [`pathfinder`](@ref) for a description of remaining arguments.
-"""
 function pathfinder(
     optim_prob::GalacticOptim.OptimizationProblem;
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
