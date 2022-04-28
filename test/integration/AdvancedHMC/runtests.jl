@@ -9,6 +9,8 @@ using AdvancedHMC,
     StatsFuns,
     Test
 
+Random.seed!(0)
+
 struct RegressionModel{X,Y}
     x::X
     y::Y
@@ -96,11 +98,10 @@ end
         ndraws = 1_000
         nadapts = 500
         nparams = 5
-        rng = MersenneTwister(42)
         x = 0:0.01:1
-        y = sin.(x) .+ randn.(rng) .* 0.2 .+ x
+        y = sin.(x) .+ randn.() .* 0.2 .+ x
         X = [x x .^ 2 x .^ 3]
-        θ₀ = randn(rng, nparams)
+        θ₀ = randn(nparams)
         ℓπ = RegressionModel(X, y)
 
         metric = DiagEuclideanMetric(nparams)
@@ -112,7 +113,6 @@ end
             MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator)
         )
         samples1, stats1 = sample(
-            rng,
             hamiltonian,
             proposal,
             θ₀,
@@ -123,8 +123,8 @@ end
             progress=false,
         )
 
-        θ₀ = rand(rng, nparams) .* 4 .- 2
-        result_pf = pathfinder(ℓπ, θ₀, 1; rng, optimizer=Optim.LBFGS(; m=6))
+        θ₀ = rand(nparams) .* 4 .- 2
+        result_pf = pathfinder(ℓπ, θ₀, 1; optimizer=Optim.LBFGS(; m=6))
 
         @testset "Initial point" begin
             metric = DiagEuclideanMetric(nparams)
@@ -134,7 +134,6 @@ end
             proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
             adaptor = StepSizeAdaptor(0.8, integrator)
             samples2, stats2 = sample(
-                rng,
                 hamiltonian,
                 proposal,
                 result_pf[2][:, 1],
@@ -155,7 +154,6 @@ end
             proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
             adaptor = StepSizeAdaptor(0.8, integrator)
             samples3, stats3 = sample(
-                rng,
                 hamiltonian,
                 proposal,
                 result_pf[2][:, 1],
@@ -176,7 +174,6 @@ end
             proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
             adaptor = StepSizeAdaptor(0.8, integrator)
             samples4, stats4 = sample(
-                rng,
                 hamiltonian,
                 proposal,
                 result_pf[2][:, 1],

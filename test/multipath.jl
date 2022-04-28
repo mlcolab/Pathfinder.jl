@@ -9,27 +9,27 @@ using Test
 
 @testset "multi path pathfinder" begin
     @testset "MvNormal" begin
-        rng = MersenneTwister(42)
         n = 10
         nruns = 20
         ndraws = 1000_000
         ndraws_per_run = ndraws ÷ nruns
         ndraws_elbo = 100
-        Σ = rand_pd_mat(rng, Float64, n)
-        μ = randn(rng, n)
+        Σ = rand_pd_mat(Float64, n)
+        μ = randn(n)
         d = MvNormal(μ, Σ)
         logp(x) = logpdf(d, x)
         ∇logp(x) = ForwardDiff.gradient(logp, x)
-        x₀s = [rand(rng, Uniform(-2, 2), n) for _ in 1:nruns]
+        x₀s = [rand(Uniform(-2, 2), n) for _ in 1:nruns]
         rngs = if VERSION ≥ v"1.7"
             [MersenneTwister(), Random.default_rng()]
         else
             [MersenneTwister()]
         end
+        seed = 76
         @testset for rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
 
-            Random.seed!(rng, 76)
+            Random.seed!(rng, seed)
             q, ϕ, component_ids = multipathfinder(
                 logp, ∇logp, x₀s, ndraws; ndraws_elbo, ndraws_per_run, rng, executor
             )
@@ -55,7 +55,7 @@ using Test
                 @test isapprox(Σ_hat[i, j], Σ[i, j], atol=atol)
             end
 
-            Random.seed!(rng, 76)
+            Random.seed!(rng, seed)
             q2, ϕ2, component_ids2 = multipathfinder(
                 logp, x₀s, ndraws; ndraws_elbo, ndraws_per_run, rng, executor
             )
@@ -63,7 +63,7 @@ using Test
             @test ϕ2 == ϕ
             @test component_ids2 == component_ids
 
-            Random.seed!(rng, 76)
+            Random.seed!(rng, seed)
             ad_backend = AD.ReverseDiffBackend()
             q3, ϕ3, component_ids3 = multipathfinder(
                 logp, x₀s, ndraws; ndraws_elbo, ndraws_per_run, rng, executor, ad_backend
