@@ -20,11 +20,12 @@ using Transducers
         else
             [MersenneTwister()]
         end
+        seed = 42
         @testset for n in [1, 5, 10, 100], rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
 
             x0 = randn(n)
-            Random.seed!(rng, 42)
+            Random.seed!(rng, seed)
             q, ϕ, logqϕ = @inferred pathfinder(logp, ∇logp, x0, ndraws; rng, executor)
             @test q isa MvNormal
             @test q.μ ≈ zeros(n)
@@ -35,7 +36,7 @@ using Transducers
             @test size(ϕ) == (n, ndraws)
             @test logqϕ ≈ logpdf(q, ϕ)
 
-            Random.seed!(rng, 42)
+            Random.seed!(rng, seed)
             q2, ϕ2, logqϕ2 = pathfinder(logp, ∇logp, x0, ndraws; rng, executor)
             @test q2 == q
             @test ϕ2 == ϕ
@@ -66,15 +67,16 @@ using Transducers
         else
             [MersenneTwister()]
         end
+        seed = 38
         @testset for rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
 
-            Random.seed!(rng, 38)
+            Random.seed!(rng, seed)
             q, ϕ, logqϕ = @inferred pathfinder(
                 logp, x₀, 10; rng, ndraws_elbo, ad_backend, executor
             )
             @test q.Σ ≈ Σ rtol = 1e-1
-            Random.seed!(rng, 38)
+            Random.seed!(rng, seed)
             q2, ϕ2, logqϕ2 = pathfinder(
                 logp, x₀, 10; rng, ndraws_elbo, ad_backend, executor
             )
@@ -83,15 +85,15 @@ using Transducers
             @test logqϕ2 == logqϕ
         end
         @testset "kwargs forwarded to solve" begin
-            rng = MersenneTwister(42)
+            Random.seed!(42)
             i = 0
             cb = (args...,) -> (i += 1; false)
-            pathfinder(logp, x₀, 10; rng)
+            pathfinder(logp, x₀, 10)
             @test i ≠ 6
 
-            rng = MersenneTwister(42)
+            Random.seed!(42)
             i = 0
-            pathfinder(logp, x₀, 10; rng, maxiters=5, cb)
+            pathfinder(logp, x₀, 10; maxiters=5, cb)
             @test i == 6
         end
     end

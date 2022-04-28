@@ -5,8 +5,7 @@ using Test
 @testset "resample" begin
     x = randn(100)
 
-    rng = MersenneTwister(42)
-
+    rng = Random.seed!(Random.default_rng(), 42)
     xsub = Pathfinder.resample(rng, x, 500)
     @test all(in.(xsub, Ref(x)))
 
