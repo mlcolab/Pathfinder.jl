@@ -92,4 +92,17 @@ using Transducers
         fun = GalacticOptim.OptimizationFunction(logp, GalacticOptim.AutoForwardDiff())
         @test_throws ArgumentError multipathfinder(fun, 10; init)
     end
+    @testset "errors if neither dim nor init valid" begin
+        logp(x) = -sum(abs2, x) / 2
+        nruns = 2
+        @test_throws ArgumentError multipathfinder(logp, 10; nruns)
+        @test_throws ArgumentError multipathfinder(logp, 10; nruns, dim=0)
+        multipathfinder(logp, 10; nruns, dim=2)
+        multipathfinder(logp, 10; init=[randn(2) for _ in 1:nruns])
+    end
+    @testset "errors if neither init nor nruns valid" begin
+        logp(x) = -sum(abs2, x) / 2
+        @test_throws ArgumentError multipathfinder(logp, 10; dim=5, nruns=0)
+        multipathfinder(logp, 10; dim=5, nruns=2)
+    end
 end
