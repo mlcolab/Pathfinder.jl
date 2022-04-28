@@ -116,5 +116,13 @@ using Transducers
         @test_throws ArgumentError pathfinder(prob)
         fun = GalacticOptim.OptimizationFunction(logp, GalacticOptim.AutoForwardDiff())
         prob = GalacticOptim.OptimizationProblem(fun, init, nothing)
+        @test_throws ArgumentError pathfinder(prob)
+    end
+    @testset "errors if neither dim nor init valid" begin
+        logp(x) = -sum(abs2, x) / 2
+        @test_throws ArgumentError pathfinder(logp)
+        @test_throws ArgumentError pathfinder(logp; dim=0)
+        pathfinder(logp; dim=3)
+        pathfinder(logp; init=randn(5))
     end
 end
