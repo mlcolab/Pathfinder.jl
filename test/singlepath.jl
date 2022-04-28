@@ -24,9 +24,9 @@ using Transducers
         @testset for n in [1, 5, 10, 100], rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
 
-            x0 = randn(n)
+            init = randn(n)
             Random.seed!(rng, seed)
-            q, ϕ, logqϕ = @inferred pathfinder(logp, ∇logp, x0, ndraws; rng, executor)
+            q, ϕ, logqϕ = @inferred pathfinder(logp, ∇logp; init, ndraws, rng, executor)
             @test q isa MvNormal
             @test q.μ ≈ zeros(n)
             @test q.Σ isa Pathfinder.WoodburyPDMat
@@ -37,13 +37,14 @@ using Transducers
             @test logqϕ ≈ logpdf(q, ϕ)
 
             Random.seed!(rng, seed)
-            q2, ϕ2, logqϕ2 = pathfinder(logp, ∇logp, x0, ndraws; rng, executor)
+            q2, ϕ2, logqϕ2 = pathfinder(logp, ∇logp; init, ndraws, rng, executor)
             @test q2 == q
             @test ϕ2 == ϕ
             @test logqϕ2 == logqϕ
 
-            q3, ϕ3, logqϕ3 = pathfinder(logp, ∇logp, x0, 2; executor)
-            @test size(ϕ3) == (n, 2)
+            ndraws = 2
+            q3, ϕ3, logqϕ3 = pathfinder(logp, ∇logp; init, ndraws, executor)
+            @test size(ϕ3) == (n, ndraws)
         end
     end
     @testset "MvNormal" begin
@@ -59,7 +60,7 @@ using Transducers
         P = inv(Symmetric(Σ))
         logp(x) = -dot(x, P, x) / 2
         ∇logp(x) = -(P * x)
-        x₀ = [2.08, 3.77, -1.26, -0.97, -3.91]
+        dim = 5
         ad_backend = AD.ReverseDiffBackend()
         ndraws_elbo = 100
         rngs = if VERSION ≥ v"1.7"
@@ -73,13 +74,11 @@ using Transducers
 
             Random.seed!(rng, seed)
             q, ϕ, logqϕ = @inferred pathfinder(
-                logp, x₀, 10; rng, ndraws_elbo, ad_backend, executor
+                logp; rng, dim, ndraws_elbo, ad_backend, executor
             )
             @test q.Σ ≈ Σ rtol = 1e-1
             Random.seed!(rng, seed)
-            q2, ϕ2, logqϕ2 = pathfinder(
-                logp, x₀, 10; rng, ndraws_elbo, ad_backend, executor
-            )
+            q2, ϕ2, logqϕ2 = pathfinder(logp; rng, dim, ndraws_elbo, ad_backend, executor)
             @test q2 == q
             @test ϕ2 == ϕ
             @test logqϕ2 == logqϕ
@@ -88,22 +87,21 @@ using Transducers
             Random.seed!(42)
             i = 0
             cb = (args...,) -> (i += 1; false)
-            pathfinder(logp, x₀, 10)
+            pathfinder(logp; dim, cb)
             @test i ≠ 6
 
             Random.seed!(42)
             i = 0
-            pathfinder(logp, x₀, 10; maxiters=5, cb)
+            pathfinder(logp; dim, cb, maxiters=5)
             @test i == 6
         end
     end
     @testset "errors if no gradient provided" begin
         logp(x) = -sum(abs2, x) / 2
-        x0 = randn(5)
-        prob = GalacticOptim.OptimizationProblem(logp, x0, nothing)
-        @test_throws ArgumentError pathfinder(prob, 10)
+        init = randn(5)
+        prob = GalacticOptim.OptimizationProblem(logp, init, nothing)
+        @test_throws ArgumentError pathfinder(prob)
         fun = GalacticOptim.OptimizationFunction(logp, GalacticOptim.AutoForwardDiff())
-        prob = GalacticOptim.OptimizationProblem(fun, x0, nothing)
-        @test_throws ArgumentError pathfinder(prob, 10)
+        prob = GalacticOptim.OptimizationProblem(fun, init, nothing)
     end
 end
