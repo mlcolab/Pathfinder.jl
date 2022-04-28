@@ -10,6 +10,8 @@ using DynamicHMC,
     Test,
     TransformVariables
 
+Random.seed!(1)
+
 struct RegressionProblem{X,Y}
     x::X
     y::Y
@@ -90,21 +92,21 @@ end
 
     @testset "DynamicHMC.mcmc_with_warmup" begin
         ndraws = 1_000
-        rng = MersenneTwister(42)
         x = 0:0.01:1
-        y = sin.(x) .+ randn.(rng) .* 0.2 .+ x
+        y = sin.(x) .+ randn.() .* 0.2 .+ x
         X = [x x .^ 2 x .^ 3]
         prob = RegressionProblem(X, y)
         trans = as((σ=asℝ₊, α=asℝ, β=as(Array, size(X, 2))))
         P = TransformedLogDensity(trans, prob)
         ∇P = ADgradient(:ForwardDiff, P)
+        rng = Random.GLOBAL_RNG
 
         result_hmc1 = mcmc_with_warmup(rng, ∇P, ndraws; reporter=NoProgressReport())
 
         logp(x) = LogDensityProblems.logdensity(P, x)
         ∇logp(x) = LogDensityProblems.logdensity_and_gradient(∇P, x)[2]
-        θ₀ = rand(rng, LogDensityProblems.dimension(P)) .* 4 .- 2
-        result_pf = pathfinder(logp, ∇logp, θ₀, 1; rng)
+        θ₀ = rand(LogDensityProblems.dimension(P)) .* 4 .- 2
+        result_pf = pathfinder(logp, ∇logp, θ₀, 1)
 
         @testset "Initial point" begin
             result_hmc2 = mcmc_with_warmup(

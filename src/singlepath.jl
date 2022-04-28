@@ -39,7 +39,8 @@ constructed using at most the previous `history_length` steps.
 - `resample_fun`: A callable with the signature `resample_fun(rng, θ₀)` that updates a copy
     of `θ₀` in-place to generate a new initial point. Defaults to drawing all elements from
     the `Uniform(-2, 2)` distribution.
-- `kwargs...` : Remaining keywords are forwarded to `GalacticOptim.OptimizationProblem`.
+- `kwargs...` : Remaining keywords are forwarded to
+    [`GalacticOptim.solve`](https://galacticoptim.sciml.ai/stable/API/solve).
 
 # Returns
 - `q::Distributions.MvNormal`: ELBO-maximizing multivariate normal distribution
@@ -72,21 +73,9 @@ automatic differentiation type) for the chosen optimization algorithm. For detai
 
 See [`pathfinder`](@ref) for a description of remaining arguments.
 """
-function pathfinder(
-    optim_fun::GalacticOptim.OptimizationFunction,
-    θ₀,
-    ndraws;
-    rng::Random.AbstractRNG=Random.GLOBAL_RNG,
-    executor::Transducers.Executor=Transducers.SequentialEx(),
-    optimizer=DEFAULT_OPTIMIZER,
-    history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
-    ndraws_elbo::Int=5,
-    kwargs...,
-)
-    optim_prob = build_optim_problem(optim_fun, θ₀; kwargs...)
-    return pathfinder(
-        optim_prob, ndraws; rng, executor, optimizer, history_length, ndraws_elbo
-    )
+function pathfinder(optim_fun::GalacticOptim.OptimizationFunction, θ₀, ndraws; kwargs...)
+    optim_prob = build_optim_problem(optim_fun, θ₀)
+    return pathfinder(optim_prob, ndraws; kwargs...)
 end
 
 """
@@ -112,6 +101,7 @@ function pathfinder(
     ndraws_elbo::Int=5,
     nretries::Int=5,
     resample_fun=(rng, x) -> rand!(rng, Distributions.Uniform(-2, 2), x),
+    kwargs...,
 )
     if optim_prob.f.grad === nothing || optim_prob.f.grad isa Bool
         throw(ArgumentError("optimization function must define a gradient function."))
@@ -132,7 +122,7 @@ function pathfinder(
         end
 
         # compute trajectory
-        θs, logpθs, ∇logpθs = optimize_with_trace(prob, optimizer, executor)
+        θs, logpθs, ∇logpθs = optimize_with_trace(optim_prob, optimizer; kwargs...)
         L = length(θs) - 1
         @assert L + 1 == length(logpθs) == length(∇logpθs)
 
