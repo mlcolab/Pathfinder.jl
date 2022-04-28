@@ -86,8 +86,9 @@ function multipathfinder(
     optim_fun::GalacticOptim.OptimizationFunction,
     ndraws::Int;
     init=nothing,
-    nruns::Int=-1,
-    ndraws_per_run::Int=5,
+    nruns::Int=init === nothing ? -1 : length(init),
+    ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
+    ndraws_per_run::Int=max(ndraws_elbo, cld(ndraws, max(nruns, 1))),
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     executor::Transducers.Executor=_default_executor(rng; basesize=1),
     executor_per_run=Transducers.SequentialEx(),
@@ -104,7 +105,6 @@ function multipathfinder(
         _init = fill(init, nruns)
     else
         _init = init
-        nruns = length(init)
     end
     if ndraws > ndraws_per_run * nruns
         @warn "More draws requested than total number of draws across replicas. Draws will not be unique."
@@ -119,6 +119,7 @@ function multipathfinder(
             ndraws=ndraws_per_run,
             init=init_i,
             executor=executor_per_run,
+            ndraws_elbo,
             kwargs...,
         )
     end

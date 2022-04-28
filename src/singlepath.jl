@@ -19,6 +19,7 @@ constructed using at most the previous `history_length` steps.
 - `ndraws`: number of approximate draws to return
 
 # Keywords
+- `ndraws_elbo::Int=$DEFAULT_NDRAWS_ELBO`: Number of draws used to estimate the ELBO
 - `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend.
 - `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
 - `executor::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl executor that
@@ -33,7 +34,6 @@ constructed using at most the previous `history_length` steps.
     the [GalacticOptim.jl documentation](https://galacticoptim.sciml.ai/stable) for details.
 - `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
     inverse Hessian. This should only be set when `optimizer` is not an `Optim.LBFGS`.
-- `ndraws_elbo::Int=5`: Number of draws used to estimate the ELBO
 - `kwargs...` : Remaining keywords are forwarded to
     [`GalacticOptim.solve`](https://galacticoptim.sciml.ai/stable/API/solve).
 
@@ -106,7 +106,7 @@ function pathfinder(
     executor::Transducers.Executor=Transducers.SequentialEx(),
     optimizer=DEFAULT_OPTIMIZER,
     history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
-    ndraws_elbo::Int=5,
+    ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
     ndraws::Int=ndraws_elbo,
     kwargs...,
 )
