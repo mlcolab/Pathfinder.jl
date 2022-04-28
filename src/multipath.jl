@@ -56,15 +56,13 @@ resulting draws better approximate draws from the target distribution ``p`` inst
 - `component_inds::Vector{Int}`: Indices ``k`` of components in ``q`` from which each column
     in `ϕ` was drawn.
 """
-function multipathfinder(logp, θ₀s, ndraws; ad_backend=AD.ForwardDiffBackend(), kwargs...)
-    optim_fun = build_optim_function(logp; ad_backend)
-    return multipathfinder(optim_fun, θ₀s, ndraws; kwargs...)
+function multipathfinder(logp, ndraws::Int; ad_backend=AD.ForwardDiffBackend(), kwargs...)
+    return multipathfinder(build_optim_function(logp; ad_backend), ndraws; kwargs...)
 end
 function multipathfinder(
-    logp, ∇logp, θ₀s, ndraws; ad_backend=AD.ForwardDiffBackend(), kwargs...
+    logp, ∇logp, ndraws::Int; ad_backend=AD.ForwardDiffBackend(), kwargs...
 )
-    optim_fun = build_optim_function(logp, ∇logp; ad_backend)
-    return multipathfinder(optim_fun, θ₀s, ndraws; kwargs...)
+    return multipathfinder(build_optim_function(logp, ∇logp; ad_backend), ndraws; kwargs...)
 end
 
 """
@@ -86,8 +84,9 @@ See [`multipathfinder`](@ref) for a description of remaining arguments.
 """
 function multipathfinder(
     optim_fun::GalacticOptim.OptimizationFunction,
-    θ₀s,
-    ndraws;
+    ndraws::Int;
+    init=nothing,
+    nruns::Int=-1,
     ndraws_per_run::Int=5,
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     executor::Transducers.Executor=_default_executor(rng; basesize=1),
@@ -98,18 +97,32 @@ function multipathfinder(
     if optim_fun.grad === nothing || optim_fun.grad isa Bool
         throw(ArgumentError("optimization function must define a gradient function."))
     end
-    if ndraws > ndraws_per_run * length(θ₀s)
+    if init === nothing
+        nruns > 0 || throw(
+            ArgumentError("A positive `nruns` must be set or `init` must be provided.")
+        )
+        _init = fill(init, nruns)
+    else
+        _init = init
+        nruns = length(init)
+    end
+    if ndraws > ndraws_per_run * nruns
         @warn "More draws requested than total number of draws across replicas. Draws will not be unique."
     end
     logp(x) = -optim_fun.f(x, nothing)
 
     # run pathfinder independently from each starting point
-    trans = Transducers.Map() do θ₀
+    trans = Transducers.Map() do (init_i)
         return pathfinder(
-            optim_fun, θ₀, ndraws_per_run; rng, executor=executor_per_run, kwargs...
+            optim_fun;
+            rng,
+            ndraws=ndraws_per_run,
+            init=init_i,
+            executor=executor_per_run,
+            kwargs...,
         )
     end
-    iter_sp = Transducers.withprogress(θ₀s; interval=1e-3) |> trans
+    iter_sp = Transducers.withprogress(_init; interval=1e-3) |> trans
     res = Folds.collect(iter_sp, executor)
     qs = res |> Transducers.Map(first) |> collect
     ϕs = reduce(hcat, res |> Transducers.Map(x -> x[2]))

@@ -42,13 +42,11 @@ constructed using at most the previous `history_length` steps.
 - `ϕ::AbstractMatrix{<:Real}`: draws from multivariate normal with size `(dim, ndraws)`
 - `logqϕ::Vector{<:Real}`: log-density of multivariate normal at columns of `ϕ`
 """
-function pathfinder(logp, θ₀, ndraws; ad_backend=AD.ForwardDiffBackend(), kwargs...)
-    optim_fun = build_optim_function(logp; ad_backend)
-    return pathfinder(optim_fun, θ₀, ndraws; kwargs...)
+function pathfinder(logp; ad_backend=AD.ForwardDiffBackend(), kwargs...)
+    return pathfinder(build_optim_function(logp; ad_backend); kwargs...)
 end
-function pathfinder(logp, ∇logp, θ₀, ndraws; ad_backend=AD.ForwardDiffBackend(), kwargs...)
-    optim_fun = build_optim_function(logp, ∇logp; ad_backend)
-    return pathfinder(optim_fun, θ₀, ndraws; kwargs...)
+function pathfinder(logp, ∇logp; ad_backend=AD.ForwardDiffBackend(), kwargs...)
+    return pathfinder(build_optim_function(logp, ∇logp; ad_backend); kwargs...)
 end
 
 """
@@ -68,9 +66,25 @@ automatic differentiation type) for the chosen optimization algorithm. For detai
 
 See [`pathfinder`](@ref) for a description of remaining arguments.
 """
-function pathfinder(optim_fun::GalacticOptim.OptimizationFunction, θ₀, ndraws; kwargs...)
-    optim_prob = build_optim_problem(optim_fun, θ₀)
-    return pathfinder(optim_prob, ndraws; kwargs...)
+function pathfinder(
+    optim_fun::GalacticOptim.OptimizationFunction;
+    rng=Random.GLOBAL_RNG,
+    init=nothing,
+    dim::Int=-1,
+    sample_init_scale=2,
+    sample_init_fun=UniformSampler(sample_init_scale),
+    kwargs...,
+)
+    if init !== nothing
+        _init = init
+    elseif init === nothing && dim > 0
+        _init = Vector{Float64}(undef, dim)
+        sample_init_fun(rng, _init)
+    else
+        throw(ArgumentError("An initial point `init` or dimension `dim` must be provided."))
+    end
+    optim_prob = build_optim_problem(optim_fun, _init)
+    return pathfinder(optim_prob; rng, kwargs...)
 end
 
 """
@@ -87,13 +101,13 @@ For details, see
 See [`pathfinder`](@ref) for a description of remaining arguments.
 """
 function pathfinder(
-    optim_prob::GalacticOptim.OptimizationProblem,
-    ndraws;
+    optim_prob::GalacticOptim.OptimizationProblem;
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     executor::Transducers.Executor=Transducers.SequentialEx(),
     optimizer=DEFAULT_OPTIMIZER,
     history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
     ndraws_elbo::Int=5,
+    ndraws::Int=ndraws_elbo,
     kwargs...,
 )
     if optim_prob.f.grad === nothing || optim_prob.f.grad isa Bool
@@ -126,4 +140,19 @@ function pathfinder(
     end
 
     return q, ϕ, logqϕ
+end
+
+"""
+    UniformSampler(scale::Real)
+
+Sampler that in-place modifies an array to be IID uniformly distributed on `[-scale, scale]`
+"""
+struct UniformSampler{T<:Real}
+    scale::T
+end
+
+function (s::UniformSampler)(rng::Random.AbstractRNG, point)
+    scale = s.scale
+    @. point = rand(rng) * 2scale - scale
+    return point
 end
