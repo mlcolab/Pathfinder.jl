@@ -10,7 +10,7 @@ using DynamicHMC,
     Test,
     TransformVariables
 
-Random.seed!(0)
+Random.seed!(1)
 
 struct RegressionProblem{X,Y}
     x::X
