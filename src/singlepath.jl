@@ -2,6 +2,7 @@
     pathfinder(logp; kwargs...)
     pathfinder(logp, ∇logp; kwargs...)
     pathfinder(fun::GalacticOptim::OptimizationFunction; kwargs...)
+    pathfinder(prob::GalacticOptim::OptimizationProblem; kwargs...)
 
 Find the best multivariate normal approximation encountered while maximizing `logp`.
 
