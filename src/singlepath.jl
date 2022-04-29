@@ -182,7 +182,6 @@ function _pathfinder(
     L = length(θs) - 1
     success = L > 0
     fail_early && !success && return false, nothing
-    L > 0
 
     # fit mv-normal distributions to trajectory
     qs = fit_mvnormals(θs, ∇logpθs; history_length)
