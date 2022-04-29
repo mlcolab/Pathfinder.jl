@@ -27,6 +27,7 @@ const DEFAULT_LINE_SEARCH = LineSearches.MoreThuente()
 const DEFAULT_OPTIMIZER = Optim.LBFGS(;
     m=DEFAULT_HISTORY_LENGTH, linesearch=DEFAULT_LINE_SEARCH
 )
+const DEFAULT_NDRAWS_ELBO = 5
 
 include("transducers.jl")
 include("woodbury.jl")
