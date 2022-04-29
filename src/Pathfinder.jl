@@ -46,6 +46,9 @@ function __init__()
     Requires.@require AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d" begin
         include("integration/advancedhmc.jl")
     end
+    Requires.@require Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0" begin
+        include("integration/turing.jl")
+    end
 end
 
 end
