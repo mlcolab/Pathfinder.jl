@@ -53,7 +53,7 @@ constructed using at most the previous `history_length` steps.
 - `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
     inverse Hessian. This should only be set when `optimizer` is not an `Optim.LBFGS`.
 - `nretries::Int=5`: Number of times to retry the optimization if it fails. Before every
-    restart, a new initial point is drawn using `resample_fun`.
+    restart, a new initial point is drawn using `init_sampler`.
 - `kwargs...` : Remaining keywords are forwarded to
     [`GalacticOptim.solve`](https://galacticoptim.sciml.ai/stable/API/solve).
 
@@ -116,7 +116,7 @@ function pathfinder(
                 break
             end
             prob = deepcopy(optim_prob)  # avoid mutating user-provided object
-            resample_fun(rng, prob.u0)
+            init_sampler(rng, prob.u0)
         end
 
         # compute trajectory
