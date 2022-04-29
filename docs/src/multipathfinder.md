@@ -38,16 +38,10 @@ nruns = 20
 nothing # hide
 ```
 
-Next, we create initial points for the Pathfinder runs.
-
-```@repl 1
-init = collect.(eachcol(rand(dim, nruns) .* 20 .- 10));
-```
-
 Now we run multi-path Pathfinder.
 
 ```@repl 1
-@time q, ϕ, component_ids = multipathfinder(logp, ∇logp, ndraws; init);
+@time q, ϕ, component_ids = multipathfinder(logp, ∇logp, ndraws; init_scale=10);
 ```
 
 The first return value is a uniformly-weighted `Distributions.MixtureModel`.

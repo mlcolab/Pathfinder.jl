@@ -30,11 +30,11 @@ constructed using at most the previous `history_length` steps.
     Ignored if `init` is provided.
 - `init::AbstractVector{<:Real}`: initial point of length `dim` from which to begin
     optimization. If not provided, an initial point of type `Vector{Float64}` and length
-    `dim` is created and filled using `sample_init_fun`.
-- `sample_init_scale::Real`: scale factor ``s`` such that the default `sample_init_fun`
-    samples entries uniformly in the range ``[-s, s]``
-- `sample_init_fun`: function with the signature `(rng, x) -> x` that modifies a vector
-    of length `dims` in-place
+    `dim` is created and filled using `init_sampler`.
+- `init_scale::Real`: scale factor ``s`` such that the default `init_sampler` samples
+    entries uniformly in the range ``[-s, s]``
+- `init_sampler`: function with the signature `(rng, x) -> x` that modifies a vector of
+    length `dims` in-place to generate an initial point
 - `ndraws_elbo::Int=$DEFAULT_NDRAWS_ELBO`: Number of draws used to estimate the ELBO
 - `ndraws::Int=ndraws_elbo`: number of approximate draws to return
 - `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend.
@@ -72,15 +72,15 @@ function pathfinder(
     rng=Random.GLOBAL_RNG,
     init=nothing,
     dim::Int=-1,
-    sample_init_scale=2,
-    sample_init_fun=UniformSampler(sample_init_scale),
+    init_scale=2,
+    init_sampler=UniformSampler(init_scale),
     kwargs...,
 )
     if init !== nothing
         _init = init
     elseif init === nothing && dim > 0
         _init = Vector{Float64}(undef, dim)
-        sample_init_fun(rng, _init)
+        init_sampler(rng, _init)
     else
         throw(ArgumentError("An initial point `init` or dimension `dim` must be provided."))
     end
