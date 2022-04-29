@@ -123,7 +123,7 @@ end
             progress=false,
         )
 
-        result_pf = pathfinder(ℓπ; dim=5)
+        result_pf = pathfinder(ℓπ; dim=5, optimizer=Optim.LBFGS(; m=6))
 
         @testset "Initial point" begin
             metric = DiagEuclideanMetric(nparams)
