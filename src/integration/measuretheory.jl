@@ -24,3 +24,9 @@ function (logp::MeasureTheoryLogDensity)(z)
     x, logdetJ = TransformVariables.transform_and_logjac(logp.transform, z)
     return MeasureTheory.logdensityof(logp.measure, x) + logdetJ
 end
+function (logp::MeasureTheoryLogDensity{M,<:TransformVariables.ScalarTransform})(
+    z
+) where {M}
+    x, logdetJ = TransformVariables.transform_and_logjac(logp.transform, z[1])
+    return MeasureTheory.logdensityof(logp.measure, x) + logdetJ
+end
