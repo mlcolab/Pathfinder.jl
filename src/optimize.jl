@@ -50,7 +50,10 @@ function optimize_with_trace(prob, optimizer; maxiters=1_000, cb=nothing, kwargs
             # NOTE: GalacticOptim doesn't have an interface for accessing the gradient trace,
             # so we need to recompute it ourselves
             # see https://github.com/SciML/GalacticOptim.jl/issues/149
-            push!(∇fxs, rmul!(grad!(similar(x), x, nothing), -1))
+            ∇fx = similar(x)
+            grad!(∇fx, x, nothing)
+            rmul!(∇fx, -1)
+            push!(∇fxs, ∇fx)
             return false
         end
         GalacticOptim.solve(prob, optimizer; cb=callback, maxiters, kwargs...)
