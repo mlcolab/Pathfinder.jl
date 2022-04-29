@@ -187,7 +187,7 @@ function _pathfinder(
     qs = fit_mvnormals(θs, ∇logpθs; history_length)
 
     # find ELBO-maximizing distribution
-    lopt, elbo, ϕ, logqϕ = maximize_elbo(rng, logp, qs[2:end], ndraws_elbo, executor)
+    lopt, elbo, ϕ, logqϕ = @views maximize_elbo(rng, logp, qs[2:end], ndraws_elbo, executor)
     success &= !isnan(elbo) & (elbo != -Inf)
 
     return success, θs, logpθs, ∇logpθs, L, qs, lopt, elbo, ϕ, logqϕ
