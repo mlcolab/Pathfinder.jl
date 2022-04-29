@@ -138,7 +138,7 @@ struct UniformSampler{T<:Real}
     scale::T
     function UniformSampler(scale::T) where {T<:Real}
         scale > 0 || throw(DomainError(scale, "scale of uniform sampler must be positive."))
-        return UniformSampler{T}(scale)
+        return new{T}(scale)
     end
 end
 
