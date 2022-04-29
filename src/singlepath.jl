@@ -88,7 +88,7 @@ function pathfinder(
         throw(ArgumentError("An initial point `init` or dimension `dim` must be provided."))
     end
     optim_prob = build_optim_problem(optim_fun, _init)
-    return pathfinder(optim_prob; rng, kwargs...)
+    return pathfinder(optim_prob; rng, init_sampler, kwargs...)
 end
 function pathfinder(
     optim_prob::GalacticOptim.OptimizationProblem;
@@ -99,6 +99,8 @@ function pathfinder(
     nretries::Int=5,
     ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
     ndraws::Int=ndraws_elbo,
+    init_scale=2,
+    init_sampler=UniformSampler(init_scale),
     kwargs...,
 )
     if optim_prob.f.grad === nothing || optim_prob.f.grad isa Bool
