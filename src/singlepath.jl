@@ -87,11 +87,11 @@ function pathfinder(
     else
         throw(ArgumentError("An initial point `init` or dimension `dim` must be provided."))
     end
-    optim_prob = build_optim_problem(optim_fun, _init)
-    return pathfinder(optim_prob; rng, init_sampler, kwargs...)
+    prob = build_optim_problem(optim_fun, _init)
+    return pathfinder(prob; rng, init_sampler, kwargs...)
 end
 function pathfinder(
-    optim_prob::GalacticOptim.OptimizationProblem;
+    prob::GalacticOptim.OptimizationProblem;
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     executor::Transducers.Executor=Transducers.SequentialEx(),
     optimizer=DEFAULT_OPTIMIZER,
@@ -103,38 +103,42 @@ function pathfinder(
     init_sampler=UniformSampler(init_scale),
     kwargs...,
 )
-    if optim_prob.f.grad === nothing || optim_prob.f.grad isa Bool
+    if prob.f.grad === nothing || prob.f.grad isa Bool
         throw(ArgumentError("optimization function must define a gradient function."))
     end
-    logp(x) = -optim_prob.f.f(x, nothing)
-    elbo = convert(float(eltype(optim_prob.u0)), NaN)
-    itry = 0
-    local θs, logpθs, ∇logpθs, L, qs, lopt, elbo, ϕ, logqϕ
-    prob = optim_prob
-    while !isfinite(elbo) && itry < nretries
-        if itry > 0
-            if !GalacticOptim.isinplace(optim_prob)
-                @warn "Will not re-initialize optimization problem because it is not in-placeable."
-                break
-            end
-            prob = deepcopy(optim_prob)  # avoid mutating user-provided object
-            init_sampler(rng, prob.u0)
-        end
-
-        # compute trajectory
-        θs, logpθs, ∇logpθs = optimize_with_trace(prob, optimizer; kwargs...)
-        L = length(θs) - 1
-        @assert L + 1 == length(logpθs) == length(∇logpθs)
-
-        # fit mv-normal distributions to trajectory
-        qs = fit_mvnormals(θs, ∇logpθs; history_length)
-
-        # find ELBO-maximizing distribution
-        lopt, elbo, ϕ, logqϕ = maximize_elbo(rng, logp, qs[2:end], ndraws_elbo, executor)
-
+    logp(x) = -prob.f.f(x, nothing)
+    success, rets... = _pathfinder_try(
+        rng,
+        prob,
+        logp,
+        Val(false);
+        optimizer,
+        history_length,
+        ndraws_elbo,
+        executor,
+        kwargs...,
+    )
+    itry = 1
+    while itry ≤ nretries
+        init_sampler(rng, prob.u0)
+        success, rets_new... = _pathfinder_try(
+            rng,
+            prob,
+            logp,
+            Val(true);
+            optimizer,
+            history_length,
+            ndraws_elbo,
+            executor,
+            kwargs...,
+        )
         itry += 1
+        if success
+            rets = rets_new
+            break
+        end
     end
-
+    θs, logpθs, ∇logpθs, L, qs, lopt, elbo, ϕ, logqϕ = rets
     @info "Optimized for $L iterations (tries: $itry). Maximum ELBO of $(round(elbo; digits=2)) reached at iteration $lopt."
 
     # get parameters of ELBO-maximizing distribution
@@ -151,6 +155,36 @@ function pathfinder(
     end
 
     return q, ϕ, logqϕ
+end
+
+function _pathfinder_try(
+    rng,
+    prob,
+    logp,
+    ::Val{fail_early};
+    optimizer,
+    history_length,
+    ndraws_elbo,
+    executor,
+    kwargs...,
+) where {fail_early}
+    fail_early && !isfinite(logp(prob.u0)) && return false, nothing
+
+    # compute trajectory
+    θs, logpθs, ∇logpθs = optimize_with_trace(prob, optimizer; kwargs...)
+    L = length(θs) - 1
+    success = L > 0
+    fail_early && !success && return false, nothing
+    L > 0
+
+    # fit mv-normal distributions to trajectory
+    qs = fit_mvnormals(θs, ∇logpθs; history_length)
+
+    # find ELBO-maximizing distribution
+    lopt, elbo, ϕ, logqϕ = maximize_elbo(rng, logp, qs[2:end], ndraws_elbo, executor)
+    success &= !isnan(elbo) & (elbo != -Inf)
+
+    return success, θs, logpθs, ∇logpθs, L, qs, lopt, elbo, ϕ, logqϕ
 end
 
 """
