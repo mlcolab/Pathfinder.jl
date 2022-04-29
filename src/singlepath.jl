@@ -119,7 +119,7 @@ function pathfinder(
         kwargs...,
     )
     itry = 1
-    while itry ≤ nretries
+    while !success && itry ≤ nretries
         init_sampler(rng, prob.u0)
         success, rets_new... = _pathfinder(
             rng,
