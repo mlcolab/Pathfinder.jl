@@ -81,14 +81,16 @@ function pathfinder(
 )
     if init !== nothing
         _init = init
+        allow_mutating_init = false
     elseif init === nothing && dim > 0
         _init = Vector{Float64}(undef, dim)
         init_sampler(rng, _init)
+        allow_mutating_init = true
     else
         throw(ArgumentError("An initial point `init` or dimension `dim` must be provided."))
     end
     prob = build_optim_problem(optim_fun, _init)
-    return pathfinder(prob; rng, init_sampler, kwargs...)
+    return pathfinder(prob; rng, init_sampler, allow_mutating_init, kwargs...)
 end
 function pathfinder(
     prob::GalacticOptim.OptimizationProblem;
@@ -101,6 +103,7 @@ function pathfinder(
     ndraws::Int=ndraws_elbo,
     init_scale=2,
     init_sampler=UniformSampler(init_scale),
+    allow_mutating_init::Bool=false,
     kwargs...,
 )
     if prob.f.grad === nothing || prob.f.grad isa Bool
@@ -119,11 +122,15 @@ function pathfinder(
         kwargs...,
     )
     itry = 1
+    _prob = prob
     while !success && itry ≤ nretries
-        init_sampler(rng, prob.u0)
+        if itry == 1 && !allow_mutating_init
+            _prob = deepcopy(prob)
+        end
+        init_sampler(rng, _prob.u0)
         success, rets_new... = _pathfinder(
             rng,
-            prob,
+            _prob,
             logp,
             Val(true);
             optimizer,
