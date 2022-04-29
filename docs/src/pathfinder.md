@@ -31,16 +31,10 @@ end
 nothing # hide
 ```
 
-Next, we create initial points for the Pathfinder runs.
-
-```@repl 1
-θ₀ = rand(5) .* 4 .- 2  # θ₀ ~ Uniform(-2, 2);
-```
-
 Now we run Pathfinder.
 
 ```@repl 1
-@time q, ϕ, logqϕ = pathfinder(logp, ∇logp, θ₀, 100; ndraws_elbo=100);
+@time q, ϕ, logqϕ = pathfinder(logp, ∇logp; dim=5, ndraws=100, ndraws_elbo=100);
 ```
 
 The first return value is a multivariate normal approximation to our target distribution.

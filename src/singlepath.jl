@@ -1,5 +1,8 @@
 """
-    pathfinder(logp[, ∇logp], θ₀::AbstractVector{<:Real}, ndraws::Int; kwargs...)
+    pathfinder(logp; kwargs...)
+    pathfinder(logp, ∇logp; kwargs...)
+    pathfinder(fun::GalacticOptim::OptimizationFunction; kwargs...)
+    pathfinder(prob::GalacticOptim::OptimizationProblem; kwargs...)
 
 Find the best multivariate normal approximation encountered while maximizing `logp`.
 
@@ -15,10 +18,26 @@ constructed using at most the previous `history_length` steps.
 - `logp`: a callable that computes the log-density of the target distribution.
 - `∇logp`: a callable that computes the gradient of `logp`. If not provided, `logp` is
     automatically differentiated using the backend specified in `ad_backend`.
-- `θ₀`: initial point of length `dim` from which to begin optimization
-- `ndraws`: number of approximate draws to return
+- `fun::GalacticOptim.OptimizationFunction`: an optimization function that represents
+    `-logp(x)` with its gradient. It must have the necessary features (e.g. a Hessian
+    function) for the chosen optimization algorithm. For details, see
+    [GalacticOptim.jl: OptimizationFunction](https://galacticoptim.sciml.ai/stable/API/optimization_function/).
+- `prob::GalacticOptim.OptimizationProblem`: an optimization problem containing a function with
+    the same properties as `fun`, as well as an initial point, in which case `init` and
+    `dim` are ignored.
 
 # Keywords
+- `dim::Int`: dimension of the target distribution. If not provided, `init` or must be.
+    Ignored if `init` is provided.
+- `init::AbstractVector{<:Real}`: initial point of length `dim` from which to begin
+    optimization. If not provided, an initial point of type `Vector{Float64}` and length
+    `dim` is created and filled using `init_sampler`.
+- `init_scale::Real`: scale factor ``s`` such that the default `init_sampler` samples
+    entries uniformly in the range ``[-s, s]``
+- `init_sampler`: function with the signature `(rng, x) -> x` that modifies a vector of
+    length `dims` in-place to generate an initial point
+- `ndraws_elbo::Int=$DEFAULT_NDRAWS_ELBO`: Number of draws used to estimate the ELBO
+- `ndraws::Int=ndraws_elbo`: number of approximate draws to return
 - `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend.
 - `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
 - `executor::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl executor that
@@ -33,12 +52,8 @@ constructed using at most the previous `history_length` steps.
     the [GalacticOptim.jl documentation](https://galacticoptim.sciml.ai/stable) for details.
 - `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
     inverse Hessian. This should only be set when `optimizer` is not an `Optim.LBFGS`.
-- `ndraws_elbo::Int=5`: Number of draws used to estimate the ELBO
 - `nretries::Int=5`: Number of times to retry the optimization if it fails. Before every
     restart, a new initial point is drawn using `resample_fun`.
-- `resample_fun`: A callable with the signature `resample_fun(rng, θ₀)` that updates a copy
-    of `θ₀` in-place to generate a new initial point. Defaults to drawing all elements from
-    the `Uniform(-2, 2)` distribution.
 - `kwargs...` : Remaining keywords are forwarded to
     [`GalacticOptim.solve`](https://galacticoptim.sciml.ai/stable/API/solve).
 
@@ -47,60 +62,43 @@ constructed using at most the previous `history_length` steps.
 - `ϕ::AbstractMatrix{<:Real}`: draws from multivariate normal with size `(dim, ndraws)`
 - `logqϕ::Vector{<:Real}`: log-density of multivariate normal at columns of `ϕ`
 """
-function pathfinder(logp, θ₀, ndraws; ad_backend=AD.ForwardDiffBackend(), kwargs...)
-    optim_fun = build_optim_function(logp; ad_backend)
-    return pathfinder(optim_fun, θ₀, ndraws; kwargs...)
+function pathfinder end
+
+function pathfinder(logp; ad_backend=AD.ForwardDiffBackend(), kwargs...)
+    return pathfinder(build_optim_function(logp; ad_backend); kwargs...)
 end
-function pathfinder(logp, ∇logp, θ₀, ndraws; ad_backend=AD.ForwardDiffBackend(), kwargs...)
-    optim_fun = build_optim_function(logp, ∇logp; ad_backend)
-    return pathfinder(optim_fun, θ₀, ndraws; kwargs...)
+function pathfinder(logp, ∇logp; ad_backend=AD.ForwardDiffBackend(), kwargs...)
+    return pathfinder(build_optim_function(logp, ∇logp; ad_backend); kwargs...)
 end
-
-"""
-    pathfinder(
-        f::GalacticOptim.OptimizationFunction,
-        θ₀::AbstractVector{<:Real},
-        ndraws::Int;
-        kwargs...,
-    )
-
-Find the best multivariate normal approximation encountered while minimizing `f`.
-
-`f` is a user-created optimization function that represents the negative log density with
-its gradient and must have the necessary features (e.g. a Hessian function or specified
-automatic differentiation type) for the chosen optimization algorithm. For details, see
-[GalacticOptim.jl: OptimizationFunction](https://galacticoptim.sciml.ai/stable/API/optimization_function/).
-
-See [`pathfinder`](@ref) for a description of remaining arguments.
-"""
-function pathfinder(optim_fun::GalacticOptim.OptimizationFunction, θ₀, ndraws; kwargs...)
-    optim_prob = build_optim_problem(optim_fun, θ₀)
-    return pathfinder(optim_prob, ndraws; kwargs...)
-end
-
-"""
-    pathfinder(prob::GalacticOptim.OptimizationProblem, ndraws::Int; kwargs...)
-
-Find the best multivariate normal approximation encountered while solving `prob`.
-
-`prob` is a user-created optimization problem that represents the negative log density with
-its gradient, an initial position and must have the necessary features (e.g. a Hessian
-function or specified automatic differentiation type) for the chosen optimization algorithm.
-For details, see
-[GalacticOptim.jl: Defining OptimizationProblems](https://galacticoptim.sciml.ai/stable/API/optimization_problem/).
-
-See [`pathfinder`](@ref) for a description of remaining arguments.
-"""
 function pathfinder(
-    optim_prob::GalacticOptim.OptimizationProblem,
-    ndraws;
+    optim_fun::GalacticOptim.OptimizationFunction;
+    rng=Random.GLOBAL_RNG,
+    init=nothing,
+    dim::Int=-1,
+    init_scale=2,
+    init_sampler=UniformSampler(init_scale),
+    kwargs...,
+)
+    if init !== nothing
+        _init = init
+    elseif init === nothing && dim > 0
+        _init = Vector{Float64}(undef, dim)
+        init_sampler(rng, _init)
+    else
+        throw(ArgumentError("An initial point `init` or dimension `dim` must be provided."))
+    end
+    optim_prob = build_optim_problem(optim_fun, _init)
+    return pathfinder(optim_prob; rng, kwargs...)
+end
+function pathfinder(
+    optim_prob::GalacticOptim.OptimizationProblem;
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     executor::Transducers.Executor=Transducers.SequentialEx(),
     optimizer=DEFAULT_OPTIMIZER,
     history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
-    ndraws_elbo::Int=5,
     nretries::Int=5,
-    resample_fun=(rng, x) -> rand!(rng, Distributions.Uniform(-2, 2), x),
+    ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
+    ndraws::Int=ndraws_elbo,
     kwargs...,
 )
     if optim_prob.f.grad === nothing || optim_prob.f.grad isa Bool
@@ -151,4 +149,23 @@ function pathfinder(
     end
 
     return q, ϕ, logqϕ
+end
+
+"""
+    UniformSampler(scale::Real)
+
+Sampler that in-place modifies an array to be IID uniformly distributed on `[-scale, scale]`
+"""
+struct UniformSampler{T<:Real}
+    scale::T
+    function UniformSampler(scale::T) where {T<:Real}
+        scale > 0 || throw(DomainError(scale, "scale of uniform sampler must be positive."))
+        return new{T}(scale)
+    end
+end
+
+function (s::UniformSampler)(rng::Random.AbstractRNG, point)
+    scale = s.scale
+    @. point = rand(rng) * 2scale - scale
+    return point
 end
