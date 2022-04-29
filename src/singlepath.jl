@@ -107,7 +107,7 @@ function pathfinder(
         throw(ArgumentError("optimization function must define a gradient function."))
     end
     logp(x) = -prob.f.f(x, nothing)
-    success, rets... = _pathfinder_try(
+    success, rets... = _pathfinder(
         rng,
         prob,
         logp,
@@ -121,7 +121,7 @@ function pathfinder(
     itry = 1
     while itry ≤ nretries
         init_sampler(rng, prob.u0)
-        success, rets_new... = _pathfinder_try(
+        success, rets_new... = _pathfinder(
             rng,
             prob,
             logp,
@@ -157,7 +157,7 @@ function pathfinder(
     return q, ϕ, logqϕ
 end
 
-function _pathfinder_try(
+function _pathfinder(
     rng,
     prob,
     logp,
