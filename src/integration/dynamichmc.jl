@@ -39,4 +39,10 @@ function Base.AbstractMatrix{T}(L::WoodburyLeftInvFactor) where {T}
     return WoodburyLeftInvFactor(AbstractMatrix{T}(L.A))
 end
 
-Base.getindex(L::WoodburyLeftInvFactor, inds...) = getindex(Matrix(L), inds...)
+function Base.getindex(L::WoodburyLeftInvFactor, i::Int, j::Int)
+    n = size(L, 2)
+    v = zeros(n)
+    v[j] = 1
+    mul!(v, L, v)
+    return v[i]
+end
