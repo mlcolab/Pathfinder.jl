@@ -17,6 +17,7 @@ using Statistics: Statistics
 using StatsBase: StatsBase
 using StatsFuns: log2π
 using Transducers: Transducers
+using UnPack: @unpack
 
 export pathfinder, multipathfinder
 

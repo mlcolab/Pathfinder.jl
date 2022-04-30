@@ -29,7 +29,15 @@ function build_optim_problem(optim_fun, x₀)
     return GalacticOptim.OptimizationProblem(optim_fun, x₀, nothing)
 end
 
-function optimize_with_trace(prob, optimizer; maxiters=1_000, cb=nothing, kwargs...)
+function optimize_with_trace(
+    prob,
+    optimizer;
+    progress_name="Optimizing",
+    progress_id=nothing,
+    maxiters=1_000,
+    cb=nothing,
+    kwargs...,
+)
     u0 = prob.u0
     fun = prob.f
     grad! = fun.grad
@@ -37,23 +45,23 @@ function optimize_with_trace(prob, optimizer; maxiters=1_000, cb=nothing, kwargs
     xs = typeof(u0)[]
     fxs = typeof(fun.f(u0, nothing))[]
     ∇fxs = typeof(u0)[]
-    ProgressLogging.@withprogress name = "Optimizing" begin
-        iteration = 0
-        function callback(x, nfx, args...)
-            # prioritize any user-provided callback
-            cb !== nothing && cb(x, nfx, args...) && return true
-            ProgressLogging.@logprogress iteration / maxiters
-            iteration += 1
-            # some backends mutate x, so we must copy it
-            push!(xs, copy(x))
-            push!(fxs, -nfx)
-            # NOTE: GalacticOptim doesn't have an interface for accessing the gradient trace,
-            # so we need to recompute it ourselves
-            # see https://github.com/SciML/GalacticOptim.jl/issues/149
-            push!(∇fxs, rmul!(grad!(similar(x), x, nothing), -1))
-            return false
-        end
-        GalacticOptim.solve(prob, optimizer; cb=callback, maxiters, kwargs...)
+    iteration = 0
+    function callback(x, nfx, args...)
+        ret = cb !== nothing && cb(x, nfx, args...)
+
+        Base.@logmsg ProgressLogging.ProgressLevel progress_name progress =
+            iteration / maxiters _id = progress_id
+
+        iteration += 1
+        # some backends mutate x, so we must copy it
+        push!(xs, copy(x))
+        push!(fxs, -nfx)
+        # NOTE: GalacticOptim doesn't have an interface for accessing the gradient trace,
+        # so we need to recompute it ourselves
+        # see https://github.com/SciML/GalacticOptim.jl/issues/149
+        push!(∇fxs, rmul!(grad!(similar(x), x, nothing), -1))
+        return ret
     end
+    GalacticOptim.solve(prob, optimizer; cb=callback, maxiters, kwargs...)
     return xs, fxs, ∇fxs
 end
