@@ -95,73 +95,27 @@ end
 function pathfinder(
     prob::GalacticOptim.OptimizationProblem;
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
-    executor::Transducers.Executor=Transducers.SequentialEx(),
-    optimizer=DEFAULT_OPTIMIZER,
-    history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
-    ntries::Int=1_000,
     ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
     ndraws::Int=ndraws_elbo,
-    init_scale=2,
-    init_sampler=UniformSampler(init_scale),
-    allow_mutating_init::Bool=false,
     kwargs...,
 )
     if prob.f.grad === nothing || prob.f.grad isa Bool
         throw(ArgumentError("optimization function must define a gradient function."))
     end
     logp(x) = -prob.f.f(x, nothing)
-    itry = 1
-    rets = ProgressLogging.progress(; name="Optimizing") do progress_id
-        progress_name = "Optimizing (try 1)"
-        success, rets... = _pathfinder(
-            rng,
-            prob,
-            logp;
-            progress_id,
-            progress_name,
-            optimizer,
-            history_length,
-            ndraws_elbo,
-            executor,
-            kwargs...,
+    path_result = ProgressLogging.progress(; name="Optimizing") do progress_id
+        return _pathfinder_try_until_succeed(
+            rng, prob, logp; progress_id, ndraws_elbo, kwargs...
         )
-        _prob = prob
-        while !success && itry < ntries
-            if itry == 1 && !allow_mutating_init
-                _prob = deepcopy(prob)
-            end
-            itry += 1
-            init_sampler(rng, _prob.u0)
-            progress_name = "Optimizing (try $itry)"
-            success, rets_new... = _pathfinder(
-                rng,
-                _prob,
-                logp;
-                progress_id,
-                progress_name,
-                optimizer,
-                history_length,
-                ndraws_elbo,
-                executor,
-                kwargs...,
-            )
-            if success
-                rets = rets_new
-                break
-            end
-        end
-        success || throw(
-            ErrorException(
-                "Pathfinder failed after $ntries tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`.",
-            ),
-        )
-        return rets
     end
-    θs, logpθs, ∇logpθs, L, qs, lopt, elbo, ϕ, logqϕ = rets
-    @info "Optimized for $L iterations (tries: $itry). Maximum ELBO of $(round(elbo; digits=2)) reached at iteration $lopt."
+    (; itry, success, θs, logpθs, ∇logpθs, L, qs, lopt, elbo, ϕ, logqϕ) = path_result
+    success ||
+        @warn "Pathfinder failed after $itry tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
+
+    @info "Optimized for $L iterations (tries: $itry). Maximum ELBO of $(round(elbo; digits=2)) reached at iteration $(lopt - 1)."
 
     # get parameters of ELBO-maximizing distribution
-    q = qs[lopt + 1]
+    q = qs[lopt]
 
     # reuse existing draws; draw additional ones if necessary
     if ndraws_elbo < ndraws
@@ -176,23 +130,62 @@ function pathfinder(
     return q, ϕ, logqϕ
 end
 
+function _pathfinder_try_until_succeed(
+    rng,
+    prob,
+    logp;
+    ntries::Int=1_000,
+    init_scale=2,
+    init_sampler=UniformSampler(init_scale),
+    allow_mutating_init::Bool=false,
+    kwargs...,
+)
+    itry = 1
+    progress_name = "Optimizing (try 1)"
+    result = _pathfinder(rng, prob, logp; progress_name, kwargs...)
+    _prob = prob
+    while !result.success && itry < ntries
+        if itry == 1 && !allow_mutating_init
+            _prob = deepcopy(prob)
+        end
+        itry += 1
+        init_sampler(rng, _prob.u0)
+        progress_name = "Optimizing (try $itry)"
+        result = _pathfinder(rng, _prob, logp; progress_name, kwargs...)
+    end
+    return (; itry, result...)
+end
+
 function _pathfinder(
-    rng, prob, logp; optimizer, history_length, ndraws_elbo, executor, kwargs...
+    rng,
+    prob,
+    logp;
+    optimizer=DEFAULT_OPTIMIZER,
+    history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
+    ndraws_elbo=DEFAULT_NDRAWS_ELBO,
+    executor::Transducers.Executor=Transducers.SequentialEx(),
+    kwargs...,
 )
     # compute trajectory
     θs, logpθs, ∇logpθs = optimize_with_trace(prob, optimizer; kwargs...)
     L = length(θs) - 1
     success = L > 0
-    !success && return false, nothing
 
     # fit mv-normal distributions to trajectory
     qs = fit_mvnormals(θs, ∇logpθs; history_length)
 
     # find ELBO-maximizing distribution
-    lopt, elbo, ϕ, logqϕ = @views maximize_elbo(rng, logp, qs[2:end], ndraws_elbo, executor)
+    if L > 0
+        lopt, elbo, ϕ, logqϕ = @views maximize_elbo(
+            rng, logp, qs[2:end], ndraws_elbo, executor
+        )
+        lopt += 1
+    else
+        lopt, elbo, ϕ, logqϕ = maximize_elbo(rng, logp, qs, ndraws_elbo, executor)
+    end
     success &= !isnan(elbo) & (elbo != -Inf)
 
-    return success, θs, logpθs, ∇logpθs, L, qs, lopt, elbo, ϕ, logqϕ
+    return (; success, θs, logpθs, ∇logpθs, L, qs, lopt, elbo, ϕ, logqϕ)
 end
 
 """
