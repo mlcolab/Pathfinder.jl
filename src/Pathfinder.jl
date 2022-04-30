@@ -5,6 +5,7 @@ using Distributions: Distributions
 using Folds: Folds
 # ensure that ForwardDiff is conditionally loaded by GalacticOptim
 using ForwardDiff: ForwardDiff
+using IrrationalConstants: log2π
 using LinearAlgebra
 using GalacticOptim: GalacticOptim
 using Optim: Optim, LineSearches
@@ -15,7 +16,6 @@ using Random
 using Requires: Requires
 using Statistics: Statistics
 using StatsBase: StatsBase
-using StatsFuns: log2π
 using Transducers: Transducers
 using UnPack: @unpack
 
