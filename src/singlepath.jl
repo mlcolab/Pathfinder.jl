@@ -145,6 +145,11 @@ function pathfinder(
             break
         end
     end
+    success || throw(
+        ErrorException(
+            "Pathfinder failed after $nretries tries. Increase `nretries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`.",
+        ),
+    )
     θs, logpθs, ∇logpθs, L, qs, lopt, elbo, ϕ, logqϕ = rets
     @info "Optimized for $L iterations (tries: $itry). Maximum ELBO of $(round(elbo; digits=2)) reached at iteration $lopt."
 
@@ -181,7 +186,7 @@ function _pathfinder(
     θs, logpθs, ∇logpθs = optimize_with_trace(prob, optimizer; kwargs...)
     L = length(θs) - 1
     success = L > 0
-    fail_early && !success && return false, nothing
+    !success && return false, nothing
 
     # fit mv-normal distributions to trajectory
     qs = fit_mvnormals(θs, ∇logpθs; history_length)
