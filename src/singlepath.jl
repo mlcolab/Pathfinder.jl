@@ -110,46 +110,53 @@ function pathfinder(
         throw(ArgumentError("optimization function must define a gradient function."))
     end
     logp(x) = -prob.f.f(x, nothing)
-    success, rets... = _pathfinder(
-        rng,
-        prob,
-        logp,
-        Val(false);
-        optimizer,
-        history_length,
-        ndraws_elbo,
-        executor,
-        kwargs...,
-    )
     itry = 1
-    _prob = prob
-    while !success && itry ≤ nretries
-        if itry == 1 && !allow_mutating_init
-            _prob = deepcopy(prob)
-        end
-        init_sampler(rng, _prob.u0)
-        success, rets_new... = _pathfinder(
+    rets = ProgressLogging.progress(; name="Optimizing") do progress_id
+        progress_name = "Optimizing (try 1)"
+        success, rets... = _pathfinder(
             rng,
-            _prob,
-            logp,
-            Val(true);
+            prob,
+            logp;
+            progress_id,
+            progress_name,
             optimizer,
             history_length,
             ndraws_elbo,
             executor,
             kwargs...,
         )
-        itry += 1
-        if success
-            rets = rets_new
-            break
+        _prob = prob
+        while !success && itry < ntries
+            if itry == 1 && !allow_mutating_init
+                _prob = deepcopy(prob)
+            end
+            itry += 1
+            init_sampler(rng, _prob.u0)
+            progress_name = "Optimizing (try $itry)"
+            success, rets_new... = _pathfinder(
+                rng,
+                _prob,
+                logp;
+                progress_id,
+                progress_name,
+                optimizer,
+                history_length,
+                ndraws_elbo,
+                executor,
+                kwargs...,
+            )
+            if success
+                rets = rets_new
+                break
+            end
         end
+        success || throw(
+            ErrorException(
+                "Pathfinder failed after $ntries tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`.",
+            ),
+        )
+        return rets
     end
-    success || throw(
-        ErrorException(
-            "Pathfinder failed after $nretries tries. Increase `nretries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`.",
-        ),
-    )
     θs, logpθs, ∇logpθs, L, qs, lopt, elbo, ϕ, logqϕ = rets
     @info "Optimized for $L iterations (tries: $itry). Maximum ELBO of $(round(elbo; digits=2)) reached at iteration $lopt."
 
@@ -170,18 +177,8 @@ function pathfinder(
 end
 
 function _pathfinder(
-    rng,
-    prob,
-    logp,
-    ::Val{fail_early};
-    optimizer,
-    history_length,
-    ndraws_elbo,
-    executor,
-    kwargs...,
-) where {fail_early}
-    fail_early && !isfinite(logp(prob.u0)) && return false, nothing
-
+    rng, prob, logp; optimizer, history_length, ndraws_elbo, executor, kwargs...
+)
     # compute trajectory
     θs, logpθs, ∇logpθs = optimize_with_trace(prob, optimizer; kwargs...)
     L = length(θs) - 1
