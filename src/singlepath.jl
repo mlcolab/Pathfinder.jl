@@ -108,7 +108,7 @@ function pathfinder(
             rng, prob, logp; progress_id, ndraws_elbo, kwargs...
         )
     end
-    (; itry, success, θs, logpθs, ∇logpθs, L, qs, lopt, elbo, ϕ, logqϕ) = path_result
+    @unpack itry, success, θs, logpθs, ∇logpθs, L, qs, lopt, elbo, ϕ, logqϕ = path_result
     success ||
         @warn "Pathfinder failed after $itry tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
 
