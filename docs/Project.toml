@@ -6,4 +6,5 @@ Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 
 [compat]
 ForwardDiff = "0.10"
+Pathfinder = "0.3"
 Plots = "1"
