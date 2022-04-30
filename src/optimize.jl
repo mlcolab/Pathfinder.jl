@@ -65,3 +65,34 @@ function optimize_with_trace(
     GalacticOptim.solve(prob, optimizer; cb=callback, maxiters, kwargs...)
     return xs, fxs, ∇fxs
 end
+
+function optimize_with_trace(
+    prob,
+    optimizer::Union{Optim.FirstOrderOptimizer,Optim.SecondOrderOptimizer};
+    progress_name="Optimizing",
+    progress_id=nothing,
+    maxiters=1_000,
+    cb=nothing,
+    kwargs...,
+)
+    iteration = 0
+    function callback(x, nfx, args...)
+        ret = cb !== nothing && cb(x, nfx, args...)
+        Base.@logmsg ProgressLogging.ProgressLevel progress_name progress =
+            iteration / maxiters _id = progress_id
+        iteration += 1
+        return ret
+    end
+    new_kwargs = merge(NamedTuple(kwargs), (; store_trace=true, extended_trace=true))
+    sol = GalacticOptim.solve(prob, optimizer; cb=callback, maxiters, new_kwargs...)
+
+    u0 = prob.u0
+    xs = Vector{typeof(u0)}(undef, iteration)
+    ∇fxs = Vector{typeof(u0)}(undef, iteration)
+    result = sol.original
+    copyto!(xs, Optim.x_trace(result))
+    fxs = -Optim.f_trace(result)
+    map!(tr -> -tr.metadata["g(x)"], ∇fxs, Optim.trace(result))
+
+    return xs::Vector{typeof(u0)}, fxs, ∇fxs::Vector{typeof(u0)}
+end
