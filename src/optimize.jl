@@ -94,5 +94,5 @@ function optimize_with_trace(
     fxs = -Optim.f_trace(result)
     map!(tr -> -tr.metadata["g(x)"], ∇fxs, Optim.trace(result))
 
-    return xs, fxs, ∇fxs
+    return xs::Vector{typeof(u0)}, fxs, ∇fxs::Vector{typeof(u0)}
 end
