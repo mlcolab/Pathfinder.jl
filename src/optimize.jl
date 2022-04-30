@@ -47,8 +47,8 @@ function optimize_with_trace(
     ∇fxs = typeof(u0)[]
     iteration = 0
     function callback(x, nfx, args...)
-        # prioritize any user-provided callback
-        cb !== nothing && cb(x, nfx, args...) && return true
+        ret = cb !== nothing && cb(x, nfx, args...)
+
         Base.@logmsg ProgressLogging.ProgressLevel progress_name progress =
             iteration / maxiters _id = progress_id
 
@@ -60,7 +60,7 @@ function optimize_with_trace(
         # so we need to recompute it ourselves
         # see https://github.com/SciML/GalacticOptim.jl/issues/149
         push!(∇fxs, rmul!(grad!(similar(x), x, nothing), -1))
-        return false
+        return ret
     end
     GalacticOptim.solve(prob, optimizer; cb=callback, maxiters, kwargs...)
     return xs, fxs, ∇fxs
