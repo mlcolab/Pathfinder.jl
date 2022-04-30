@@ -10,7 +10,16 @@ jobs:
       - name: Pkg.add("CompatHelper")
         run: julia -e 'using Pkg; Pkg.add("CompatHelper")'
       - name: CompatHelper.main()
+        run: |
+          using CompatHelper
+          subdirs = [
+              "",
+              "test/integration/AdvancedHMC",
+              "test/integration/DynamicHMC",
+              "docs",
+            ]
+          CompatHelper.main(; subdirs)
+        shell: julia --color=yes {0}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COMPATHELPER_PRIV: ${{ secrets.DOCUMENTER_KEY }}
-        run: julia -e 'using CompatHelper; CompatHelper.main()'
+          COMPATHELPER_PRIV: ${{ secrets.COMPATHELPER_KEY }}

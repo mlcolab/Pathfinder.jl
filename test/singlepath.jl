@@ -96,6 +96,22 @@ using Transducers
             @test i == 6
         end
     end
+    @testset "retries" begin
+        @testset "logp returning NaN" begin
+            dim = 5
+            nfail = 20
+            logp(x) = i ≤ nfail ? NaN : -sum(abs2, x) / 2
+            cb = (args...,) -> (i += 1; true)
+            i = 1
+            res = pathfinder(logp; dim, cb)
+            @test res[1].μ ≈ zeros(dim) atol = 1e-6
+            @test res[1].Σ ≈ diagm(ones(dim)) atol = 1e-6
+            i = 1
+            init = randn(dim)
+            res2 = pathfinder(logp; init, cb, ntries=nfail)
+            @test !isapprox(res2[1].μ, zeros(dim); atol=1e-6)
+        end
+    end
     @testset "UniformSampler" begin
         @test_throws DomainError Pathfinder.UniformSampler(-1.0)
         @test_throws DomainError Pathfinder.UniformSampler(0.0)

@@ -36,7 +36,6 @@ function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_len
 
     for l in 1:L
         θlp1, ∇logpθlp1 = θs[l + 1], ∇logpθs[l + 1]
-        (any(isnan, θlp1) || any(isnan, ∇logpθlp1)) && break
         s .= θlp1 .- θ
         y .= ∇logpθ .- ∇logpθlp1
         if dot(y, s) > ϵ * sum(abs2, y)  # curvature is positive, safe to update inverse Hessian

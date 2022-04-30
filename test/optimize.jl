@@ -85,11 +85,14 @@ end
 
     @testset "progress logging" begin
         logs, = Test.collect_test_logs(; min_level=ProgressLogging.ProgressLevel) do
-            Pathfinder.optimize_with_trace(prob, Optim.LBFGS())
+            ProgressLogging.progress(; name="Optimizing") do progress_id
+                Pathfinder.optimize_with_trace(prob, Optim.LBFGS(); progress_id)
+            end
         end
         @test logs[1].kwargs[:progress] === nothing
-        @test logs[1].message.progress.name == "Optimizing"
+        @test logs[1].message == "Optimizing"
         @test logs[2].kwargs[:progress] == 0.0
+        @test logs[2].message == "Optimizing"
         @test logs[3].kwargs[:progress] == 0.001
         @test logs[end].kwargs[:progress] == "done"
     end

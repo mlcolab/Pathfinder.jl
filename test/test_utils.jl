@@ -15,12 +15,13 @@ rand_pd_diag_mat(T, n) = rand_pd_diag_mat(Random.GLOBAL_RNG, T, n)
 function Pathfinder.rand_and_logpdf(rng, dist, ndraws)
     x = rand(rng, dist, ndraws)
     if x isa AbstractVector
+        xmat = permutedims(x)
         logpx = Distributions.logpdf.(dist, x)
-        x = collect(x')
     else
+        xmat = x
         logpx = Distributions.logpdf(dist, x)
     end
-    return x, logpx
+    return xmat, logpx
 end
 
 # banana distribution
