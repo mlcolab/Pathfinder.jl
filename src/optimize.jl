@@ -68,7 +68,7 @@ end
 
 function optimize_with_trace(
     prob,
-    optimizer::Optim.AbstractOptimizer;
+    optimizer::Union{Optim.FirstOrderOptimizer,Optim.SecondOrderOptimizer};
     progress_name="Optimizing",
     progress_id=nothing,
     maxiters=1_000,
