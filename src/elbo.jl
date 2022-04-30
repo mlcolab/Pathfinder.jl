@@ -20,12 +20,3 @@ function elbo_and_samples(rng, logp, dist, ndraws)
 end
 
 elbo_from_logpdfs(logpϕ, logqϕ) = Statistics.mean(logpϕ) - Statistics.mean(logqϕ)
-
-function _argmax_ignore_nan(x)
-    imax, _ = foldl(pairs(x)) do i1_x1, i2_x2
-        x1 = last(i1_x1)
-        x2 = last(i2_x2)
-        return (isnan(x2) || !Base.isless(x1, x2)) ? i1_x1 : i2_x2
-    end
-    return imax
-end
