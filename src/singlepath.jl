@@ -108,7 +108,8 @@ function pathfinder(
             rng, prob, logp; progress_id, ndraws_elbo, kwargs...
         )
     end
-    @unpack itry, success, θs, logpθs, ∇logpθs, L, qs, lopt, elbo_estimate = path_result
+    @unpack itry, success, optim_solution, optim_trace, qs, lopt, elbo_estimate = path_result
+    L = length(optim_trace) - 1
     success ||
         @warn "Pathfinder failed after $itry tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
 
@@ -169,12 +170,12 @@ function _pathfinder(
     kwargs...,
 )
     # compute trajectory
-    θs, logpθs, ∇logpθs = optimize_with_trace(prob, optimizer; kwargs...)
-    L = length(θs) - 1
+    optim_solution, optim_trace = optimize_with_trace(prob, optimizer; kwargs...)
+    L = length(optim_trace) - 1
     success = L > 0
 
     # fit mv-normal distributions to trajectory
-    qs = fit_mvnormals(θs, ∇logpθs; history_length)
+    qs = fit_mvnormals(optim_trace.points, optim_trace.gradients; history_length)
 
     # find ELBO-maximizing distribution
     if L > 0
@@ -188,7 +189,7 @@ function _pathfinder(
     elbo = elbo_estimate.value
     success &= !isnan(elbo) & (elbo != -Inf)
 
-    return (; success, θs, logpθs, ∇logpθs, L, qs, lopt, elbo_estimate)
+    return (; success, optim_solution, optim_trace, qs, lopt, elbo_estimate)
 end
 
 """
