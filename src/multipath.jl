@@ -23,7 +23,7 @@ Container for results of multi-path Pathfinder.
 - `draws_transformed`: `draws` transformed to be draws from `fit_dist_mix_transformed`.
 - `pathfinder_results::Vector{<:PathfinderResult}`: results of each single-path Pathfinder
     run.
-- `psis_result::Union{Nothing,<:PSIS.PSISResult`: If importance resampling was used, the
+- `psis_result::Union{Nothing,<:PSIS.PSISResult}`: If importance resampling was used, the
     result of Pareto-smoothed importance resampling. `psis_result.pareto_shape` also
     diagnoses whether `draws` can be used to compute estimates from the target distribution.
 """
