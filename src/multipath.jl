@@ -128,7 +128,7 @@ function multipathfinder(
         log_densities_ratios = log_densities_target - log_densities_fit
         resample(rng, inds, log_densities_ratios, ndraws)
     else
-        resample(rng, inds, ndraws)
+        resample(rng, inds, ndraws), nothing
     end
 
     fit_dist_mix = Distributions.MixtureModel(fit_dist_opts)
@@ -137,5 +137,5 @@ function multipathfinder(
     # get component ids (k) of draws in ϕ
     draw_component_ids = cld.(sample_inds, ndraws_per_run)
 
-    return fit_dist_mix, draws, draw_component_ids
+    return (; fit_dist_mix, draws, draw_component_ids, pathfinder_results, psis_result)
 end
