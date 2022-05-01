@@ -1,4 +1,69 @@
 """
+    MultiPathfinderResult
+
+Container for results of multi-path Pathfinder.
+
+# Fields
+- `input`: User-provided input object, e.g. either `logp`, `(logp, ∇logp)`, `optim_fun`,
+    `optim_prob`, or another object.
+- `optimizer`: Optimizer used for maximizing the log-density
+- `rng`: Pseudorandom number generator that was used for sampling
+- `optim_prob::GalacticOptim.OptimizationProblem`: Otimization problem used for
+    optimization
+- `logp`: Log-density function
+- `fit_dist_mix::Distributions.MixtureModel`: uniformly-weighted mixture of ELBO-maximizing
+    multivariate normal distributions from each run.
+- `draws::AbstractMatrix{<:Real}`: draws from `fit_dist_mix` with size `(dim, ndraws)`,
+    potentially resampled using importance resampling to be closer to the target
+    distribution.
+- `draw_component_ids::Vector{Int}`: component id of each draw in `draws`.
+- `fit_dist_mix_transformed`: `fit_dist_mix` transformed to the same space as the user-
+    supplied target distribution. This is only different from `fit_dist_mix` when
+    integrating with other packages, and its type depends on the type of `input`.
+- `draws_transformed`: `draws` transformed to be draws from `fit_dist_mix_transformed`.
+- `pathfinder_results::Vector{<:PathfinderResult}`: results of each single-path Pathfinder
+    run.
+- `psis_result::Union{Nothing,<:PSIS.PSISResult`: If importance resampling was used, the
+    result of Pareto-smoothed importance resampling. `psis_result.pareto_shape` also
+    diagnoses whether `draws` can be used to compute estimates from the target distribution.
+"""
+struct MultiPathfinderResult{I,O,R,OF,LP,FD,D,C,FDT,DT,PFR,PR}
+    input::I
+    optimizer::O
+    rng::R
+    optim_fun::OF
+    logp::LP
+    fit_dist_mix::FD
+    draws::D
+    draw_component_ids::C
+    fit_dist_mix_transformed::FDT
+    draws_transformed::DT
+    pathfinder_results::PFR
+    psis_result::PR
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", result::MultiPathfinderResult)
+    println(io, "Multi-path Pathfinder result")
+    print(io, "  num_runs: $(length(result.pathfinder_results))")
+    psis_result = result.psis_result
+    if psis_result !== nothing
+        println(io)
+        k = psis_result.pareto_shape
+        assessment = if k > 1
+            "very bad"
+        elseif k > 0.7
+            "bad"
+        elseif k > 0.5
+            "ok"
+        else
+            "good"
+        end
+        print("  Pareto shape diagnostic: ", round(k; digits=2), " ($assessment)")
+    end
+    return nothing
+end
+
+"""
     multipathfinder(logp, ndraws; kwargs...)
     multipathfinder(logp, ∇logp, ndraws; kwargs...)
     multipathfinder(fun::GalacticOptim.OptimizationFunction, ndraws; kwargs...)
@@ -152,5 +217,22 @@ function multipathfinder(
     # get component ids (k) of draws in ϕ
     draw_component_ids = cld.(sample_inds, ndraws_per_run)
 
-    return (; fit_dist_mix, draws, draw_component_ids, pathfinder_results, psis_result)
+    # placeholders
+    fit_dist_mix_transformed = fit_dist_mix
+    draws_transformed = draws
+
+    return MultiPathfinderResult(
+        input,
+        optimizer,
+        rng,
+        optim_fun,
+        logp,
+        fit_dist_mix,
+        draws,
+        draw_component_ids,
+        fit_dist_mix_transformed,
+        draws_transformed,
+        pathfinder_results,
+        psis_result,
+    )
 end
