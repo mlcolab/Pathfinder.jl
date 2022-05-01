@@ -11,14 +11,14 @@ Container for results of multi-path Pathfinder.
 - `optim_prob::GalacticOptim.OptimizationProblem`: Otimization problem used for
     optimization
 - `logp`: Log-density function
-- `fit_distribution::Distributions.MixtureModel`: uniformly-weighted mixture of ELBO-maximizing
-    multivariate normal distributions from each run.
+- `fit_distribution::Distributions.MixtureModel`: uniformly-weighted mixture of ELBO-
+    maximizing multivariate normal distributions from each run.
 - `draws::AbstractMatrix{<:Real}`: draws from `fit_distribution` with size `(dim, ndraws)`,
     potentially resampled using importance resampling to be closer to the target
     distribution.
 - `draw_component_ids::Vector{Int}`: component id of each draw in `draws`.
-- `fit_distribution_transformed`: `fit_distribution` transformed to the same space as the user-
-    supplied target distribution. This is only different from `fit_distribution` when
+- `fit_distribution_transformed`: `fit_distribution` transformed to the same space as the
+    user-supplied target distribution. This is only different from `fit_distribution` when
     integrating with other packages, and its type depends on the type of `input`.
 - `draws_transformed`: `draws` transformed to be draws from `fit_distribution_transformed`.
 - `pathfinder_results::Vector{<:PathfinderResult}`: results of each single-path Pathfinder
