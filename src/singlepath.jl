@@ -111,19 +111,22 @@ function pathfinder(
     end
     @unpack itry, success, optim_solution, optim_trace, fit_dists, iteration_opt, elbo_estimates =
         path_result
-    success ||
-        @warn "Pathfinder failed after $itry tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
 
-    # get parameters of ELBO-maximizing distribution
-    elbo_estimate_opt = elbo_estimates[iteration_opt]
+    if !success
+        ndraws_elbo_actual = 0
+        @warn "Pathfinder failed after $itry tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
+    else
+        elbo_estimate_opt = elbo_estimates[iteration_opt]
+        ndraws_elbo_actual = ndraws
+        iterations = length(optim_trace) - 1
+        @info "Optimized for $iterations iterations (tries: $itry). Maximum ELBO of $(_to_string(elbo_estimate_opt)) reached at iteration $iteration_opt."
+    end
+
     fit_dist_opt = fit_dists[iteration_opt + 1]
 
-    iterations = length(optim_trace) - 1
-    @info "Optimized for $iterations iterations (tries: $itry). Maximum ELBO of $(_to_string(elbo_estimate_opt)) reached at iteration $iteration_opt."
-
     # reuse existing draws; draw additional ones if necessary
-    draws = if ndraws_elbo < ndraws
-        hcat(elbo_estimate_opt.draws, rand(rng, fit_dist_opt, ndraws - ndraws_elbo))
+    draws = if ndraws_elbo_actual < ndraws
+        hcat(elbo_estimate_opt.draws, rand(rng, fit_dist_opt, ndraws - ndraws_elbo_actual))
     else
         elbo_estimate_opt.draws[:, 1:ndraws]
     end
