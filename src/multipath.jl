@@ -187,8 +187,8 @@ function multipathfinder(
     end
     iter_sp = Transducers.withprogress(_init; interval=1e-3) |> trans
     pathfinder_results = Folds.collect(iter_sp, executor)
-    fit_distribution_opts =
-        pathfinder_results |> Transducers.Map(x -> x.fit_distribution_opt) |> collect
+    fit_distributions =
+        pathfinder_results |> Transducers.Map(x -> x.fit_distribution) |> collect
     draws_all = reduce(hcat, pathfinder_results |> Transducers.Map(x -> x.draws))
 
     # draw samples from augmented mixture model
@@ -197,7 +197,7 @@ function multipathfinder(
         log_densities_fit =
             pathfinder_results |>
             Transducers.MapCat() do x
-                return Distributions.logpdf(x.fit_distribution_opt, x.draws)
+                return Distributions.logpdf(x.fit_distribution, x.draws)
             end |>
             collect
         iter_logp = eachcol(draws_all) |> Transducers.Map(logp)
@@ -208,7 +208,7 @@ function multipathfinder(
         resample(rng, inds, ndraws), nothing
     end
 
-    fit_distribution = Distributions.MixtureModel(fit_distribution_opts)
+    fit_distribution = Distributions.MixtureModel(fit_distributions)
     draws = draws_all[:, sample_inds]
 
     # get component ids (k) of draws in ϕ
