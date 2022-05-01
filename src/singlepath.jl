@@ -184,7 +184,7 @@ function pathfinder(
         @warn "Pathfinder failed after $itry tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
     else
         elbo_estimate_opt = elbo_estimates[iteration_opt]
-        ndraws_elbo_actual = ndraws
+        ndraws_elbo_actual = ndraws_elbo
     end
 
     fit_dist_opt = fit_dists[iteration_opt + 1]
