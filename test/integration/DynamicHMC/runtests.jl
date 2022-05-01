@@ -112,7 +112,7 @@ end
                 rng,
                 ∇P,
                 ndraws;
-                initialization=(; q=result_pf[2][:, 1]),
+                initialization=(; q=result_pf.draws[:, 1]),
                 reporter=NoProgressReport(),
             )
             @test result_hmc2.κ.M⁻¹ isa Diagonal
@@ -125,7 +125,8 @@ end
                 ∇P,
                 ndraws;
                 initialization=(;
-                    q=result_pf[2][:, 1], κ=GaussianKineticEnergy(result_pf[1].Σ)
+                    q=result_pf.draws[:, 1],
+                    κ=GaussianKineticEnergy(result_pf.fit_dist_opt.Σ),
                 ),
                 warmup_stages=default_warmup_stages(; M=Symmetric),
                 reporter=NoProgressReport(),
@@ -140,12 +141,13 @@ end
                 ∇P,
                 ndraws;
                 initialization=(;
-                    q=result_pf[2][:, 1], κ=GaussianKineticEnergy(result_pf[1].Σ)
+                    q=result_pf.draws[:, 1],
+                    κ=GaussianKineticEnergy(result_pf.fit_dist_opt.Σ),
                 ),
                 warmup_stages=default_warmup_stages(; middle_steps=0, doubling_stages=0),
                 reporter=NoProgressReport(),
             )
-            @test result_hmc4.κ.M⁻¹ === result_pf[1].Σ
+            @test result_hmc4.κ.M⁻¹ === result_pf.fit_dist_opt.Σ
             compare_estimates(identity, result_hmc4.chain, result_hmc1.chain)
         end
     end
