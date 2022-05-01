@@ -172,7 +172,14 @@ function pathfinder(
     logp(x) = -prob.f.f(x, nothing)
     path_result = ProgressLogging.progress(; name="Optimizing") do progress_id
         return _pathfinder_try_until_succeed(
-            rng, prob, logp; history_length, optimizer, progress_id, ndraws_elbo, kwargs...
+            rng,
+            prob,
+            logp;
+            history_length,
+            optimizer,
+            progress_id,
+            ndraws_elbo,
+            kwargs...,
         )
     end
     @unpack (
