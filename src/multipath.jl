@@ -26,6 +26,8 @@ Container for results of multi-path Pathfinder.
 - `psis_result::Union{Nothing,<:PSIS.PSISResult}`: If importance resampling was used, the
     result of Pareto-smoothed importance resampling. `psis_result.pareto_shape` also
     diagnoses whether `draws` can be used to compute estimates from the target distribution.
+    See [`PSIS.PSISResult`](https://psis.julia.arviz.org/stable/api/#PSIS.PSISResult) for
+    details
 """
 struct MultiPathfinderResult{I,O,R,OF,LP,FD,D,C,FDT,DT,PFR,PR}
     input::I
