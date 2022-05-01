@@ -120,9 +120,7 @@ constructed using at most the previous `history_length` steps.
     [`GalacticOptim.solve`](https://galacticoptim.sciml.ai/stable/API/solve).
 
 # Returns
-- `q::Distributions.MvNormal`: ELBO-maximizing multivariate normal distribution
-- `ϕ::AbstractMatrix{<:Real}`: draws from multivariate normal with size `(dim, ndraws)`
-- `logqϕ::Vector{<:Real}`: log-density of multivariate normal at columns of `ϕ`
+- [`PathfinderResult`](@ref)
 """
 function pathfinder end
 
