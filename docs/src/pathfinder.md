@@ -45,7 +45,6 @@ See its docstring for a description of its fields.
 Its mean and covariance are quite close to our target distribution's.
 
 ```@repl 1
-result.fit_dist_opt
 result.fit_dist_opt.μ
 result.fit_dist_opt.Σ
 ```
