@@ -27,6 +27,9 @@ Container for results of single-path Pathfinder.
     for each point in `optim_trace`, where `fit_dists[iteration_opt + 1] == fit_dist_opt`
 - `elbo_estimates::AbstractVector{<:Pathfinder.ELBOEstimate}`: ELBO estimates for all but
     the first distribution in `fit_dists`.
+
+# Returns
+- [`PathfinderResult`](@ref)
 """
 struct PathfinderResult{I,O,R,OP,LP,FD,D,FDT,DT,OS,OT,EE}
     input::I

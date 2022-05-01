@@ -42,7 +42,7 @@ struct MultiPathfinderResult{I,O,R,OF,LP,FD,D,C,FDT,DT,PFR,PR}
     psis_result::PR
 end
 
-function Base.show(io::IO, mime::MIME"text/plain", result::MultiPathfinderResult)
+function Base.show(io::IO, ::MIME"text/plain", result::MultiPathfinderResult)
     println(io, "Multi-path Pathfinder result")
     print(io, "  num_runs: $(length(result.pathfinder_results))")
     psis_result = result.psis_result
@@ -119,12 +119,7 @@ for approximating expectations with respect to ``p``.
 - `kwargs...` : Remaining keywords are forwarded to [`pathfinder`](@ref).
 
 # Returns
-- `q::Distributions.MixtureModel`: Uniformly weighted mixture of ELBO-maximizing
-    multivariate normal distributions
-- `ϕ::AbstractMatrix{<:Real}`: approximate draws from target distribution with size
-    `(dim, ndraws)`
-- `component_inds::Vector{Int}`: Indices ``k`` of components in ``q`` from which each column
-    in `ϕ` was drawn.
+- [`MultiPathfinderResult`](@ref)
 """
 function multipathfinder end
 
