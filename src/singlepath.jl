@@ -1,3 +1,59 @@
+
+"""
+    PathfinderResult
+
+Container for results of single-path Pathfinder.
+
+# Fields
+- `input`: User-provided input object, e.g. either `logp`, `(logp, ∇logp)`, `optim_fun`,
+    `optim_prob`, or another object.
+- `optimizer`: Optimizer used for maximizing the log-density
+- `rng`: Pseudorandom number generator that was used for sampling
+- `optim_prob::GalacticOptim.OptimizationProblem`: Otimization problem used for
+    optimization
+- `logp`: Log-density function
+- `fit_dist_opt::Distributions.MvNormal`: ELBO-maximizing multivariate normal distribution
+- `draws::AbstractMatrix{<:Real}`: draws from multivariate normal with size `(dim, ndraws)`
+- `fit_dist_opt_transformed`: `fit_dist_opt` transformed to the same space as the user-
+    supplied target distribution. This is only different from `fit_dist_opt` when
+    integrating with other packages, and its type depends on the type of `input`.
+- `draws_transformed`: `draws` transformed to be draws from `fit_dist_opt_transformed`.
+- `iteration_opt::Int`: Iteration at which ELBO estimate was maximized
+- `num_tries::Int`: Number of tries until Pathfinder succeeded
+- `optim_solution::GalacticOptim.OptimizationSolution`: Solution object of optimization.
+- `optim_trace::Pathfinder.OptimizationTrace`: container for optimization trace of points,
+    log-density, and gradient. The first point is the initial point.
+- `fit_dists::AbstractVector{Distributions.MvNormal}`: Multivariate normal distributions
+    for each point in `optim_trace`, where `fit_dists[iteration_opt + 1] == fit_dist_opt`
+- `elbo_estimates::AbstractVector{<:Pathfinder.ELBOEstimate}`: ELBO estimates for all but
+    the first distribution in `fit_dists`.
+"""
+struct PathfinderResult{I,O,R,OP,LP,FD,D,FDT,DT,OS,OT,EE}
+    input::I
+    optimizer::O
+    rng::R
+    optim_prob::OP
+    logp::LP
+    fit_dist_opt::FD
+    draws::D
+    fit_dist_opt_transformed::FDT
+    draws_transformed::DT
+    iteration_opt::Int
+    num_tries::Int
+    optim_solution::OS
+    optim_trace::OT
+    fit_dists::Vector{FD}
+    elbo_estimates::EE
+end
+
+function Base.show(io::IO, ::MIME"text/plain", result::PathfinderResult)
+    println(io, "PathfinderResult")
+    println(io, "  tries: $(result.num_tries)")
+    println(io, "  fit iteration: $(result.iteration_opt) / $(length(result.optim_trace) - 1)")
+    println(io, "  fit ELBO: $(_to_string(result.elbo_estimates[result.iteration_opt]))")
+    print(io, "  fit distribution: ", result.fit_dist_opt)
+end
+
 """
     pathfinder(logp; kwargs...)
     pathfinder(logp, ∇logp; kwargs...)
@@ -133,7 +189,27 @@ function pathfinder(
         elbo_estimate_opt.draws[:, 1:ndraws]
     end
 
-    return fit_dist_opt, draws
+    # placeholders
+    fit_dist_opt_transformed = fit_dist_opt
+    draws_transformed = draws
+
+    return PathfinderResult(
+        input,
+        optimizer,
+        rng,
+        prob,
+        logp,
+        fit_dist_opt,
+        draws,
+        fit_dist_opt_transformed,
+        draws_transformed,
+        iteration_opt,
+        itry,
+        optim_solution,
+        optim_trace,
+        fit_dists,
+        elbo_estimates,
+    )
 end
 
 function _pathfinder_try_until_succeed(
