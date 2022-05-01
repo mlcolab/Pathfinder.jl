@@ -19,6 +19,7 @@ using StatsBase: StatsBase
 using Transducers: Transducers
 using UnPack: @unpack
 
+export PathfinderResult, MultiPathfinderResult
 export pathfinder, multipathfinder
 
 # Note: we override the default history length to be shorter and the default line search
