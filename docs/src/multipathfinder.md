@@ -53,7 +53,7 @@ Each component is the result of a single Pathfinder run.
 
 While we could draw samples from `result.fit_distribution` directly, these aren't equivalent to the samples returned by multi-path Pathfinder, which uses multiple importance sampling with Pareto-smoothed importance resampling to combine the individual runs and resample them so that, if possible, the samples can be used to estimate draws from `logp` directly.
 
-Note that [PSIS.jl](https://github.com/arviz-devs/PSIS.jl), which smooths the importance weights, warns us that the importance weights are unsuitable for computing estimates, so we should definitely run MCMC to get better samples.
+Note that [PSIS.jl](https://psis.julia.arviz.org/stable/), which smooths the importance weights, warns us that the importance weights are unsuitable for computing estimates, so we should definitely run MCMC to get better samples.
 Pathfinder's samples can still be useful though for initializing MCMC.
 
 Let's compare Pathfinder's samples with samples from `result.fit_distribution` directly, plotted over the exact marginal density.
