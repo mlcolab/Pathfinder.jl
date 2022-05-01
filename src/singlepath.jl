@@ -108,18 +108,17 @@ function pathfinder(
             rng, prob, logp; progress_id, ndraws_elbo, kwargs...
         )
     end
-    @unpack itry, success, optim_solution, optim_trace, fit_dists, lopt, elbo_estimates = path_result
-    L = length(optim_trace) - 1
+    @unpack itry, success, optim_solution, optim_trace, fit_dists, iteration_opt, elbo_estimates =
+        path_result
     success ||
         @warn "Pathfinder failed after $itry tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
 
-    @info "Optimized for $L iterations (tries: $itry). Maximum $elbo_estimate reached at iteration $(lopt - 1)."
-
     # get parameters of ELBO-maximizing distribution
-    elbo_estimate_opt = elbo_estimates[lopt]
-    fit_dist_opt = fit_dists[lopt]
+    elbo_estimate_opt = elbo_estimates[iteration_opt]
+    fit_dist_opt = fit_dists[iteration_opt + 1]
 
-    @info "Optimized for $L iterations (tries: $itry). Maximum $elbo_estimate_opt reached at iteration $(lopt - 1)."
+    iterations = length(optim_trace) - 1
+    @info "Optimized for $iterations iterations (tries: $itry). Maximum ELBO of $(_to_string(elbo_estimate_opt)) reached at iteration $iteration_opt."
 
     # reuse existing draws; draw additional ones if necessary
     draws = if ndraws_elbo < ndraws
@@ -173,21 +172,14 @@ function _pathfinder(
     success = L > 0
 
     # fit mv-normal distributions to trajectory
-    qs = fit_mvnormals(optim_trace.points, optim_trace.gradients; history_length)
+    fit_dists = fit_mvnormals(optim_trace.points, optim_trace.gradients; history_length)
 
     # find ELBO-maximizing distribution
-    if L > 0
-        lopt, elbo_estimate = @views maximize_elbo(
-            rng, logp, qs[2:end], ndraws_elbo, executor
-        )
-        lopt += 1
-    else
-        lopt, elbo_estimate = maximize_elbo(rng, logp, qs, ndraws_elbo, executor)
-    end
-    elbo = elbo_estimate.value
+    iteration_opt, elbo_estimates = @views maximize_elbo(rng, logp, fit_dists[begin+1:end], ndraws_elbo, executor)
+    elbo = elbo_estimates[iteration_opt].value
     success &= !isnan(elbo) & (elbo != -Inf)
 
-    return (; success, optim_solution, optim_trace, qs, lopt, elbo_estimate)
+    return (; success, optim_solution, optim_trace, fit_dists, iteration_opt, elbo_estimates)
 end
 
 """

@@ -1,13 +1,12 @@
 function maximize_elbo(rng, logp, dists, ndraws, executor)
-    estimate = elbo_and_samples(rng, logp, dists[begin], ndraws)
-    estimates = similar(dists, typeof(estimate))
-    estimates[begin] = estimate
-    length(estimates) == 1 && return 1, estimates
-    @views Folds.map!(estimates[(begin + 1):end], dists[(begin + 1):end], executor) do dist
+    EE = Core.Compiler.return_type(elbo_and_samples,Tuple{typeof(rng),typeof(logp),eltype(dists),Int})
+    estimates = similar(dists, EE)
+    isempty(estimates) && return 0, estimates
+    Folds.map!(estimates, dists, executor) do dist
         return elbo_and_samples(rng, logp, dist, ndraws)
     end
-    _, lopt = _findmax(@view(estimates[2:end]) |> Transducers.Map(est -> est.value))
-    return lopt + 1, estimates
+    _, iteration_opt = _findmax(estimates |> Transducers.Map(est -> est.value))
+    return iteration_opt, estimates
 end
 
 function elbo_and_samples(rng, logp, dist, ndraws)
