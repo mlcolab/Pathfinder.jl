@@ -52,6 +52,7 @@ end
 function Base.show(io::IO, ::MIME"text/plain", result::PathfinderResult)
     println(io, "Single-path Pathfinder result")
     println(io, "  tries: $(result.num_tries)")
+    println(io, "  draws: $(size(result.draws, 1))")
     println(
         io, "  fit iteration: $(result.iteration_opt) / $(length(result.optim_trace) - 1)"
     )

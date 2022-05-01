@@ -44,7 +44,8 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", result::MultiPathfinderResult)
     println(io, "Multi-path Pathfinder result")
-    print(io, "  num_runs: $(length(result.pathfinder_results))")
+    println(io, "  runs: $(length(result.pathfinder_results))")
+    print(io, "  draws: $(size(result.draws, 1))")
     psis_result = result.psis_result
     if psis_result !== nothing
         println(io)
