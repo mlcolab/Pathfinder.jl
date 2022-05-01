@@ -29,12 +29,10 @@ struct ELBOEstimate{T,P,L<:AbstractVector{T}}
 end
 
 function Base.show(io::IO, elbo::ELBOEstimate)
-    print(
-        io,
-        "ELBO estimate ",
-        round(elbo.value; digits=2),
-        " ± ",
-        round(elbo.std_err; digits=2),
-    )
+    print(io, "ELBO estimate: ", _to_string(elbo))
     return nothing
+end
+
+function _to_string(est::ELBOEstimate; digits=2)
+    return "$(round(est.value; digits)) ± $(round(est.std_err; digits))"
 end
