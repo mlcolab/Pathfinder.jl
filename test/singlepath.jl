@@ -48,13 +48,13 @@ using Transducers
             @test result.optim_trace isa Pathfinder.OptimizationTrace
             @test result.fit_distributions isa Vector{typeof(fit_distribution)}
             @test length(result.fit_distributions) == length(result.optim_trace)
-            @test result.fit_distributions[result.iteration_opt + 1] == fit_distribution
-            @test result.iteration_opt ==
+            @test result.fit_distributions[result.fit_iteration + 1] == fit_distribution
+            @test result.fit_iteration ==
                 argmax(getproperty.(result.elbo_estimates, :value))
 
             Random.seed!(rng, seed)
             result2 = pathfinder(logp, ∇logp; init, ndraws, rng, executor)
-            @test result2.iteration_opt == result.iteration_opt
+            @test result2.fit_iteration == result.fit_iteration
             @test result2.draws == result.draws
             @test getproperty.(result2.elbo_estimates, :value) ==
                 getproperty.(result.elbo_estimates, :value)
@@ -129,7 +129,7 @@ using Transducers
             init = randn(dim)
             result2 = pathfinder(logp; init, cb, ntries=nfail)
             @test !isapprox(result2.fit_distribution.μ, zeros(dim); atol=1e-6)
-            @test result2.iteration_opt == 0
+            @test result2.fit_iteration == 0
             @test isempty(result2.elbo_estimates)
             @test result2.num_tries == nfail
             @test result2.optim_prob.u0 == result2.optim_trace.points[1]

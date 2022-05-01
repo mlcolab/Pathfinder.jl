@@ -18,13 +18,13 @@ Container for results of single-path Pathfinder.
     supplied target distribution. This is only different from `fit_distribution` when
     integrating with other packages, and its type depends on the type of `input`.
 - `draws_transformed`: `draws` transformed to be draws from `fit_distribution_transformed`.
-- `iteration_opt::Int`: Iteration at which ELBO estimate was maximized
+- `fit_iteration::Int`: Iteration at which ELBO estimate was maximized
 - `num_tries::Int`: Number of tries until Pathfinder succeeded
 - `optim_solution::GalacticOptim.OptimizationSolution`: Solution object of optimization.
 - `optim_trace::Pathfinder.OptimizationTrace`: container for optimization trace of points,
     log-density, and gradient. The first point is the initial point.
 - `fit_distributions::AbstractVector{Distributions.MvNormal}`: Multivariate normal distributions
-    for each point in `optim_trace`, where `fit_distributions[iteration_opt + 1] == fit_distribution`
+    for each point in `optim_trace`, where `fit_distributions[fit_iteration + 1] == fit_distribution`
 - `elbo_estimates::AbstractVector{<:Pathfinder.ELBOEstimate}`: ELBO estimates for all but
     the first distribution in `fit_distributions`.
 
@@ -41,7 +41,7 @@ struct PathfinderResult{I,O,R,OP,LP,FD,D,FDT,DT,OS,OT,EE}
     draws::D
     fit_distribution_transformed::FDT
     draws_transformed::DT
-    iteration_opt::Int
+    fit_iteration::Int
     num_tries::Int
     optim_solution::OS
     optim_trace::OT
@@ -54,9 +54,9 @@ function Base.show(io::IO, ::MIME"text/plain", result::PathfinderResult)
     println(io, "  tries: $(result.num_tries)")
     println(io, "  draws: $(size(result.draws, 1))")
     println(
-        io, "  fit iteration: $(result.iteration_opt) / $(length(result.optim_trace) - 1)"
+        io, "  fit iteration: $(result.fit_iteration) / $(length(result.optim_trace) - 1)"
     )
-    println(io, "  fit ELBO: $(_to_string(result.elbo_estimates[result.iteration_opt]))")
+    println(io, "  fit ELBO: $(_to_string(result.elbo_estimates[result.fit_iteration]))")
     print(io, "  fit distribution: ", result.fit_distribution)
     return nothing
 end
@@ -180,7 +180,7 @@ function pathfinder(
         optim_solution,
         optim_trace,
         fit_distributions,
-        iteration_opt,
+        fit_iteration,
         elbo_estimates,
     ) = path_result
 
@@ -188,11 +188,11 @@ function pathfinder(
         ndraws_elbo_actual = 0
         @warn "Pathfinder failed after $itry tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
     else
-        elbo_estimate_opt = elbo_estimates[iteration_opt]
+        elbo_estimate_opt = elbo_estimates[fit_iteration]
         ndraws_elbo_actual = ndraws_elbo
     end
 
-    fit_distribution = fit_distributions[iteration_opt + 1]
+    fit_distribution = fit_distributions[fit_iteration + 1]
 
     # reuse existing draws; draw additional ones if necessary
     draws = if ndraws_elbo_actual == 0
@@ -217,7 +217,7 @@ function pathfinder(
         draws,
         fit_distribution_transformed,
         draws_transformed,
-        iteration_opt,
+        fit_iteration,
         itry,
         optim_solution,
         optim_trace,
@@ -273,13 +273,13 @@ function _pathfinder(
     )
 
     # find ELBO-maximizing distribution
-    iteration_opt, elbo_estimates = @views maximize_elbo(
+    fit_iteration, elbo_estimates = @views maximize_elbo(
         rng, logp, fit_distributions[(begin + 1):end], ndraws_elbo, executor
     )
     if isempty(elbo_estimates)
         success = false
     else
-        elbo = elbo_estimates[iteration_opt].value
+        elbo = elbo_estimates[fit_iteration].value
         success &= !isnan(elbo) & (elbo != -Inf)
     end
 
@@ -288,7 +288,7 @@ function _pathfinder(
         optim_solution,
         optim_trace,
         fit_distributions,
-        iteration_opt,
+        fit_iteration,
         elbo_estimates,
     )
 end
