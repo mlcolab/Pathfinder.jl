@@ -120,9 +120,12 @@ function multipathfinder(
     # draw samples from augmented mixture model
     inds = axes(draws_all, 2)
     sample_inds, psis_result = if importance
-        log_densities_fit = pathfinder_results |> Transducers.MapCat() do x
-            return Distributions.logpdf(x.fit_dist_opt, x.draws)
-        end |> collect
+        log_densities_fit =
+            pathfinder_results |>
+            Transducers.MapCat() do x
+                return Distributions.logpdf(x.fit_dist_opt, x.draws)
+            end |>
+            collect
         iter_logp = eachcol(draws_all) |> Transducers.Map(logp)
         log_densities_target = Folds.collect(iter_logp, executor)
         log_densities_ratios = log_densities_target - log_densities_fit
