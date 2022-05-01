@@ -47,11 +47,14 @@ struct PathfinderResult{I,O,R,OP,LP,FD,D,FDT,DT,OS,OT,EE}
 end
 
 function Base.show(io::IO, ::MIME"text/plain", result::PathfinderResult)
-    println(io, "PathfinderResult")
+    println(io, "Single-path Pathfinder result")
     println(io, "  tries: $(result.num_tries)")
-    println(io, "  fit iteration: $(result.iteration_opt) / $(length(result.optim_trace) - 1)")
+    println(
+        io, "  fit iteration: $(result.iteration_opt) / $(length(result.optim_trace) - 1)"
+    )
     println(io, "  fit ELBO: $(_to_string(result.elbo_estimates[result.iteration_opt]))")
     print(io, "  fit distribution: ", result.fit_dist_opt)
+    return nothing
 end
 
 """
@@ -124,7 +127,9 @@ function pathfinder(logp; ad_backend=AD.ForwardDiffBackend(), kwargs...)
     return pathfinder(build_optim_function(logp; ad_backend); input=logp, kwargs...)
 end
 function pathfinder(logp, ∇logp; ad_backend=AD.ForwardDiffBackend(), kwargs...)
-    return pathfinder(build_optim_function(logp, ∇logp; ad_backend); input=(logp, ∇logp), kwargs...)
+    return pathfinder(
+        build_optim_function(logp, ∇logp; ad_backend); input=(logp, ∇logp), kwargs...
+    )
 end
 function pathfinder(
     optim_fun::GalacticOptim.OptimizationFunction;
@@ -133,7 +138,7 @@ function pathfinder(
     dim::Int=-1,
     init_scale=2,
     init_sampler=UniformSampler(init_scale),
-    input = optim_fun,
+    input=optim_fun,
     kwargs...,
 )
     if init !== nothing
@@ -155,7 +160,7 @@ function pathfinder(
     optimizer=DEFAULT_OPTIMIZER,
     ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
     ndraws::Int=ndraws_elbo,
-    input = prob,
+    input=prob,
     kwargs...,
 )
     if prob.f.grad === nothing || prob.f.grad isa Bool
@@ -167,8 +172,9 @@ function pathfinder(
             rng, prob, logp; optimizer, progress_id, ndraws_elbo, kwargs...
         )
     end
-    @unpack itry, success, optim_solution, optim_trace, fit_dists, iteration_opt, elbo_estimates =
-        path_result
+    @unpack (
+        itry, success, optim_solution, optim_trace, fit_dists, iteration_opt, elbo_estimates
+    ) = path_result
 
     if !success
         ndraws_elbo_actual = 0
@@ -176,8 +182,6 @@ function pathfinder(
     else
         elbo_estimate_opt = elbo_estimates[iteration_opt]
         ndraws_elbo_actual = ndraws
-        iterations = length(optim_trace) - 1
-        @info "Optimized for $iterations iterations (tries: $itry). Maximum ELBO of $(_to_string(elbo_estimate_opt)) reached at iteration $iteration_opt."
     end
 
     fit_dist_opt = fit_dists[iteration_opt + 1]
@@ -257,7 +261,9 @@ function _pathfinder(
     fit_dists = fit_mvnormals(optim_trace.points, optim_trace.gradients; history_length)
 
     # find ELBO-maximizing distribution
-    iteration_opt, elbo_estimates = @views maximize_elbo(rng, logp, fit_dists[begin+1:end], ndraws_elbo, executor)
+    iteration_opt, elbo_estimates = @views maximize_elbo(
+        rng, logp, fit_dists[(begin + 1):end], ndraws_elbo, executor
+    )
     if isempty(elbo_estimates)
         success = false
     else
@@ -265,7 +271,9 @@ function _pathfinder(
         success &= !isnan(elbo) & (elbo != -Inf)
     end
 
-    return (; success, optim_solution, optim_trace, fit_dists, iteration_opt, elbo_estimates)
+    return (;
+        success, optim_solution, optim_trace, fit_dists, iteration_opt, elbo_estimates
+    )
 end
 
 """
