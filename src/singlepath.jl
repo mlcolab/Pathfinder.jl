@@ -108,7 +108,7 @@ function pathfinder(
             rng, prob, logp; progress_id, ndraws_elbo, kwargs...
         )
     end
-    @unpack itry, success, optim_solution, optim_trace, qs, lopt, elbo_estimate = path_result
+    @unpack itry, success, optim_solution, optim_trace, fit_dists, lopt, elbo_estimates = path_result
     L = length(optim_trace) - 1
     success ||
         @warn "Pathfinder failed after $itry tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
@@ -116,21 +116,19 @@ function pathfinder(
     @info "Optimized for $L iterations (tries: $itry). Maximum $elbo_estimate reached at iteration $(lopt - 1)."
 
     # get parameters of ELBO-maximizing distribution
-    q = qs[lopt]
+    elbo_estimate_opt = elbo_estimates[lopt]
+    fit_dist_opt = fit_dists[lopt]
+
+    @info "Optimized for $L iterations (tries: $itry). Maximum $elbo_estimate_opt reached at iteration $(lopt - 1)."
 
     # reuse existing draws; draw additional ones if necessary
-    ϕ = elbo_estimate.draws
-    logqϕ = elbo_estimate.log_densities_fit
-    if ndraws_elbo < ndraws
-        ϕnew, logqϕnew = rand_and_logpdf(rng, q, ndraws - ndraws_elbo)
-        ϕ = hcat(ϕ, ϕnew)
-        append!(logqϕ, logqϕnew)
-    elseif ndraws < ndraws_elbo
-        ϕ = ϕ[:, 1:ndraws]
-        logqϕ = logqϕ[1:ndraws]
+    draws = if ndraws_elbo < ndraws
+        hcat(elbo_estimate_opt.draws, rand(rng, fit_dist_opt, ndraws - ndraws_elbo))
+    else
+        elbo_estimate_opt.draws[:, 1:ndraws]
     end
 
-    return q, ϕ, logqϕ
+    return fit_dist_opt, draws
 end
 
 function _pathfinder_try_until_succeed(
