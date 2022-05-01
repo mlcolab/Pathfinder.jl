@@ -176,8 +176,12 @@ function _pathfinder(
 
     # find ELBO-maximizing distribution
     iteration_opt, elbo_estimates = @views maximize_elbo(rng, logp, fit_dists[begin+1:end], ndraws_elbo, executor)
-    elbo = elbo_estimates[iteration_opt].value
-    success &= !isnan(elbo) & (elbo != -Inf)
+    if isempty(elbo_estimates)
+        success = false
+    else
+        elbo = elbo_estimates[iteration_opt].value
+        success &= !isnan(elbo) & (elbo != -Inf)
+    end
 
     return (; success, optim_solution, optim_trace, fit_dists, iteration_opt, elbo_estimates)
 end
