@@ -58,7 +58,7 @@ function Base.show(io::IO, ::MIME"text/plain", result::MultiPathfinderResult)
         else
             "good"
         end
-        print("  Pareto shape diagnostic: ", round(k; digits=2), " ($assessment)")
+        print(io, "  Pareto shape diagnostic: ", round(k; digits=2), " ($assessment)")
     end
     return nothing
 end
