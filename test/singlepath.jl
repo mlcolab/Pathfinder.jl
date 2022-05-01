@@ -33,22 +33,22 @@ using Transducers
             @test result.logp(init) ≈ logp(init)
             @test result.rng === rng
             @test result.optimizer === Pathfinder.DEFAULT_OPTIMIZER
-            fit_dist_opt = result.fit_dist_opt
-            @test fit_dist_opt isa MvNormal
-            @test fit_dist_opt.μ ≈ zeros(dim)
-            @test fit_dist_opt.Σ isa Pathfinder.WoodburyPDMat
-            @test fit_dist_opt.Σ ≈ I
-            @test size(fit_dist_opt.Σ.B) == (dim, 2) # history contains only 1 iteration
+            fit_distribution = result.fit_distribution
+            @test fit_distribution isa MvNormal
+            @test fit_distribution.μ ≈ zeros(dim)
+            @test fit_distribution.Σ isa Pathfinder.WoodburyPDMat
+            @test fit_distribution.Σ ≈ I
+            @test size(fit_distribution.Σ.B) == (dim, 2) # history contains only 1 iteration
             @test result.draws isa AbstractMatrix
             @test size(result.draws) == (dim, ndraws)
-            @test result.fit_dist_opt_transformed === result.fit_dist_opt
+            @test result.fit_distribution_transformed === result.fit_distribution
             @test result.draws_transformed === result.draws
             @test result.num_tries ≥ 1
             @test result.optim_solution isa GalacticOptim.SciMLBase.OptimizationSolution
             @test result.optim_trace isa Pathfinder.OptimizationTrace
-            @test result.fit_dists isa Vector{typeof(fit_dist_opt)}
-            @test length(result.fit_dists) == length(result.optim_trace)
-            @test result.fit_dists[result.iteration_opt + 1] == fit_dist_opt
+            @test result.fit_distributions isa Vector{typeof(fit_distribution)}
+            @test length(result.fit_distributions) == length(result.optim_trace)
+            @test result.fit_distributions[result.iteration_opt + 1] == fit_distribution
             @test result.iteration_opt ==
                 argmax(getproperty.(result.elbo_estimates, :value))
 
@@ -92,10 +92,10 @@ using Transducers
             Random.seed!(rng, seed)
             result = @inferred pathfinder(logp; rng, dim, ndraws_elbo, ad_backend, executor)
             @test result.input === logp
-            @test result.fit_dist_opt.Σ ≈ Σ rtol = 1e-1
+            @test result.fit_distribution.Σ ≈ Σ rtol = 1e-1
             Random.seed!(rng, seed)
             result2 = pathfinder(logp; rng, dim, ndraws_elbo, ad_backend, executor)
-            @test result2.fit_dist_opt == result.fit_dist_opt
+            @test result2.fit_distribution == result.fit_distribution
             @test result2.draws == result.draws
             @test getproperty.(result2.elbo_estimates, :value) ==
                 getproperty.(result.elbo_estimates, :value)
@@ -121,14 +121,14 @@ using Transducers
             cb = (args...,) -> (i += 1; true)
             i = 1
             result = pathfinder(logp; dim, cb)
-            @test result.fit_dist_opt.μ ≈ zeros(dim) atol = 1e-6
-            @test result.fit_dist_opt.Σ ≈ diagm(ones(dim)) atol = 1e-6
+            @test result.fit_distribution.μ ≈ zeros(dim) atol = 1e-6
+            @test result.fit_distribution.Σ ≈ diagm(ones(dim)) atol = 1e-6
             @test result.num_tries == nfail + 1
             @test result.optim_prob.u0 == result.optim_trace.points[1]
             i = 1
             init = randn(dim)
             result2 = pathfinder(logp; init, cb, ntries=nfail)
-            @test !isapprox(result2.fit_dist_opt.μ, zeros(dim); atol=1e-6)
+            @test !isapprox(result2.fit_distribution.μ, zeros(dim); atol=1e-6)
             @test result2.iteration_opt == 0
             @test isempty(result2.elbo_estimates)
             @test result2.num_tries == nfail

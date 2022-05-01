@@ -39,15 +39,15 @@ using Transducers
             @test result.optim_fun isa GalacticOptim.OptimizationFunction
             @test result.rng === rng
             @test result.optimizer === Pathfinder.DEFAULT_OPTIMIZER
-            @test result.fit_dist_mix isa MixtureModel
-            @test ncomponents(result.fit_dist_mix) == nruns
-            @test Distributions.component_type(result.fit_dist_mix) <: MvNormal
+            @test result.fit_distribution isa MixtureModel
+            @test ncomponents(result.fit_distribution) == nruns
+            @test Distributions.component_type(result.fit_distribution) <: MvNormal
             @test result.draws isa AbstractMatrix
             @test size(result.draws) == (dim, ndraws)
             @test result.draw_component_ids isa Vector{Int}
             @test length(result.draw_component_ids) == ndraws
             @test extrema(result.draw_component_ids) == (1, nruns)
-            @test result.fit_dist_mix_transformed === result.fit_dist_mix
+            @test result.fit_distribution_transformed === result.fit_distribution
             @test result.draws_transformed == result.draws
             @test result.pathfinder_results isa Vector{<:PathfinderResult}
             @test length(result.pathfinder_results) == nruns
@@ -70,7 +70,7 @@ using Transducers
             result2 = multipathfinder(
                 logp, ndraws; dim, nruns, ndraws_elbo, ndraws_per_run, rng, executor
             )
-            @test result2.fit_dist_mix == result.fit_dist_mix
+            @test result2.fit_distribution == result.fit_distribution
             @test result2.draws == result.draws
             @test result2.draw_component_ids == result.draw_component_ids
 
@@ -88,14 +88,14 @@ using Transducers
                 ad_backend,
             )
             for (c1, c2) in
-                zip(result.fit_dist_mix.components, result3.fit_dist_mix.components)
+                zip(result.fit_distribution.components, result3.fit_distribution.components)
                 @test c1 ≈ c2 atol = 1e-6
             end
         end
 
         init = [randn(dim) for _ in 1:nruns]
         result = multipathfinder(logp, ∇logp, ndraws; init)
-        @test ncomponents(result.fit_dist_mix) == nruns
+        @test ncomponents(result.fit_distribution) == nruns
         @test size(result.draws) == (dim, ndraws)
     end
     @testset "errors if no gradient provided" begin

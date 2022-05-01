@@ -41,15 +41,15 @@ result = pathfinder(logp, ∇logp; dim=5, ndraws=100, ndraws_elbo=100)
 `result` is a [`PathfinderResult`](@ref).
 See its docstring for a description of its fields.
 
-`result.fit_dist_opt` is a multivariate normal approximation to our target distribution.
+`result.fit_distribution` is a multivariate normal approximation to our target distribution.
 Its mean and covariance are quite close to our target distribution's.
 
 ```@repl 1
-result.fit_dist_opt.μ
-result.fit_dist_opt.Σ
+result.fit_distribution.μ
+result.fit_distribution.Σ
 ```
 
-`result.draws` is a `Matrix` whose columns are the requested draws from `result.fit_dist_opt`:
+`result.draws` is a `Matrix` whose columns are the requested draws from `result.fit_distribution`:
 ```@repl 1
 result.draws
 ```

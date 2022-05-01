@@ -126,7 +126,7 @@ end
                 ndraws;
                 initialization=(;
                     q=result_pf.draws[:, 1],
-                    κ=GaussianKineticEnergy(result_pf.fit_dist_opt.Σ),
+                    κ=GaussianKineticEnergy(result_pf.fit_distribution.Σ),
                 ),
                 warmup_stages=default_warmup_stages(; M=Symmetric),
                 reporter=NoProgressReport(),
@@ -142,12 +142,12 @@ end
                 ndraws;
                 initialization=(;
                     q=result_pf.draws[:, 1],
-                    κ=GaussianKineticEnergy(result_pf.fit_dist_opt.Σ),
+                    κ=GaussianKineticEnergy(result_pf.fit_distribution.Σ),
                 ),
                 warmup_stages=default_warmup_stages(; middle_steps=0, doubling_stages=0),
                 reporter=NoProgressReport(),
             )
-            @test result_hmc4.κ.M⁻¹ === result_pf.fit_dist_opt.Σ
+            @test result_hmc4.κ.M⁻¹ === result_pf.fit_distribution.Σ
             compare_estimates(identity, result_hmc4.chain, result_hmc1.chain)
         end
     end

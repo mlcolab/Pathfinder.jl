@@ -146,7 +146,7 @@ end
         end
 
         @testset "Initial point and metric" begin
-            metric = DiagEuclideanMetric(diag(result_pf.fit_dist_opt.Σ))
+            metric = DiagEuclideanMetric(diag(result_pf.fit_distribution.Σ))
             hamiltonian = Hamiltonian(metric, ℓπ, ForwardDiff)
             ϵ = find_good_stepsize(hamiltonian, θ₀)
             integrator = Leapfrog(ϵ)
@@ -166,7 +166,7 @@ end
         end
 
         @testset "Initial point and final metric" begin
-            metric = Pathfinder.RankUpdateEuclideanMetric(result_pf.fit_dist_opt.Σ)
+            metric = Pathfinder.RankUpdateEuclideanMetric(result_pf.fit_distribution.Σ)
             hamiltonian = Hamiltonian(metric, ℓπ, ForwardDiff)
             ϵ = find_good_stepsize(hamiltonian, θ₀)
             integrator = Leapfrog(ϵ)

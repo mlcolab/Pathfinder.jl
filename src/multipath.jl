@@ -11,16 +11,16 @@ Container for results of multi-path Pathfinder.
 - `optim_prob::GalacticOptim.OptimizationProblem`: Otimization problem used for
     optimization
 - `logp`: Log-density function
-- `fit_dist_mix::Distributions.MixtureModel`: uniformly-weighted mixture of ELBO-maximizing
+- `fit_distribution::Distributions.MixtureModel`: uniformly-weighted mixture of ELBO-maximizing
     multivariate normal distributions from each run.
-- `draws::AbstractMatrix{<:Real}`: draws from `fit_dist_mix` with size `(dim, ndraws)`,
+- `draws::AbstractMatrix{<:Real}`: draws from `fit_distribution` with size `(dim, ndraws)`,
     potentially resampled using importance resampling to be closer to the target
     distribution.
 - `draw_component_ids::Vector{Int}`: component id of each draw in `draws`.
-- `fit_dist_mix_transformed`: `fit_dist_mix` transformed to the same space as the user-
-    supplied target distribution. This is only different from `fit_dist_mix` when
+- `fit_distribution_transformed`: `fit_distribution` transformed to the same space as the user-
+    supplied target distribution. This is only different from `fit_distribution` when
     integrating with other packages, and its type depends on the type of `input`.
-- `draws_transformed`: `draws` transformed to be draws from `fit_dist_mix_transformed`.
+- `draws_transformed`: `draws` transformed to be draws from `fit_distribution_transformed`.
 - `pathfinder_results::Vector{<:PathfinderResult}`: results of each single-path Pathfinder
     run.
 - `psis_result::Union{Nothing,<:PSIS.PSISResult}`: If importance resampling was used, the
@@ -33,10 +33,10 @@ struct MultiPathfinderResult{I,O,R,OF,LP,FD,D,C,FDT,DT,PFR,PR}
     rng::R
     optim_fun::OF
     logp::LP
-    fit_dist_mix::FD
+    fit_distribution::FD
     draws::D
     draw_component_ids::C
-    fit_dist_mix_transformed::FDT
+    fit_distribution_transformed::FDT
     draws_transformed::DT
     pathfinder_results::PFR
     psis_result::PR
@@ -187,7 +187,8 @@ function multipathfinder(
     end
     iter_sp = Transducers.withprogress(_init; interval=1e-3) |> trans
     pathfinder_results = Folds.collect(iter_sp, executor)
-    fit_dist_opts = pathfinder_results |> Transducers.Map(x -> x.fit_dist_opt) |> collect
+    fit_distribution_opts =
+        pathfinder_results |> Transducers.Map(x -> x.fit_distribution_opt) |> collect
     draws_all = reduce(hcat, pathfinder_results |> Transducers.Map(x -> x.draws))
 
     # draw samples from augmented mixture model
@@ -196,7 +197,7 @@ function multipathfinder(
         log_densities_fit =
             pathfinder_results |>
             Transducers.MapCat() do x
-                return Distributions.logpdf(x.fit_dist_opt, x.draws)
+                return Distributions.logpdf(x.fit_distribution_opt, x.draws)
             end |>
             collect
         iter_logp = eachcol(draws_all) |> Transducers.Map(logp)
@@ -207,14 +208,14 @@ function multipathfinder(
         resample(rng, inds, ndraws), nothing
     end
 
-    fit_dist_mix = Distributions.MixtureModel(fit_dist_opts)
+    fit_distribution = Distributions.MixtureModel(fit_distribution_opts)
     draws = draws_all[:, sample_inds]
 
     # get component ids (k) of draws in ϕ
     draw_component_ids = cld.(sample_inds, ndraws_per_run)
 
     # placeholders
-    fit_dist_mix_transformed = fit_dist_mix
+    fit_distribution_transformed = fit_distribution
     draws_transformed = draws
 
     return MultiPathfinderResult(
@@ -223,10 +224,10 @@ function multipathfinder(
         rng,
         optim_fun,
         logp,
-        fit_dist_mix,
+        fit_distribution,
         draws,
         draw_component_ids,
-        fit_dist_mix_transformed,
+        fit_distribution_transformed,
         draws_transformed,
         pathfinder_results,
         psis_result,
