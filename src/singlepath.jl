@@ -187,7 +187,9 @@ function pathfinder(
     fit_dist_opt = fit_dists[iteration_opt + 1]
 
     # reuse existing draws; draw additional ones if necessary
-    draws = if ndraws_elbo_actual < ndraws
+    draws = if ndraws_elbo_actual == 0
+        rand(rng, fit_dist_opt, ndraws)
+    elseif ndraws_elbo_actual < ndraws
         hcat(elbo_estimate_opt.draws, rand(rng, fit_dist_opt, ndraws - ndraws_elbo_actual))
     else
         elbo_estimate_opt.draws[:, 1:ndraws]
