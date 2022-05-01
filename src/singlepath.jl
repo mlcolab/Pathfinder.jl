@@ -95,6 +95,7 @@ end
 function pathfinder(
     prob::GalacticOptim.OptimizationProblem;
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
+    optimizer=DEFAULT_OPTIMIZER,
     ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
     ndraws::Int=ndraws_elbo,
     kwargs...,
@@ -105,7 +106,7 @@ function pathfinder(
     logp(x) = -prob.f.f(x, nothing)
     path_result = ProgressLogging.progress(; name="Optimizing") do progress_id
         return _pathfinder_try_until_succeed(
-            rng, prob, logp; progress_id, ndraws_elbo, kwargs...
+            rng, prob, logp; optimizer, progress_id, ndraws_elbo, kwargs...
         )
     end
     @unpack itry, success, optim_solution, optim_trace, fit_dists, iteration_opt, elbo_estimates =
