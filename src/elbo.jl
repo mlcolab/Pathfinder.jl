@@ -1,5 +1,7 @@
 function maximize_elbo(rng, logp, dists, ndraws, executor)
-    EE = Core.Compiler.return_type(elbo_and_samples,Tuple{typeof(rng),typeof(logp),eltype(dists),Int})
+    EE = Core.Compiler.return_type(
+        elbo_and_samples, Tuple{typeof(rng),typeof(logp),eltype(dists),Int}
+    )
     estimates = similar(dists, EE)
     isempty(estimates) && return 0, estimates
     Folds.map!(estimates, dists, executor) do dist
