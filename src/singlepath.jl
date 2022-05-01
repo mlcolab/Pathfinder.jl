@@ -109,12 +109,12 @@ constructed using at most the previous `history_length` steps.
     the log-density function is known to have no internal state, then
     `Transducers.PreferParallel()` may be used to parallelize log-density evaluation.
     This is generally only faster for expensive log density functions.
+- `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
+    inverse Hessian.
 - `optimizer`: Optimizer to be used for constructing trajectory. Can be any optimizer
     compatible with GalacticOptim, so long as it supports callbacks. Defaults to
-    `Optim.LBFGS(; m=$DEFAULT_HISTORY_LENGTH, linesearch=LineSearches.MoreThuente())`. See
+    `Optim.LBFGS(; m=history_length, linesearch=LineSearches.MoreThuente())`. See
     the [GalacticOptim.jl documentation](https://galacticoptim.sciml.ai/stable) for details.
-- `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
-    inverse Hessian. This should only be set when `optimizer` is not an `Optim.LBFGS`.
 - `ntries::Int=1_000`: Number of times to try the optimization, restarting if it fails. Before
     every restart, a new initial point is drawn using `init_sampler`.
 - `kwargs...` : Remaining keywords are forwarded to
@@ -159,7 +159,8 @@ end
 function pathfinder(
     prob::GalacticOptim.OptimizationProblem;
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
-    optimizer=DEFAULT_OPTIMIZER,
+    history_length::Int=DEFAULT_HISTORY_LENGTH,
+    optimizer=default_optimizer(history_length),
     ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
     ndraws::Int=ndraws_elbo,
     input=prob,
@@ -171,7 +172,7 @@ function pathfinder(
     logp(x) = -prob.f.f(x, nothing)
     path_result = ProgressLogging.progress(; name="Optimizing") do progress_id
         return _pathfinder_try_until_succeed(
-            rng, prob, logp; optimizer, progress_id, ndraws_elbo, kwargs...
+            rng, prob, logp; history_length, optimizer, progress_id, ndraws_elbo, kwargs...
         )
     end
     @unpack (
@@ -256,8 +257,8 @@ function _pathfinder(
     rng,
     prob,
     logp;
-    optimizer=DEFAULT_OPTIMIZER,
-    history_length::Int=optimizer isa Optim.LBFGS ? optimizer.m : DEFAULT_HISTORY_LENGTH,
+    history_length::Int=DEFAULT_HISTORY_LENGTH,
+    optimizer=default_optimizer(history_length),
     ndraws_elbo=DEFAULT_NDRAWS_ELBO,
     executor::Transducers.Executor=Transducers.SequentialEx(),
     kwargs...,
