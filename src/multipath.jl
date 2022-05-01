@@ -63,22 +63,33 @@ for approximating expectations with respect to ``p``.
 """
 function multipathfinder end
 
-function multipathfinder(logp, ndraws::Int; ad_backend=AD.ForwardDiffBackend(), kwargs...)
-    return multipathfinder(build_optim_function(logp; ad_backend), ndraws; kwargs...)
+function multipathfinder(
+    logp, ndraws::Int; ad_backend=AD.ForwardDiffBackend(), input=logp, kwargs...
+)
+    return multipathfinder(build_optim_function(logp; ad_backend), ndraws; input, kwargs...)
 end
 function multipathfinder(
-    logp, ∇logp, ndraws::Int; ad_backend=AD.ForwardDiffBackend(), kwargs...
+    logp,
+    ∇logp,
+    ndraws::Int;
+    ad_backend=AD.ForwardDiffBackend(),
+    input=(logp, ∇logp),
+    kwargs...,
 )
-    return multipathfinder(build_optim_function(logp, ∇logp; ad_backend), ndraws; kwargs...)
+    return multipathfinder(
+        build_optim_function(logp, ∇logp; ad_backend), ndraws; input, kwargs...
+    )
 end
 function multipathfinder(
     optim_fun::GalacticOptim.OptimizationFunction,
     ndraws::Int;
     init=nothing,
+    input=optim_fun,
     nruns::Int=init === nothing ? -1 : length(init),
     ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
     ndraws_per_run::Int=max(ndraws_elbo, cld(ndraws, max(nruns, 1))),
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
+    optimizer=DEFAULT_OPTIMIZER,
     executor::Transducers.Executor=_default_executor(rng; basesize=1),
     executor_per_run=Transducers.SequentialEx(),
     importance::Bool=true,
@@ -105,6 +116,7 @@ function multipathfinder(
         return pathfinder(
             optim_fun;
             rng,
+            optimizer,
             ndraws=ndraws_per_run,
             init=init_i,
             executor=executor_per_run,
