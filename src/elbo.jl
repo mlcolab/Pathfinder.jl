@@ -30,7 +30,7 @@ struct ELBOEstimate{T,P,L<:AbstractVector{T}}
     log_density_ratios::L
 end
 
-function Base.show(io::IO, elbo::ELBOEstimate)
+function Base.show(io::IO, ::MIME"text/plain", elbo::ELBOEstimate)
     print(io, "ELBO estimate: ", _to_string(elbo))
     return nothing
 end
