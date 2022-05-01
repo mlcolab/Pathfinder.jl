@@ -152,7 +152,8 @@ function multipathfinder(
     ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
     ndraws_per_run::Int=max(ndraws_elbo, cld(ndraws, max(nruns, 1))),
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
-    optimizer=DEFAULT_OPTIMIZER,
+    history_length::Int=DEFAULT_HISTORY_LENGTH,
+    optimizer=default_optimizer(history_length),
     executor::Transducers.Executor=_default_executor(rng; basesize=1),
     executor_per_run=Transducers.SequentialEx(),
     importance::Bool=true,
@@ -179,6 +180,7 @@ function multipathfinder(
         return pathfinder(
             optim_fun;
             rng,
+            history_length,
             optimizer,
             ndraws=ndraws_per_run,
             init=init_i,

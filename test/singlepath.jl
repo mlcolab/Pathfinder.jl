@@ -32,7 +32,8 @@ using Transducers
             @test result.optim_prob isa GalacticOptim.OptimizationProblem
             @test result.logp(init) ≈ logp(init)
             @test result.rng === rng
-            @test result.optimizer === Pathfinder.DEFAULT_OPTIMIZER
+            @test result.optimizer ===
+                Pathfinder.default_optimizer(Pathfinder.DEFAULT_HISTORY_LENGTH)
             fit_distribution = result.fit_distribution
             @test fit_distribution isa MvNormal
             @test fit_distribution.μ ≈ zeros(dim)

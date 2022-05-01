@@ -38,7 +38,8 @@ using Transducers
             @test result.input === (logp, ∇logp)
             @test result.optim_fun isa GalacticOptim.OptimizationFunction
             @test result.rng === rng
-            @test result.optimizer === Pathfinder.DEFAULT_OPTIMIZER
+            @test result.optimizer ===
+                Pathfinder.default_optimizer(Pathfinder.DEFAULT_HISTORY_LENGTH)
             @test result.fit_distribution isa MixtureModel
             @test ncomponents(result.fit_distribution) == nruns
             @test Distributions.component_type(result.fit_distribution) <: MvNormal
