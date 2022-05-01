@@ -80,7 +80,11 @@ function Base.AbstractMatrix{T}(W::WoodburyPDMat) where {T}
     )
 end
 
-Base.getindex(W::WoodburyPDMat, inds...) = getindex(Matrix(W), inds...)
+function Base.getindex(W::WoodburyPDMat, i::Int, j::Int)
+    B = W.B
+    isempty(B) && return W.A[i, j]
+    return @views W.A[i, j] + dot(B[i, :], W.D, B[j, :])
+end
 
 Base.adjoint(W::WoodburyPDMat) = W
 
