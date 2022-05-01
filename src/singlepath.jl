@@ -65,10 +65,10 @@ constructed using at most the previous `history_length` steps.
 function pathfinder end
 
 function pathfinder(logp; ad_backend=AD.ForwardDiffBackend(), kwargs...)
-    return pathfinder(build_optim_function(logp; ad_backend); kwargs...)
+    return pathfinder(build_optim_function(logp; ad_backend); input=logp, kwargs...)
 end
 function pathfinder(logp, ∇logp; ad_backend=AD.ForwardDiffBackend(), kwargs...)
-    return pathfinder(build_optim_function(logp, ∇logp; ad_backend); kwargs...)
+    return pathfinder(build_optim_function(logp, ∇logp; ad_backend); input=(logp, ∇logp), kwargs...)
 end
 function pathfinder(
     optim_fun::GalacticOptim.OptimizationFunction;
@@ -77,6 +77,7 @@ function pathfinder(
     dim::Int=-1,
     init_scale=2,
     init_sampler=UniformSampler(init_scale),
+    input = optim_fun,
     kwargs...,
 )
     if init !== nothing
@@ -90,7 +91,7 @@ function pathfinder(
         throw(ArgumentError("An initial point `init` or dimension `dim` must be provided."))
     end
     prob = build_optim_problem(optim_fun, _init)
-    return pathfinder(prob; rng, init_sampler, allow_mutating_init, kwargs...)
+    return pathfinder(prob; rng, input, init_sampler, allow_mutating_init, kwargs...)
 end
 function pathfinder(
     prob::GalacticOptim.OptimizationProblem;
@@ -98,6 +99,7 @@ function pathfinder(
     optimizer=DEFAULT_OPTIMIZER,
     ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
     ndraws::Int=ndraws_elbo,
+    input = prob,
     kwargs...,
 )
     if prob.f.grad === nothing || prob.f.grad isa Bool
