@@ -28,7 +28,7 @@ end
     @test all(>(0), result.draws_transformed[:σ])
     init_params = Vector(result.draws_transformed.value[1, :, 1])
     chns = sample(model, NUTS(), 10_000; init_params, progress=false)
-    @test mean(chns).nt.mean ≈ mean(result.draws_transformed).nt.mean rtol = 0.01
+    @test mean(chns).nt.mean ≈ mean(result.draws_transformed).nt.mean rtol = 0.1
 
     result = multipathfinder(model, 10_000; nruns=4)
     @test result isa MultiPathfinderResult
@@ -41,5 +41,5 @@ end
     @test all(>(0), result.draws_transformed[:σ])
     init_params = Vector(result.draws_transformed.value[1, :, 1])
     chns = sample(model, NUTS(), 10_000; init_params, progress=false)
-    @test mean(chns).nt.mean ≈ mean(result.draws_transformed).nt.mean rtol = 0.01
+    @test mean(chns).nt.mean ≈ mean(result.draws_transformed).nt.mean rtol = 0.1
 end
