@@ -3,6 +3,7 @@ using Distributions
 using ForwardDiff
 using GalacticOptim
 using LinearAlgebra
+using Optim
 using Pathfinder
 using Random
 using ReverseDiff
@@ -87,15 +88,21 @@ using Transducers
             [MersenneTwister()]
         end
         seed = 38
+        optimizer = Optim.LBFGS(; m=6)
         @testset for rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
 
             Random.seed!(rng, seed)
-            result = @inferred pathfinder(logp; rng, dim, ndraws_elbo, ad_backend, executor)
+            result = @inferred pathfinder(
+                logp; rng, dim, optimizer, ndraws_elbo, ad_backend, executor
+            )
             @test result.input === logp
             @test result.fit_distribution.Σ ≈ Σ rtol = 1e-1
+            @test result.optimizer == optimizer
             Random.seed!(rng, seed)
-            result2 = pathfinder(logp; rng, dim, ndraws_elbo, ad_backend, executor)
+            result2 = pathfinder(
+                logp; rng, dim, optimizer, ndraws_elbo, ad_backend, executor
+            )
             @test result2.fit_distribution == result.fit_distribution
             @test result2.draws == result.draws
             @test getproperty.(result2.elbo_estimates, :value) ==
