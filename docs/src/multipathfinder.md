@@ -41,7 +41,7 @@ nothing # hide
 Now we run multi-path Pathfinder.
 
 ```@repl 1
-@time q, ϕ, component_ids = multipathfinder(logp, ∇logp, ndraws; init_scale=10);
+@time q, ϕ, component_ids = multipathfinder(logp, ∇logp, ndraws; nruns, dim, init_scale=10);
 ```
 
 The first return value is a uniformly-weighted `Distributions.MixtureModel`.

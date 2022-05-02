@@ -14,11 +14,15 @@ function _default_executor(rng; kwargs...)
     end
 end
 
-# transducer-friendly findmax
+# transducer-friendly findmax, ignoring NaNs
 function _findmax(x)
     return Transducers.foldxl(x |> Transducers.Enumerate(); init=missing) do xmax_imax, i_xi
         xmax_imax === missing && return reverse(i_xi)
-        return last(i_xi) > first(xmax_imax) ? reverse(i_xi) : xmax_imax
+        i, xi = i_xi
+        isnan(xi) && return xmax_imax
+        xmax = first(xmax_imax)
+        isnan(xmax) && return (xi, i)
+        return xi > xmax ? (xi, i) : xmax_imax
     end
 end
 
