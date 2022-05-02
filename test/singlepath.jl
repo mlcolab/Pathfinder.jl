@@ -3,6 +3,7 @@ using Distributions
 using ForwardDiff
 using GalacticOptim
 using LinearAlgebra
+using Optim
 using Pathfinder
 using Random
 using ReverseDiff
@@ -21,30 +22,48 @@ using Transducers
             [MersenneTwister()]
         end
         seed = 42
-        @testset for n in [1, 5, 10, 100], rng in rngs
+        @testset for dim in [1, 5, 10, 100], rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
 
-            init = randn(n)
+            init = randn(dim)
             Random.seed!(rng, seed)
-            q, ϕ, logqϕ = @inferred pathfinder(logp, ∇logp; init, ndraws, rng, executor)
-            @test q isa MvNormal
-            @test q.μ ≈ zeros(n)
-            @test q.Σ isa Pathfinder.WoodburyPDMat
-            @test q.Σ ≈ I
-            @test size(q.Σ.B) == (n, 2) # history contains only 1 iteration
-            @test ϕ isa AbstractMatrix
-            @test size(ϕ) == (n, ndraws)
-            @test logqϕ ≈ logpdf(q, ϕ)
+            result = @inferred pathfinder(logp, ∇logp; init, ndraws, rng, executor)
+            @test result isa PathfinderResult
+            @test result.input === (logp, ∇logp)
+            @test result.optim_prob isa GalacticOptim.OptimizationProblem
+            @test result.logp(init) ≈ logp(init)
+            @test result.rng === rng
+            @test result.optimizer ===
+                Pathfinder.default_optimizer(Pathfinder.DEFAULT_HISTORY_LENGTH)
+            fit_distribution = result.fit_distribution
+            @test fit_distribution isa MvNormal
+            @test fit_distribution.μ ≈ zeros(dim)
+            @test fit_distribution.Σ isa Pathfinder.WoodburyPDMat
+            @test fit_distribution.Σ ≈ I
+            @test size(fit_distribution.Σ.B) == (dim, 2) # history contains only 1 iteration
+            @test result.draws isa AbstractMatrix
+            @test size(result.draws) == (dim, ndraws)
+            @test result.fit_distribution_transformed === result.fit_distribution
+            @test result.draws_transformed === result.draws
+            @test result.num_tries ≥ 1
+            @test result.optim_solution isa GalacticOptim.SciMLBase.OptimizationSolution
+            @test result.optim_trace isa Pathfinder.OptimizationTrace
+            @test result.fit_distributions isa Vector{typeof(fit_distribution)}
+            @test length(result.fit_distributions) == length(result.optim_trace)
+            @test result.fit_distributions[result.fit_iteration + 1] == fit_distribution
+            @test result.fit_iteration ==
+                argmax(getproperty.(result.elbo_estimates, :value))
 
             Random.seed!(rng, seed)
-            q2, ϕ2, logqϕ2 = pathfinder(logp, ∇logp; init, ndraws, rng, executor)
-            @test q2 == q
-            @test ϕ2 == ϕ
-            @test logqϕ2 == logqϕ
+            result2 = pathfinder(logp, ∇logp; init, ndraws, rng, executor)
+            @test result2.fit_iteration == result.fit_iteration
+            @test result2.draws == result.draws
+            @test getproperty.(result2.elbo_estimates, :value) ==
+                getproperty.(result.elbo_estimates, :value)
 
             ndraws = 2
-            q3, ϕ3, logqϕ3 = pathfinder(logp, ∇logp; init, ndraws, executor)
-            @test size(ϕ3) == (n, ndraws)
+            result3 = pathfinder(logp, ∇logp; init, ndraws, executor)
+            @test size(result3.draws) == (dim, ndraws)
         end
     end
     @testset "MvNormal" begin
@@ -69,19 +88,25 @@ using Transducers
             [MersenneTwister()]
         end
         seed = 38
+        optimizer = Optim.LBFGS(; m=6)
         @testset for rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
 
             Random.seed!(rng, seed)
-            q, ϕ, logqϕ = @inferred pathfinder(
-                logp; rng, dim, ndraws_elbo, ad_backend, executor
+            result = @inferred pathfinder(
+                logp; rng, dim, optimizer, ndraws_elbo, ad_backend, executor
             )
-            @test q.Σ ≈ Σ rtol = 1e-1
+            @test result.input === logp
+            @test result.fit_distribution.Σ ≈ Σ rtol = 1e-1
+            @test result.optimizer == optimizer
             Random.seed!(rng, seed)
-            q2, ϕ2, logqϕ2 = pathfinder(logp; rng, dim, ndraws_elbo, ad_backend, executor)
-            @test q2 == q
-            @test ϕ2 == ϕ
-            @test logqϕ2 == logqϕ
+            result2 = pathfinder(
+                logp; rng, dim, optimizer, ndraws_elbo, ad_backend, executor
+            )
+            @test result2.fit_distribution == result.fit_distribution
+            @test result2.draws == result.draws
+            @test getproperty.(result2.elbo_estimates, :value) ==
+                getproperty.(result.elbo_estimates, :value)
         end
         @testset "kwargs forwarded to solve" begin
             Random.seed!(42)
@@ -94,6 +119,28 @@ using Transducers
             i = 0
             pathfinder(logp; dim, cb, maxiters=5)
             @test i == 6
+        end
+    end
+    @testset "retries" begin
+        @testset "logp returning NaN" begin
+            dim = 5
+            nfail = 20
+            logp(x) = i ≤ nfail ? NaN : -sum(abs2, x) / 2
+            cb = (args...,) -> (i += 1; true)
+            i = 1
+            result = pathfinder(logp; dim, cb)
+            @test result.fit_distribution.μ ≈ zeros(dim) atol = 1e-6
+            @test result.fit_distribution.Σ ≈ diagm(ones(dim)) atol = 1e-6
+            @test result.num_tries == nfail + 1
+            @test result.optim_prob.u0 == result.optim_trace.points[1]
+            i = 1
+            init = randn(dim)
+            result2 = pathfinder(logp; init, cb, ntries=nfail)
+            @test !isapprox(result2.fit_distribution.μ, zeros(dim); atol=1e-6)
+            @test result2.fit_iteration == 0
+            @test isempty(result2.elbo_estimates)
+            @test result2.num_tries == nfail
+            @test result2.optim_prob.u0 == result2.optim_trace.points[1]
         end
     end
     @testset "UniformSampler" begin

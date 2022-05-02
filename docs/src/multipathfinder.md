@@ -2,6 +2,7 @@
 
 ```@docs
 multipathfinder
+MultiPathfinderResult
 ```
 
 ## Examples
@@ -41,31 +42,30 @@ nothing # hide
 Now we run multi-path Pathfinder.
 
 ```@repl 1
-@time q, ϕ, component_ids = multipathfinder(logp, ∇logp, ndraws; init_scale=10);
+result = multipathfinder(logp, ∇logp, ndraws; nruns, dim, init_scale=10)
 ```
 
-The first return value is a uniformly-weighted `Distributions.MixtureModel`.
+`result` is a [`MultiPathfinderResult`](@ref).
+See its docstring for a description of its fields.
+
+`result.fit_distribution` is a uniformly-weighted `Distributions.MixtureModel`.
 Each component is the result of a single Pathfinder run.
 
-```@repl 1
-typeof(q)
-```
+While we could draw samples from `result.fit_distribution` directly, these aren't equivalent to the samples returned by multi-path Pathfinder, which uses multiple importance sampling with Pareto-smoothed importance resampling to combine the individual runs and resample them so that, if possible, the samples can be used to estimate draws from `logp` directly.
 
-While we could draw samples from `q` directly, these aren't equivalent to the samples returned by multi-path Pathfinder, which uses multiple importance sampling with Pareto-smoothed importance resampling to combine the individual runs.
-
-Note that [PSIS.jl](https://github.com/arviz-devs/PSIS.jl), which smooths the importance weights, warns us that the importance weights are unsuitable for computing estimates, so we should definitely run MCMC to get better samples.
+Note that [PSIS.jl](https://psis.julia.arviz.org/stable/), which smooths the importance weights, warns us that the importance weights are unsuitable for computing estimates, so we should definitely run MCMC to get better samples.
 Pathfinder's samples can still be useful though for initializing MCMC.
 
-Let's compare Pathfinder's samples with samples from `q` directly, plotted over the exact marginal density.
+Let's compare Pathfinder's samples with samples from `result.fit_distribution` directly, plotted over the exact marginal density.
 
 ```@example 1
 using Plots
 
-τ_approx = ϕ[1, :]
-β₁_approx = ϕ[2, :]
-ϕ2 = rand(q, ndraws)
-τ_approx2 = ϕ2[1, :]
-β₁_approx2 = ϕ2[2, :]
+τ_approx = result.draws[1, :]
+β₁_approx = result.draws[2, :]
+draws2 = rand(result.fit_distribution, ndraws)
+τ_approx2 = draws2[1, :]
+β₁_approx2 = draws2[2, :]
 
 τ_range = -15:0.01:5
 β₁_range = -5:0.01:5
@@ -78,11 +78,11 @@ plt
 ```
 
 As expected from PSIS.jl's warning, neither set of samples cover the density well.
-But we can also see that the mixture model (`q`) places too many samples in regions of low density, which is corrected by the importance resampling.
+But we can also see that the mixture model (`result.fit_distribution`) places too many samples in regions of low density, which is corrected by the importance resampling.
 
 We can check how much each component contributed to the returned sample.
 
 ```@example 1
-histogram(component_ids; bins=(0:nruns) .+ 0.5, bar_width=0.8, xticks=1:nruns,
+histogram(result.draw_component_ids; bins=(0:nruns) .+ 0.5, bar_width=0.8, xticks=1:nruns,
           xlabel="Component index", ylabel="Count", legend=false)
 ```
