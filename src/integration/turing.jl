@@ -55,7 +55,6 @@ function flattened_varnames_list(model::DynamicPPL.Model)
     return syms
 end
 
-
 # code snippet shared by @torfjelde
 """
     varnames_to_ranges(model::DynamicPPL.Model)
@@ -99,7 +98,9 @@ Dict{AbstractPPL.VarName, UnitRange{Int64}} with 8 entries:
 function varnames_to_ranges end
 
 varnames_to_ranges(model::DynamicPPL.Model) = varnames_to_ranges(DynamicPPL.VarInfo(model))
-varnames_to_ranges(varinfo::DynamicPPL.UntypedVarInfo) = varnames_to_ranges(varinfo.metadata)
+function varnames_to_ranges(varinfo::DynamicPPL.UntypedVarInfo)
+    return varnames_to_ranges(varinfo.metadata)
+end
 function varnames_to_ranges(varinfo::DynamicPPL.TypedVarInfo)
     offset = 0
     dicts = map(varinfo.metadata) do md
