@@ -17,13 +17,13 @@ end
     X = [x x .^ 2 x .^ 3]
     model = regression_model(X, y)
 
-    result = pathfinder(result; ndraws=1_000)
+    result = pathfinder(model; ndraws=1_000)
     @test result isa PathfinderResult
     @test result.input === model
     @test size(result.draws) == (5, 1_000)
     @test result.draws_transformed isa MCMCChains.Chains
 
-    result = multipathfinder(result, 500; nruns=5)
+    result = multipathfinder(model, 500; nruns=5)
     @test result isa MultiPathfinderResult
     @test result.input === model
     @test size(result.draws) == (5, 500)
