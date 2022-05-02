@@ -13,14 +13,18 @@ using Transducers
         rng = Random.seed!(Random.default_rng(), 42)
         @testset for σ in σs
             dist = Normal(0, σ)
-            elbo, ϕ, logqϕ = @inferred Pathfinder.elbo_and_samples(
-                rng, logp, dist, 1_000_000
-            )
+            est = @inferred Pathfinder.elbo_and_samples(rng, logp, dist, 1_000_000)
+            @test est isa Pathfinder.ELBOEstimate
+
             # explicit elbo calculation
             r = σ / σ_target
             elbo_exp = (1 - r^2) / 2 + log(r)
-            @test elbo ≈ elbo_exp rtol = 1e-2
-            @test mean(logp.(eachcol(ϕ)) - logqϕ) ≈ elbo
+            @test est.value ≈ elbo_exp atol = 3 * est.std_err
+            @test est.log_densities_target ≈ logp.(eachcol(est.draws))
+            @test est.log_densities_fit ≈ logpdf.(dist, first.(eachcol(est.draws)))
+            @test est.log_density_ratios == est.log_densities_target - est.log_densities_fit
+            @test est.value ≈ mean(est.log_density_ratios)
+            @test est.std_err ≈ std(est.log_density_ratios) / sqrt(1_000_000)
         end
     end
 
@@ -37,19 +41,21 @@ using Transducers
         end
         @testset "$executor" for executor in executors
             rng = Random.seed!(Random.default_rng(), 42)
-            lopt, elbo, ϕ, logqϕ = @inferred Pathfinder.maximize_elbo(
+            lopt, estimates = @inferred Pathfinder.maximize_elbo(
                 rng, logp, dists, 100, executor
             )
             @test lopt == 3
-            @test elbo ≈ 0
+            @test estimates[lopt].value ≈ 0
             rng = Random.seed!(Random.default_rng(), 42)
-            lopt2, elbo2, ϕ2, logqϕ2 = Pathfinder.maximize_elbo(
-                rng, logp, dists, 100, executor
-            )
+            lopt2, estimates2 = Pathfinder.maximize_elbo(rng, logp, dists, 100, executor)
             @test lopt2 == lopt
-            @test elbo2 == elbo
-            @test ϕ2 ≈ ϕ
-            @test logqϕ ≈ logqϕ2
+            @test getproperty.(estimates2, :value) == getproperty.(estimates, :value)
+            @test getproperty.(estimates2, :std_err) == getproperty.(estimates, :std_err)
+            lopt3, estimates3 = @inferred Pathfinder.maximize_elbo(
+                rng, logp, dists[2:1], 100, executor
+            )
+            @test lopt3 == 0
+            @test isempty(estimates3)
         end
     end
 end

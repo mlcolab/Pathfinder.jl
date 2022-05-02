@@ -4,6 +4,7 @@ using ForwardDiff
 using LinearAlgebra
 using GalacticOptim
 using Pathfinder
+using PSIS
 using ReverseDiff
 using Test
 using Transducers
@@ -30,19 +31,30 @@ using Transducers
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
 
             Random.seed!(rng, seed)
-            q, ϕ, component_ids = multipathfinder(
+            result = multipathfinder(
                 logp, ∇logp, ndraws; dim, nruns, ndraws_elbo, ndraws_per_run, rng, executor
             )
-            @test q isa MixtureModel
-            @test ncomponents(q) == nruns
-            @test Distributions.component_type(q) <: MvNormal
-            @test ϕ isa AbstractMatrix
-            @test size(ϕ) == (dim, ndraws)
-            @test component_ids isa Vector{Int}
-            @test length(component_ids) == ndraws
-            @test extrema(component_ids) == (1, nruns)
-            μ_hat = mean(ϕ; dims=2)
-            Σ_hat = cov(ϕ .- μ_hat; dims=2, corrected=false)
+            @test result isa MultiPathfinderResult
+            @test result.input === (logp, ∇logp)
+            @test result.optim_fun isa GalacticOptim.OptimizationFunction
+            @test result.rng === rng
+            @test result.optimizer ===
+                Pathfinder.default_optimizer(Pathfinder.DEFAULT_HISTORY_LENGTH)
+            @test result.fit_distribution isa MixtureModel
+            @test ncomponents(result.fit_distribution) == nruns
+            @test Distributions.component_type(result.fit_distribution) <: MvNormal
+            @test result.draws isa AbstractMatrix
+            @test size(result.draws) == (dim, ndraws)
+            @test result.draw_component_ids isa Vector{Int}
+            @test length(result.draw_component_ids) == ndraws
+            @test extrema(result.draw_component_ids) == (1, nruns)
+            @test result.fit_distribution_transformed === result.fit_distribution
+            @test result.draws_transformed == result.draws
+            @test result.pathfinder_results isa Vector{<:PathfinderResult}
+            @test length(result.pathfinder_results) == nruns
+            @test result.psis_result isa PSIS.PSISResult
+            μ_hat = mean(result.draws; dims=2)
+            Σ_hat = cov(result.draws .- μ_hat; dims=2, corrected=false)
             # adapted from the MvNormal tests
             # allow for 15x disagreement in atol, since this method is approximate
             multiplier = 15
@@ -56,16 +68,16 @@ using Transducers
             end
 
             Random.seed!(rng, seed)
-            q2, ϕ2, component_ids2 = multipathfinder(
+            result2 = multipathfinder(
                 logp, ndraws; dim, nruns, ndraws_elbo, ndraws_per_run, rng, executor
             )
-            @test q2 == q
-            @test ϕ2 == ϕ
-            @test component_ids2 == component_ids
+            @test result2.fit_distribution == result.fit_distribution
+            @test result2.draws == result.draws
+            @test result2.draw_component_ids == result.draw_component_ids
 
             Random.seed!(rng, seed)
             ad_backend = AD.ReverseDiffBackend()
-            q3, ϕ3, component_ids3 = multipathfinder(
+            result3 = multipathfinder(
                 logp,
                 ndraws;
                 dim,
@@ -76,15 +88,16 @@ using Transducers
                 executor,
                 ad_backend,
             )
-            for (c1, c2) in zip(q.components, q3.components)
+            for (c1, c2) in
+                zip(result.fit_distribution.components, result3.fit_distribution.components)
                 @test c1 ≈ c2 atol = 1e-6
             end
         end
 
         init = [randn(dim) for _ in 1:nruns]
-        q, ϕ, component_ids = multipathfinder(logp, ∇logp, ndraws; init)
-        @test ncomponents(q) == nruns
-        @test size(ϕ) == (dim, ndraws)
+        result = multipathfinder(logp, ∇logp, ndraws; init)
+        @test ncomponents(result.fit_distribution) == nruns
+        @test size(result.draws) == (dim, ndraws)
     end
     @testset "errors if no gradient provided" begin
         logp(x) = -sum(abs2, x) / 2
