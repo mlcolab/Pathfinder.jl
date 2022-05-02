@@ -135,7 +135,7 @@ end
             samples2, stats2 = sample(
                 hamiltonian,
                 proposal,
-                result_pf[2][:, 1],
+                result_pf.draws[:, 1],
                 ndraws,
                 adaptor,
                 nadapts;
@@ -146,7 +146,7 @@ end
         end
 
         @testset "Initial point and metric" begin
-            metric = DiagEuclideanMetric(diag(result_pf[1].Σ))
+            metric = DiagEuclideanMetric(diag(result_pf.fit_distribution.Σ))
             hamiltonian = Hamiltonian(metric, ℓπ, ForwardDiff)
             ϵ = find_good_stepsize(hamiltonian, θ₀)
             integrator = Leapfrog(ϵ)
@@ -155,7 +155,7 @@ end
             samples3, stats3 = sample(
                 hamiltonian,
                 proposal,
-                result_pf[2][:, 1],
+                result_pf.draws[:, 1],
                 ndraws,
                 adaptor,
                 nadapts;
@@ -166,7 +166,7 @@ end
         end
 
         @testset "Initial point and final metric" begin
-            metric = Pathfinder.RankUpdateEuclideanMetric(result_pf[1].Σ)
+            metric = Pathfinder.RankUpdateEuclideanMetric(result_pf.fit_distribution.Σ)
             hamiltonian = Hamiltonian(metric, ℓπ, ForwardDiff)
             ϵ = find_good_stepsize(hamiltonian, θ₀)
             integrator = Leapfrog(ϵ)
@@ -175,7 +175,7 @@ end
             samples4, stats4 = sample(
                 hamiltonian,
                 proposal,
-                result_pf[2][:, 1],
+                result_pf.draws[:, 1],
                 ndraws,
                 adaptor,
                 nadapts;

@@ -66,20 +66,24 @@ end
         Optim.BFGS(), Optim.LBFGS(), Optim.ConjugateGradient(), NLopt.Opt(:LD_LBFGS, n)
     ]
     @testset "$(typeof(optimizer))" for optimizer in optimizers
-        xs, fxs, ∇fxs = Pathfinder.optimize_with_trace(prob, optimizer)
-        @test xs[1] ≈ x0
-        @test xs[end] ≈ μ
-        @test fxs ≈ f.(xs)
-        @test ∇fxs ≈ ∇f.(xs) atol = 1e-4
+        optim_sol, optim_trace = Pathfinder.optimize_with_trace(prob, optimizer)
+        @test optim_sol isa GalacticOptim.SciMLBase.OptimizationSolution
+        @test optim_trace isa Pathfinder.OptimizationTrace
+        @test optim_trace.points[1] ≈ x0
+        @test optim_sol.prob.u0 ≈ x0
+        @test optim_trace.points[end] ≈ μ
+        @test optim_sol.u ≈ μ
+        @test optim_trace.log_densities ≈ f.(optim_trace.points)
+        @test optim_trace.gradients ≈ ∇f.(optim_trace.points) atol = 1e-4
 
         if !(optimizer isa NLopt.Opt)
             options = Optim.Options(; store_trace=true, extended_trace=true)
             res = Optim.optimize(
                 x -> -f(x), (y, x) -> copyto!(y, -∇f(x)), x0, optimizer, options
             )
-            @test Optim.iterations(res) == length(xs) - 1
-            @test Optim.x_trace(res) ≈ xs
-            @test Optim.minimizer(res) ≈ xs[end]
+            @test Optim.iterations(res) == length(optim_trace.points) - 1
+            @test Optim.x_trace(res) ≈ optim_trace.points
+            @test Optim.minimizer(res) ≈ optim_trace.points[end]
         end
     end
 

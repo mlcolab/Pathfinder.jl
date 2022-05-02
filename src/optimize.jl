@@ -62,8 +62,8 @@ function optimize_with_trace(
         push!(∇fxs, rmul!(grad!(similar(x), x, nothing), -1))
         return ret
     end
-    GalacticOptim.solve(prob, optimizer; cb=callback, maxiters, kwargs...)
-    return xs, fxs, ∇fxs
+    sol = GalacticOptim.solve(prob, optimizer; cb=callback, maxiters, kwargs...)
+    return sol, OptimizationTrace(xs, fxs, ∇fxs)
 end
 
 function optimize_with_trace(
@@ -94,5 +94,18 @@ function optimize_with_trace(
     fxs = -Optim.f_trace(result)
     map!(tr -> -tr.metadata["g(x)"], ∇fxs, Optim.trace(result))
 
-    return xs::Vector{typeof(u0)}, fxs, ∇fxs::Vector{typeof(u0)}
+    return sol, OptimizationTrace(xs::Vector{typeof(u0)}, fxs, ∇fxs::Vector{typeof(u0)})
+end
+
+struct OptimizationTrace{P,L}
+    points::P
+    log_densities::L
+    gradients::P
+end
+
+Base.length(trace::OptimizationTrace) = length(trace.points)
+
+function Base.show(io::IO, trace::OptimizationTrace)
+    print(io, "OptimizationTrace with $(length(trace) - 1) iterations")
+    return nothing
 end

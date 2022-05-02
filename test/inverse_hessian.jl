@@ -57,14 +57,17 @@ end
         optimizer = Optim.LBFGS(;
             m=history_length, linesearch=Optim.LineSearches.MoreThuente()
         )
-        θs, logpθs, ∇logpθs = Pathfinder.optimize_with_trace(prob, optimizer)
+        sol, optim_trace = Pathfinder.optimize_with_trace(prob, optimizer)
 
         # run lbfgs_inverse_hessians with the same initialization as Optim.LBFGS
         Hs = Pathfinder.lbfgs_inverse_hessians(
-            θs, ∇logpθs; history_length, Hinit=nocedal_wright_scaling
+            optim_trace.points,
+            optim_trace.gradients;
+            history_length,
+            Hinit=nocedal_wright_scaling,
         )
-        ss = diff(θs)
-        ps = (Hs .* ∇logpθs)[1:(end - 1)]
+        ss = diff(optim_trace.points)
+        ps = (Hs .* optim_trace.gradients)[1:(end - 1)]
         # check that next direction computed from Hessian is the same as the actual
         # direction that was taken
         @test all(≈(1), dot.(ps, ss) ./ norm.(ss) ./ norm.(ps))

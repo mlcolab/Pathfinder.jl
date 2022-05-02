@@ -1,4 +1,72 @@
 """
+    MultiPathfinderResult
+
+Container for results of multi-path Pathfinder.
+
+# Fields
+- `input`: User-provided input object, e.g. either `logp`, `(logp, ∇logp)`, `optim_fun`,
+    `optim_prob`, or another object.
+- `optimizer`: Optimizer used for maximizing the log-density
+- `rng`: Pseudorandom number generator that was used for sampling
+- `optim_prob::GalacticOptim.OptimizationProblem`: Otimization problem used for
+    optimization
+- `logp`: Log-density function
+- `fit_distribution::Distributions.MixtureModel`: uniformly-weighted mixture of ELBO-
+    maximizing multivariate normal distributions from each run.
+- `draws::AbstractMatrix{<:Real}`: draws from `fit_distribution` with size `(dim, ndraws)`,
+    potentially resampled using importance resampling to be closer to the target
+    distribution.
+- `draw_component_ids::Vector{Int}`: component id of each draw in `draws`.
+- `fit_distribution_transformed`: `fit_distribution` transformed to the same space as the
+    user-supplied target distribution. This is only different from `fit_distribution` when
+    integrating with other packages, and its type depends on the type of `input`.
+- `draws_transformed`: `draws` transformed to be draws from `fit_distribution_transformed`.
+- `pathfinder_results::Vector{<:PathfinderResult}`: results of each single-path Pathfinder
+    run.
+- `psis_result::Union{Nothing,<:PSIS.PSISResult}`: If importance resampling was used, the
+    result of Pareto-smoothed importance resampling. `psis_result.pareto_shape` also
+    diagnoses whether `draws` can be used to compute estimates from the target distribution.
+    See [`PSIS.PSISResult`](https://psis.julia.arviz.org/stable/api/#PSIS.PSISResult) for
+    details
+"""
+struct MultiPathfinderResult{I,O,R,OF,LP,FD,D,C,FDT,DT,PFR,PR}
+    input::I
+    optimizer::O
+    rng::R
+    optim_fun::OF
+    logp::LP
+    fit_distribution::FD
+    draws::D
+    draw_component_ids::C
+    fit_distribution_transformed::FDT
+    draws_transformed::DT
+    pathfinder_results::PFR
+    psis_result::PR
+end
+
+function Base.show(io::IO, ::MIME"text/plain", result::MultiPathfinderResult)
+    println(io, "Multi-path Pathfinder result")
+    println(io, "  runs: $(length(result.pathfinder_results))")
+    print(io, "  draws: $(size(result.draws, 1))")
+    psis_result = result.psis_result
+    if psis_result !== nothing
+        println(io)
+        k = psis_result.pareto_shape
+        assessment = if k > 1
+            "very bad"
+        elseif k > 0.7
+            "bad"
+        elseif k > 0.5
+            "ok"
+        else
+            "good"
+        end
+        print(io, "  Pareto shape diagnostic: ", round(k; digits=2), " ($assessment)")
+    end
+    return nothing
+end
+
+"""
     multipathfinder(logp, ndraws; kwargs...)
     multipathfinder(logp, ∇logp, ndraws; kwargs...)
     multipathfinder(fun::GalacticOptim.OptimizationFunction, ndraws; kwargs...)
@@ -54,31 +122,38 @@ for approximating expectations with respect to ``p``.
 - `kwargs...` : Remaining keywords are forwarded to [`pathfinder`](@ref).
 
 # Returns
-- `q::Distributions.MixtureModel`: Uniformly weighted mixture of ELBO-maximizing
-    multivariate normal distributions
-- `ϕ::AbstractMatrix{<:Real}`: approximate draws from target distribution with size
-    `(dim, ndraws)`
-- `component_inds::Vector{Int}`: Indices ``k`` of components in ``q`` from which each column
-    in `ϕ` was drawn.
+- [`MultiPathfinderResult`](@ref)
 """
 function multipathfinder end
 
-function multipathfinder(logp, ndraws::Int; ad_backend=AD.ForwardDiffBackend(), kwargs...)
-    return multipathfinder(build_optim_function(logp; ad_backend), ndraws; kwargs...)
+function multipathfinder(
+    logp, ndraws::Int; ad_backend=AD.ForwardDiffBackend(), input=logp, kwargs...
+)
+    return multipathfinder(build_optim_function(logp; ad_backend), ndraws; input, kwargs...)
 end
 function multipathfinder(
-    logp, ∇logp, ndraws::Int; ad_backend=AD.ForwardDiffBackend(), kwargs...
+    logp,
+    ∇logp,
+    ndraws::Int;
+    ad_backend=AD.ForwardDiffBackend(),
+    input=(logp, ∇logp),
+    kwargs...,
 )
-    return multipathfinder(build_optim_function(logp, ∇logp; ad_backend), ndraws; kwargs...)
+    return multipathfinder(
+        build_optim_function(logp, ∇logp; ad_backend), ndraws; input, kwargs...
+    )
 end
 function multipathfinder(
     optim_fun::GalacticOptim.OptimizationFunction,
     ndraws::Int;
     init=nothing,
+    input=optim_fun,
     nruns::Int=init === nothing ? -1 : length(init),
     ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
     ndraws_per_run::Int=max(ndraws_elbo, cld(ndraws, max(nruns, 1))),
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
+    history_length::Int=DEFAULT_HISTORY_LENGTH,
+    optimizer=default_optimizer(history_length),
     executor::Transducers.Executor=_default_executor(rng; basesize=1),
     executor_per_run=Transducers.SequentialEx(),
     importance::Bool=true,
@@ -105,6 +180,8 @@ function multipathfinder(
         return pathfinder(
             optim_fun;
             rng,
+            history_length,
+            optimizer,
             ndraws=ndraws_per_run,
             init=init_i,
             executor=executor_per_run,
@@ -113,27 +190,50 @@ function multipathfinder(
         )
     end
     iter_sp = Transducers.withprogress(_init; interval=1e-3) |> trans
-    res = Folds.collect(iter_sp, executor)
-    qs = res |> Transducers.Map(first) |> collect
-    ϕs = reduce(hcat, res |> Transducers.Map(x -> x[2]))
+    pathfinder_results = Folds.collect(iter_sp, executor)
+    fit_distributions =
+        pathfinder_results |> Transducers.Map(x -> x.fit_distribution) |> collect
+    draws_all = reduce(hcat, pathfinder_results |> Transducers.Map(x -> x.draws))
 
     # draw samples from augmented mixture model
-    inds = axes(ϕs, 2)
-    sample_inds = if importance
-        logqϕs = res |> Transducers.MapCat(last) |> collect
-        iter_logp = eachcol(ϕs) |> Transducers.Map(logp)
-        logpϕs = Folds.collect(iter_logp, executor)
-        log_ratios = logpϕs - logqϕs
-        resample(rng, inds, log_ratios, ndraws)
+    inds = axes(draws_all, 2)
+    sample_inds, psis_result = if importance
+        log_densities_fit =
+            pathfinder_results |>
+            Transducers.MapCat() do x
+                return Distributions.logpdf(x.fit_distribution, x.draws)
+            end |>
+            collect
+        iter_logp = eachcol(draws_all) |> Transducers.Map(logp)
+        log_densities_target = Folds.collect(iter_logp, executor)
+        log_densities_ratios = log_densities_target - log_densities_fit
+        resample(rng, inds, log_densities_ratios, ndraws)
     else
-        resample(rng, inds, ndraws)
+        resample(rng, inds, ndraws), nothing
     end
 
-    q = Distributions.MixtureModel(qs)
-    ϕ = ϕs[:, sample_inds]
+    fit_distribution = Distributions.MixtureModel(fit_distributions)
+    draws = draws_all[:, sample_inds]
 
     # get component ids (k) of draws in ϕ
-    component_ids = cld.(sample_inds, ndraws_per_run)
+    draw_component_ids = cld.(sample_inds, ndraws_per_run)
 
-    return q, ϕ, component_ids
+    # placeholders
+    fit_distribution_transformed = fit_distribution
+    draws_transformed = draws
+
+    return MultiPathfinderResult(
+        input,
+        optimizer,
+        rng,
+        optim_fun,
+        logp,
+        fit_distribution,
+        draws,
+        draw_component_ids,
+        fit_distribution_transformed,
+        draws_transformed,
+        pathfinder_results,
+        psis_result,
+    )
 end

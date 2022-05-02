@@ -2,6 +2,7 @@
 
 ```@docs
 pathfinder
+PathfinderResult
 ```
 
 ## Examples
@@ -34,19 +35,21 @@ nothing # hide
 Now we run Pathfinder.
 
 ```@repl 1
-@time q, ϕ, logqϕ = pathfinder(logp, ∇logp; dim=5, ndraws=100, ndraws_elbo=100);
+result = pathfinder(logp, ∇logp; dim=5, ndraws=100, ndraws_elbo=100)
 ```
 
-The first return value is a multivariate normal approximation to our target distribution.
+`result` is a [`PathfinderResult`](@ref).
+See its docstring for a description of its fields.
+
+`result.fit_distribution` is a multivariate normal approximation to our target distribution.
 Its mean and covariance are quite close to our target distribution's.
 
 ```@repl 1
-q
-q.μ
-q.Σ
+result.fit_distribution.μ
+result.fit_distribution.Σ
 ```
 
-`ϕ` is a `Matrix` whose columns are the requested draws from `q`:
+`result.draws` is a `Matrix` whose columns are the requested draws from `result.fit_distribution`:
 ```@repl 1
-ϕ
+result.draws
 ```
