@@ -2,7 +2,7 @@
 
 This page introduces basic Pathfinder usage with examples.
 
-## A 5-ddimensional multivariate normal
+## A 5-dimensional multivariate normal
 
 For a simple example, we'll run Pathfinder on a multivariate normal distribution with
 a dense covariance matrix.

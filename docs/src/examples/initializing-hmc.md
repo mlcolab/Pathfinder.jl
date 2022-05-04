@@ -2,7 +2,7 @@
 
 ## The MCMC warm-up phase
 
-When using MCMC to draw samples from some target distribution, there is often a length warm-up phase with 2 goals:
+When using MCMC to draw samples from some target distribution, there is often a lengthy warm-up phase with 2 phases:
 1. converge to the _typical set_ (the region of the target distribution where the bulk of the probability mass is located)
 2. adapt any tunable parameters of the MCMC sampler (optional)
 

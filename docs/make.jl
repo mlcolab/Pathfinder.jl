@@ -21,6 +21,8 @@ makedocs(;
         ],
         "Examples" => [
             "Quickstart" => "examples/quickstart.md",
+            "Initializing HMC" => "examples/initializing-hmc.md",
+            "Turing usage" => "examples/turing.md",
         ]
     ],
 )

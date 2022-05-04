@@ -37,7 +37,7 @@ See [Initializing HMC with Pathfinder](@ref) for details.
 
 ## Integration with the Julia ecosystem
 
-Pathfinder uses several interfaces for extended functionality.
+Pathfinder uses several packages for extended functionality:
 
 - [GalacticOptim.jl](https://galacticoptim.sciml.ai/stable/): This allows the L-BFGS optimizer to be replaced with any of the many GalacticOptim-compatible optimizers and supports use of callbacks. Note that any changes made to Pathfinder using these features would be experimental.
 - [Transducers.jl](https://juliafolds.github.io/Transducers.jl/stable/): parallelization support

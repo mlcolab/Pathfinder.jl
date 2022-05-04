@@ -15,7 +15,7 @@ Random.seed!(39)
     y .~ Normal.(α .+ β .* x, σ)
 end
 x = 0:0.1:10
-y = @. 2x + 1.5 + randn.() * 0.2
+y = @. 2x + 1.5 + randn() * 0.2
 nothing # hide
 ```
 
@@ -24,7 +24,7 @@ model = regress(collect(x), y)
 ```
 
 The first way we can use Turing with Pathfinder is via its mode estimation functionality.
-We can use `Turing.optim_problem` to generate a `SciMLBase.OptimizationFunction`, which [`pathfinder`](@ref) and [`multipathfinder`](@ref) can take as inputs.
+We can use `Turing.optim_function` to generate a `SciMLBase.OptimizationFunction`, which [`pathfinder`](@ref) and [`multipathfinder`](@ref) can take as inputs.
 
 ```@example 1
 fun = optim_function(model, MAP(); constrained=false)
@@ -51,7 +51,7 @@ result_multi = multipathfinder(model, 1_000; nruns=8)
 
 Here, the Pareto shape diagnostic indicates that it is likely safe to use these draws to compute posterior estimates.
 
-When passed a `Model`, Pathfinder also gives access to the posterior draws in a familiar `MCMC.Chains` object.
+When passed a `Model`, Pathfinder also gives access to the posterior draws in a familiar `MCMCChains.Chains` object.
 
 ```@example 1
 result_multi.draws_transformed
