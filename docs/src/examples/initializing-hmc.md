@@ -17,7 +17,7 @@ Pathfinder can be used to initialize MCMC, and in particular HMC, in 3 ways:
 
 This tutorial demonstrates all three approaches with [DynamicHMC.jl](https://tamaspapp.eu/DynamicHMC.jl/stable/) and [AdvancedHMC.jl](https://github.com/TuringLang/AdvancedHMC.jl).
 Both of these packages have standalone implementations of adaptive HMC (aka NUTS) and can be used independently of any probabilistic programming language (PPL).
-Both the [Turing](Turing.ml/) and [Soss](https://github.com/cscherrer/Soss.jl) PPLs have some DynamicHMC integration, while Turing also integrates with AdvancedHMC.
+Both the [Turing](https://turing.ml/stable/) and [Soss](https://github.com/cscherrer/Soss.jl) PPLs have some DynamicHMC integration, while Turing also integrates with AdvancedHMC.
 
 For demonstration purposes, we'll use the following dummy data:
 
