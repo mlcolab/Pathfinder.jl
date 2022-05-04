@@ -15,7 +15,7 @@ Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 [compat]
 AdvancedHMC = "0.3"
 Documenter = "0.27"
-DynamicHMC "3"
+DynamicHMC = "3"
 ForwardDiff = "0.10"
 LogDensityProblems = "0.11"
 Pathfinder = "0.4"
