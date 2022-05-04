@@ -15,6 +15,7 @@ using ProgressLogging: ProgressLogging
 using PSIS: PSIS
 using Random
 using Requires: Requires
+using SciMLBase: SciMLBase
 using Statistics: Statistics
 using StatsBase: StatsBase
 using Transducers: Transducers

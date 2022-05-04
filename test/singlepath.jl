@@ -7,6 +7,7 @@ using Optim
 using Pathfinder
 using Random
 using ReverseDiff
+using SciMLBase
 using Test
 using Transducers
 
@@ -30,7 +31,7 @@ using Transducers
             result = @inferred pathfinder(logp, ∇logp; init, ndraws, rng, executor)
             @test result isa PathfinderResult
             @test result.input === (logp, ∇logp)
-            @test result.optim_prob isa GalacticOptim.OptimizationProblem
+            @test result.optim_prob isa SciMLBase.OptimizationProblem
             @test result.logp(init) ≈ logp(init)
             @test result.rng === rng
             @test result.optimizer ===
@@ -46,7 +47,7 @@ using Transducers
             @test result.fit_distribution_transformed === result.fit_distribution
             @test result.draws_transformed === result.draws
             @test result.num_tries ≥ 1
-            @test result.optim_solution isa GalacticOptim.SciMLBase.OptimizationSolution
+            @test result.optim_solution isa SciMLBase.OptimizationSolution
             @test result.optim_trace isa Pathfinder.OptimizationTrace
             @test result.fit_distributions isa Vector{typeof(fit_distribution)}
             @test length(result.fit_distributions) == length(result.optim_trace)
@@ -161,10 +162,10 @@ using Transducers
     @testset "errors if no gradient provided" begin
         logp(x) = -sum(abs2, x) / 2
         init = randn(5)
-        prob = GalacticOptim.OptimizationProblem(logp, init, nothing)
+        prob = SciMLBase.OptimizationProblem(logp, init, nothing)
         @test_throws ArgumentError pathfinder(prob)
-        fun = GalacticOptim.OptimizationFunction(logp, GalacticOptim.AutoForwardDiff())
-        prob = GalacticOptim.OptimizationProblem(fun, init, nothing)
+        fun = SciMLBase.OptimizationFunction(logp, GalacticOptim.AutoForwardDiff())
+        prob = SciMLBase.OptimizationProblem(fun, init, nothing)
         @test_throws ArgumentError pathfinder(prob)
     end
     @testset "errors if neither dim nor init valid" begin

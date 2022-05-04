@@ -9,7 +9,7 @@ Container for results of single-path Pathfinder.
     `optim_prob`, or another object.
 - `optimizer`: Optimizer used for maximizing the log-density
 - `rng`: Pseudorandom number generator that was used for sampling
-- `optim_prob::GalacticOptim.OptimizationProblem`: Otimization problem used for
+- `optim_prob::SciMLBase.OptimizationProblem`: Otimization problem used for
     optimization
 - `logp`: Log-density function
 - `fit_distribution::Distributions.MvNormal`: ELBO-maximizing multivariate normal
@@ -21,7 +21,7 @@ Container for results of single-path Pathfinder.
 - `draws_transformed`: `draws` transformed to be draws from `fit_distribution_transformed`.
 - `fit_iteration::Int`: Iteration at which ELBO estimate was maximized
 - `num_tries::Int`: Number of tries until Pathfinder succeeded
-- `optim_solution::GalacticOptim.OptimizationSolution`: Solution object of optimization.
+- `optim_solution::SciMLBase.OptimizationSolution`: Solution object of optimization.
 - `optim_trace::Pathfinder.OptimizationTrace`: container for optimization trace of points,
     log-density, and gradient. The first point is the initial point.
 - `fit_distributions::AbstractVector{Distributions.MvNormal}`: Multivariate normal
@@ -66,8 +66,8 @@ end
 """
     pathfinder(logp; kwargs...)
     pathfinder(logp, ∇logp; kwargs...)
-    pathfinder(fun::GalacticOptim::OptimizationFunction; kwargs...)
-    pathfinder(prob::GalacticOptim::OptimizationProblem; kwargs...)
+    pathfinder(fun::SciMLBase::OptimizationFunction; kwargs...)
+    pathfinder(prob::SciMLBase::OptimizationProblem; kwargs...)
 
 Find the best multivariate normal approximation encountered while maximizing `logp`.
 
@@ -83,11 +83,11 @@ constructed using at most the previous `history_length` steps.
 - `logp`: a callable that computes the log-density of the target distribution.
 - `∇logp`: a callable that computes the gradient of `logp`. If not provided, `logp` is
     automatically differentiated using the backend specified in `ad_backend`.
-- `fun::GalacticOptim.OptimizationFunction`: an optimization function that represents
+- `fun::SciMLBase.OptimizationFunction`: an optimization function that represents
     `-logp(x)` with its gradient. It must have the necessary features (e.g. a Hessian
     function) for the chosen optimization algorithm. For details, see
     [GalacticOptim.jl: OptimizationFunction](https://galacticoptim.sciml.ai/stable/API/optimization_function/).
-- `prob::GalacticOptim.OptimizationProblem`: an optimization problem containing a function with
+- `prob::SciMLBase.OptimizationProblem`: an optimization problem containing a function with
     the same properties as `fun`, as well as an initial point, in which case `init` and
     `dim` are ignored.
 
@@ -136,7 +136,7 @@ function pathfinder(logp, ∇logp; ad_backend=AD.ForwardDiffBackend(), kwargs...
     )
 end
 function pathfinder(
-    optim_fun::GalacticOptim.OptimizationFunction;
+    optim_fun::SciMLBase.OptimizationFunction;
     rng=Random.GLOBAL_RNG,
     init=nothing,
     dim::Int=-1,
@@ -159,7 +159,7 @@ function pathfinder(
     return pathfinder(prob; rng, input, init_sampler, allow_mutating_init, kwargs...)
 end
 function pathfinder(
-    prob::GalacticOptim.OptimizationProblem;
+    prob::SciMLBase.OptimizationProblem;
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     history_length::Int=DEFAULT_HISTORY_LENGTH,
     optimizer=default_optimizer(history_length),

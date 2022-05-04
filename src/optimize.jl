@@ -22,11 +22,11 @@ function build_optim_function(f, ∇f; ad_backend=AD.ForwardDiffBackend())
         @. res = -Hv
         return res
     end
-    return GalacticOptim.OptimizationFunction((x, p...) -> -f(x); grad, hess, hv)
+    return SciMLBase.OptimizationFunction((x, p...) -> -f(x); grad, hess, hv)
 end
 
 function build_optim_problem(optim_fun, x₀)
-    return GalacticOptim.OptimizationProblem(optim_fun, x₀, nothing)
+    return SciMLBase.OptimizationProblem(optim_fun, x₀, nothing)
 end
 
 function optimize_with_trace(
