@@ -111,13 +111,13 @@ using Transducers
         @testset "kwargs forwarded to solve" begin
             Random.seed!(42)
             i = 0
-            cb = (args...,) -> (i += 1; false)
-            pathfinder(logp; dim, cb)
+            callback = (args...,) -> (i += 1; false)
+            pathfinder(logp; dim, callback)
             @test i ≠ 6
 
             Random.seed!(42)
             i = 0
-            pathfinder(logp; dim, cb, maxiters=5)
+            pathfinder(logp; dim, callback, maxiters=5)
             @test i == 6
         end
     end
@@ -126,16 +126,16 @@ using Transducers
             dim = 5
             nfail = 20
             logp(x) = i ≤ nfail ? NaN : -sum(abs2, x) / 2
-            cb = (args...,) -> (i += 1; true)
+            callback = (args...,) -> (i += 1; true)
             i = 1
-            result = pathfinder(logp; dim, cb)
+            result = pathfinder(logp; dim, callback)
             @test result.fit_distribution.μ ≈ zeros(dim) atol = 1e-6
             @test result.fit_distribution.Σ ≈ diagm(ones(dim)) atol = 1e-6
             @test result.num_tries == nfail + 1
             @test result.optim_prob.u0 == result.optim_trace.points[1]
             i = 1
             init = randn(dim)
-            result2 = pathfinder(logp; init, cb, ntries=nfail)
+            result2 = pathfinder(logp; init, callback, ntries=nfail)
             @test !isapprox(result2.fit_distribution.μ, zeros(dim); atol=1e-6)
             @test result2.fit_iteration == 0
             @test isempty(result2.elbo_estimates)
