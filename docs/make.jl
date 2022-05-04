@@ -15,8 +15,9 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "Single-path Pathfinder" => "pathfinder.md",
-        "Multi-path Pathfinder" => "multipathfinder.md",
+        "Examples" => [
+            "Quickstart" => "examples/quickstart.md",
+        ]
     ],
 )
 
