@@ -91,7 +91,7 @@ samples, stats = sample(
     hamiltonian,
     proposal,
     init_params[1],
-    ndraws,
+    ndraws + nadapts,
     adaptor,
     nadapts;
     drop_warmup=true,

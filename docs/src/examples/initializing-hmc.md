@@ -180,7 +180,7 @@ samples_ahmc1, stats_ahmc1 = sample(
     hamiltonian,
     proposal,
     init_params,
-    ndraws,
+    ndraws + nadapts,
     adaptor,
     nadapts;
     drop_warmup=true,
@@ -204,7 +204,7 @@ samples_ahmc2, stats_ahmc2 = sample(
     hamiltonian,
     proposal,
     init_params,
-    ndraws,
+    ndraws + nadapts,
     adaptor,
     nadapts;
     drop_warmup=true,
@@ -228,7 +228,7 @@ samples_ahmc3, stats_ahmc3 = sample(
     hamiltonian,
     proposal,
     init_params,
-    ndraws,
+    ndraws + nadapts,
     adaptor,
     nadapts;
     drop_warmup=true,
