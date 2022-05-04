@@ -10,6 +10,7 @@ Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Folds = "41a02a25-b8f0-4f67-bc48-60067656b558"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 GalacticOptim = "a75be94c-b780-496d-a8a9-0878b188d577"
+GalacticOptimJL = "9d3c5eb1-403b-401b-8c0f-c11105342e6b"
 IrrationalConstants = "92d709cd-6900-40b7-9082-c6be49f344b6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
@@ -29,7 +30,8 @@ Accessors = "0.1"
 Distributions = "0.25"
 Folds = "0.2"
 ForwardDiff = "0.10"
-GalacticOptim = "2"
+GalacticOptim = "3"
+GalacticOptimJL = "0.1"
 IrrationalConstants = "0.1.1"
 Optim = "1.4"
 PDMats = "0.11"
@@ -42,9 +44,9 @@ UnPack = "1"
 julia = "1.6"
 
 [extras]
-NLopt = "76087f3c-5699-56af-9a33-bf431cd00edd"
+GalacticNLopt = "792012fa-ebfb-4b3a-ab44-69908522effd"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["NLopt", "ReverseDiff", "Test"]
+test = ["GalacticNLopt", "ReverseDiff", "Test"]

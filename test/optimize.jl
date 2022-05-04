@@ -1,8 +1,8 @@
 using AbstractDifferentiation
 using ForwardDiff
+using GalacticNLopt
 using GalacticOptim
 using LinearAlgebra
-using NLopt
 using Optim
 using Pathfinder
 using ProgressLogging
