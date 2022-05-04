@@ -15,6 +15,10 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "Library" => [
+            "Public" => "lib/public.md",
+            "Internals" => "lib/internals.md",
+        ],
         "Examples" => [
             "Quickstart" => "examples/quickstart.md",
         ]
