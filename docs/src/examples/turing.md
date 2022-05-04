@@ -99,4 +99,12 @@ samples, stats = sample(
 )
 ```
 
+Now we pack the samples into an `MCMCChains.Chains`:
+
+```@example 1
+samples_transformed = reduce(vcat, fun.transform.(samples)')
+varnames = Pathfinder.flattened_varnames_list(model)
+chns = MCMCChains.Chains(samples_transformed, varnames)
+```
+
 See [Initializing HMC with Pathfinder](@ref) for further examples.
