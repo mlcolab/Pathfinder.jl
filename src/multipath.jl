@@ -8,7 +8,7 @@ Container for results of multi-path Pathfinder.
     `optim_prob`, or another object.
 - `optimizer`: Optimizer used for maximizing the log-density
 - `rng`: Pseudorandom number generator that was used for sampling
-- `optim_prob::GalacticOptim.OptimizationProblem`: Otimization problem used for
+- `optim_prob::SciMLBase.OptimizationProblem`: Otimization problem used for
     optimization
 - `logp`: Log-density function
 - `fit_distribution::Distributions.MixtureModel`: uniformly-weighted mixture of ELBO-
@@ -69,7 +69,7 @@ end
 """
     multipathfinder(logp, ndraws; kwargs...)
     multipathfinder(logp, ∇logp, ndraws; kwargs...)
-    multipathfinder(fun::GalacticOptim.OptimizationFunction, ndraws; kwargs...)
+    multipathfinder(fun::SciMLBase.OptimizationFunction, ndraws; kwargs...)
 
 Run [`pathfinder`](@ref) multiple times to fit a multivariate normal mixture model.
 
@@ -94,7 +94,7 @@ for approximating expectations with respect to ``p``.
 - `logp`: a callable that computes the log-density of the target distribution.
 - `∇logp`: a callable that computes the gradient of `logp`. If not provided, `logp` is
     automatically differentiated using the backend specified in `ad_backend`.
-- `fun::GalacticOptim.OptimizationFunction`: an optimization function that represents
+- `fun::SciMLBase.OptimizationFunction`: an optimization function that represents
     `-logp(x)` with its gradient. It must have the necessary features (e.g. a Hessian
     function) for the chosen optimization algorithm. For details, see
     [GalacticOptim.jl: OptimizationFunction](https://galacticoptim.sciml.ai/stable/API/optimization_function/).
@@ -144,7 +144,7 @@ function multipathfinder(
     )
 end
 function multipathfinder(
-    optim_fun::GalacticOptim.OptimizationFunction,
+    optim_fun::SciMLBase.OptimizationFunction,
     ndraws::Int;
     init=nothing,
     input=optim_fun,

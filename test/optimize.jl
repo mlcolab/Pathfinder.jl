@@ -1,11 +1,11 @@
 using AbstractDifferentiation
 using ForwardDiff
-using GalacticOptim
+using GalacticNLopt
 using LinearAlgebra
-using NLopt
 using Optim
 using Pathfinder
 using ProgressLogging
+using SciMLBase
 using Test
 
 include("test_utils.jl")
@@ -21,7 +21,7 @@ include("test_utils.jl")
         "automatic gradient" => Pathfinder.build_optim_function(f; ad_backend),
     ]
     @testset "$name" for (name, fun) in funs
-        @test fun isa GalacticOptim.OptimizationFunction
+        @test fun isa SciMLBase.OptimizationFunction
         @test fun.f(x) ≈ -f(x)
         ∇fx = similar(x)
         fun.grad(∇fx, x, nothing)
@@ -44,7 +44,7 @@ end
     x0 = randn(n)
     fun = Pathfinder.build_optim_function(f; ad_backend)
     prob = Pathfinder.build_optim_problem(fun, x0)
-    @test prob isa GalacticOptim.OptimizationProblem
+    @test prob isa SciMLBase.OptimizationProblem
     @test prob.f === fun
     @test prob.u0 == x0
     @test prob.p === nothing
@@ -67,7 +67,7 @@ end
     ]
     @testset "$(typeof(optimizer))" for optimizer in optimizers
         optim_sol, optim_trace = Pathfinder.optimize_with_trace(prob, optimizer)
-        @test optim_sol isa GalacticOptim.SciMLBase.OptimizationSolution
+        @test optim_sol isa SciMLBase.OptimizationSolution
         @test optim_trace isa Pathfinder.OptimizationTrace
         @test optim_trace.points[1] ≈ x0
         @test optim_sol.prob.u0 ≈ x0

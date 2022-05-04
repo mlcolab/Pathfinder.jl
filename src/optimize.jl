@@ -22,11 +22,11 @@ function build_optim_function(f, ∇f; ad_backend=AD.ForwardDiffBackend())
         @. res = -Hv
         return res
     end
-    return GalacticOptim.OptimizationFunction((x, p...) -> -f(x); grad, hess, hv)
+    return SciMLBase.OptimizationFunction((x, p...) -> -f(x); grad, hess, hv)
 end
 
 function build_optim_problem(optim_fun, x₀)
-    return GalacticOptim.OptimizationProblem(optim_fun, x₀, nothing)
+    return SciMLBase.OptimizationProblem(optim_fun, x₀, nothing)
 end
 
 function optimize_with_trace(
@@ -35,7 +35,7 @@ function optimize_with_trace(
     progress_name="Optimizing",
     progress_id=nothing,
     maxiters=1_000,
-    cb=nothing,
+    callback=nothing,
     kwargs...,
 )
     u0 = prob.u0
@@ -46,8 +46,8 @@ function optimize_with_trace(
     fxs = typeof(fun.f(u0, nothing))[]
     ∇fxs = typeof(u0)[]
     iteration = 0
-    function callback(x, nfx, args...)
-        ret = cb !== nothing && cb(x, nfx, args...)
+    function _callback(x, nfx, args...)
+        ret = callback !== nothing && callback(x, nfx, args...)
 
         Base.@logmsg ProgressLogging.ProgressLevel progress_name progress =
             iteration / maxiters _id = progress_id
@@ -62,7 +62,7 @@ function optimize_with_trace(
         push!(∇fxs, rmul!(grad!(similar(x), x, nothing), -1))
         return ret
     end
-    sol = GalacticOptim.solve(prob, optimizer; cb=callback, maxiters, kwargs...)
+    sol = GalacticOptim.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
     return sol, OptimizationTrace(xs, fxs, ∇fxs)
 end
 
@@ -72,19 +72,19 @@ function optimize_with_trace(
     progress_name="Optimizing",
     progress_id=nothing,
     maxiters=1_000,
-    cb=nothing,
+    callback=nothing,
     kwargs...,
 )
     iteration = 0
-    function callback(x, nfx, args...)
-        ret = cb !== nothing && cb(x, nfx, args...)
+    function _callback(x, nfx, args...)
+        ret = callback !== nothing && callback(x, nfx, args...)
         Base.@logmsg ProgressLogging.ProgressLevel progress_name progress =
             iteration / maxiters _id = progress_id
         iteration += 1
         return ret
     end
     new_kwargs = merge(NamedTuple(kwargs), (; store_trace=true, extended_trace=true))
-    sol = GalacticOptim.solve(prob, optimizer; cb=callback, maxiters, new_kwargs...)
+    sol = GalacticOptim.solve(prob, optimizer; callback=_callback, maxiters, new_kwargs...)
 
     u0 = prob.u0
     xs = Vector{typeof(u0)}(undef, iteration)

@@ -8,12 +8,14 @@ using ForwardDiff: ForwardDiff
 using IrrationalConstants: log2π
 using LinearAlgebra
 using GalacticOptim: GalacticOptim
+using GalacticOptimJL: GalacticOptimJL
 using Optim: Optim, LineSearches
 using PDMats: PDMats
 using ProgressLogging: ProgressLogging
 using PSIS: PSIS
 using Random
 using Requires: Requires
+using SciMLBase: SciMLBase
 using Statistics: Statistics
 using StatsBase: StatsBase
 using Transducers: Transducers

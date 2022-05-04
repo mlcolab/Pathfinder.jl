@@ -7,6 +7,7 @@ using Optim
 using Pathfinder
 using Random
 using ReverseDiff
+using SciMLBase
 using Test
 using Transducers
 
@@ -30,7 +31,7 @@ using Transducers
             result = @inferred pathfinder(logp, ∇logp; init, ndraws, rng, executor)
             @test result isa PathfinderResult
             @test result.input === (logp, ∇logp)
-            @test result.optim_prob isa GalacticOptim.OptimizationProblem
+            @test result.optim_prob isa SciMLBase.OptimizationProblem
             @test result.logp(init) ≈ logp(init)
             @test result.rng === rng
             @test result.optimizer ===
@@ -46,7 +47,7 @@ using Transducers
             @test result.fit_distribution_transformed === result.fit_distribution
             @test result.draws_transformed === result.draws
             @test result.num_tries ≥ 1
-            @test result.optim_solution isa GalacticOptim.SciMLBase.OptimizationSolution
+            @test result.optim_solution isa SciMLBase.OptimizationSolution
             @test result.optim_trace isa Pathfinder.OptimizationTrace
             @test result.fit_distributions isa Vector{typeof(fit_distribution)}
             @test length(result.fit_distributions) == length(result.optim_trace)
@@ -111,13 +112,13 @@ using Transducers
         @testset "kwargs forwarded to solve" begin
             Random.seed!(42)
             i = 0
-            cb = (args...,) -> (i += 1; false)
-            pathfinder(logp; dim, cb)
+            callback = (args...,) -> (i += 1; false)
+            pathfinder(logp; dim, callback)
             @test i ≠ 6
 
             Random.seed!(42)
             i = 0
-            pathfinder(logp; dim, cb, maxiters=5)
+            pathfinder(logp; dim, callback, maxiters=5)
             @test i == 6
         end
     end
@@ -126,16 +127,16 @@ using Transducers
             dim = 5
             nfail = 20
             logp(x) = i ≤ nfail ? NaN : -sum(abs2, x) / 2
-            cb = (args...,) -> (i += 1; true)
+            callback = (args...,) -> (i += 1; true)
             i = 1
-            result = pathfinder(logp; dim, cb)
+            result = pathfinder(logp; dim, callback)
             @test result.fit_distribution.μ ≈ zeros(dim) atol = 1e-6
             @test result.fit_distribution.Σ ≈ diagm(ones(dim)) atol = 1e-6
             @test result.num_tries == nfail + 1
             @test result.optim_prob.u0 == result.optim_trace.points[1]
             i = 1
             init = randn(dim)
-            result2 = pathfinder(logp; init, cb, ntries=nfail)
+            result2 = pathfinder(logp; init, callback, ntries=nfail)
             @test !isapprox(result2.fit_distribution.μ, zeros(dim); atol=1e-6)
             @test result2.fit_iteration == 0
             @test isempty(result2.elbo_estimates)
@@ -161,10 +162,10 @@ using Transducers
     @testset "errors if no gradient provided" begin
         logp(x) = -sum(abs2, x) / 2
         init = randn(5)
-        prob = GalacticOptim.OptimizationProblem(logp, init, nothing)
+        prob = SciMLBase.OptimizationProblem(logp, init, nothing)
         @test_throws ArgumentError pathfinder(prob)
-        fun = GalacticOptim.OptimizationFunction(logp, GalacticOptim.AutoForwardDiff())
-        prob = GalacticOptim.OptimizationProblem(fun, init, nothing)
+        fun = SciMLBase.OptimizationFunction(logp, GalacticOptim.AutoForwardDiff())
+        prob = SciMLBase.OptimizationProblem(fun, init, nothing)
         @test_throws ArgumentError pathfinder(prob)
     end
     @testset "errors if neither dim nor init valid" begin
