@@ -80,8 +80,8 @@ E &= I \\circ R\\\\
 D &= \\begin{pmatrix}
     0 & -R^{-1}\\\\
     -R^{-\\mathrm{T}} & R^\\mathrm{-T} (E + Y^\\mathrm{T} H_0 Y ) R^\\mathrm{-1}\\\\
+\\end{pmatrix}\\
 H &= H_0 + B D B^\\mathrm{T}
-\\end{pmatrix}
 \\end{align}
 ```
 
