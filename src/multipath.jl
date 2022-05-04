@@ -114,8 +114,8 @@ for approximating expectations with respect to ``p``.
     use a parallelization-friendly PRNG like the default PRNG on Julia 1.7 and up.
 - `executor::Transducers.Executor`: Transducers.jl executor that determines if and how
     to run the single-path runs in parallel. If `rng` is known to be thread-safe, the
-    default is `Transducers.PreferParallel(; basesize=1)` (parallel executation, defaulting
-    to multi-threading). Otherwise, it is `Transducers.SequentialEx()` (no parallelization).
+    default is `Transducers.PreferParallel()` (parallel executation, defaulting to
+    multi-threading). Otherwise, it is `Transducers.SequentialEx()` (no parallelization).
 - `executor_per_run::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl
     executor used within each run to parallelize PRNG calls. Defaults to no parallelization.
     See [`pathfinder`](@ref) for a description.
@@ -154,7 +154,7 @@ function multipathfinder(
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     history_length::Int=DEFAULT_HISTORY_LENGTH,
     optimizer=default_optimizer(history_length),
-    executor::Transducers.Executor=_default_executor(rng; basesize=1),
+    executor::Transducers.Executor=_default_executor(rng),
     executor_per_run=Transducers.SequentialEx(),
     importance::Bool=true,
     kwargs...,
