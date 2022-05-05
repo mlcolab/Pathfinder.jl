@@ -80,7 +80,7 @@ gif(anim, fps=5)
 
 Especially for complicated target distributions, it's more useful to run multi-path Pathfinder.
 
-Like in the [funnel example](quickstart#a-100-dimensional-funnel), we can see that most of the approximations are not great, because this distribution is far from normal. It is always a good idea to run [`multipathfinder`](@ref) directly, which runs single-path Pathfinder multiple times.
+Like in the [funnel example](quickstart#a-100-dimensional-funnel), we can see that most of the normal approximations above are not great, because this distribution is far from normal. It is always a good idea to run [`multipathfinder`](@ref) directly, which runs single-path Pathfinder multiple times.
 
 ```@example 1
 ndraws = 1_000
