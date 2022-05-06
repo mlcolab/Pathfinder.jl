@@ -12,7 +12,7 @@ First we will define the distribution,
 
 ```@example 1
 using LinearAlgebra, Pathfinder, Printf, StatsPlots, Random
-Random.seed!(42)
+Random.seed!(23)
 
 logp_banana(x) = -(x[1]^2 + (x[2] - 2*(x[1]^2 - 5))^2) / 2
 nothing # hide
