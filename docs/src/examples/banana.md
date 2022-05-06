@@ -23,7 +23,7 @@ and then visualise it:
 ```@example 1
 xrange = -3.5:0.05:3.5
 yrange = -15:0.05:12
-contour(xrange, yrange, (x, y) -> banana([x, y]), xlabel="x₁", ylabel="x₂")
+contour(xrange, yrange, (x, y) -> exp(logp_banana([x, y])); xlabel="x₁", ylabel="x₂")
 ```
 
 Now we run [`pathfinder`](@ref).
