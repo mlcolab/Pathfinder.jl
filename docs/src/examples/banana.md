@@ -34,23 +34,6 @@ Now we run [`pathfinder`](@ref).
 result = pathfinder(logp_banana; dim=2, init_scale=4)
 ```
 
-`result` is a [`PathfinderResult`](@ref).
-See its docstring for a description of its fields.
-
-`result.fit_distribution` is a multivariate normal approximation to our target distribution.
-
-```@example 1
-result.fit_distribution.μ
-```
-
-```@example 1
-result.fit_distribution.Σ
-```
-
-`result.draws` is a `Matrix` whose columns are the requested draws from `result.fit_distribution`:
-```@example 1
-result.draws
-```
 
 ```@example 1
 iterations = length(result.optim_trace) - 1
