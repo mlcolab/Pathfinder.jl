@@ -5,9 +5,7 @@ This page shows basic Pathfinder usage on a banana shaped distribution.
 We'll run Pathfinder on the following distribution:
 
 ```math
-\begin{equation}
-\pi(x_1,x_2) = e^{-x_1^2/4}e^{-(x_2-2(x_1^2-5))^2/2}
-\end{equation}
+\pi(x_1, x_2) = e^{-x_1^2 / 4} e^{-(x_2 - 2(x_1^2 - 5))^2 / 2}
 ```
 
 First we will define the distribution,
