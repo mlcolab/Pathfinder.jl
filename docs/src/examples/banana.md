@@ -20,9 +20,7 @@ function banana(x) # x = [x₁,x₂]
     return exp(-(x[1]^2.0)/4.0)*exp(-((x[2]-2.0*(x[1]^2-5.0))^2.0)/2.0)
 end
 
-function logp_banana(x)
-    return -(x[1]^2.0)/4.0 -((x[2]-2.0*(x[1]^2-5.0))^2.0)/2.0
-end
+logp_banana(x) = -(x[1]^2 + (x[2] - 2*(x[1]^2 - 5))^2) / 2
 nothing # hide
 ```
 
