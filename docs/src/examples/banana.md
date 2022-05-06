@@ -44,7 +44,7 @@ xrange = -5:0.1:5
 yrange = -35:0.1:25
 
 anim = @animate for i in 1:iterations
-    contour(xrange, yrange, (x, y) -> banana([x, y]), label="") # cutoff logp at -500 for better visualistation
+    contour(xrange, yrange, (x, y) -> exp(logp_banana([x, y])); label="") # cutoff logp at -500 for better visualistation
     trace = trace_points[1:(i + 1)]
     dist = trace_dists[i + 1]
     plot!(first.(trace), last.(trace); seriestype=:scatterpath, color=:black, msw=0, label="trace")
