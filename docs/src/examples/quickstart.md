@@ -236,7 +236,7 @@ ndraws = 1_000
 result = multipathfinder(logp_funnel, ndraws; nruns=20, dim, init_scale)
 ```
 
-Again [PSIS.jl](https://psis.julia.arviz.org/stable/) warns us that the importance weights are unsuitable for computing estimates, so we should definitely run MCMC to get better draws.
+Again, PSIS.jl's warning indicates we should follow this up with MCMC.
 
 Here we can see that the bulk of Pathfinder's draws come from the neck of the funnel, where the fit from the single path we examined was located.
 
