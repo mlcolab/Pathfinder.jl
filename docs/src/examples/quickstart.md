@@ -149,7 +149,6 @@ It's possible that some runs fit the target distribution much better than others
 The Pareto shape diagnostic also informs us on the quality of these draws.
 Here [PSIS.jl](https://psis.julia.arviz.org/stable/), which smooths the importance weights, warns us that the importance weights are unsuitable for computing estimates, so we should definitely run MCMC to get better draws.
 
-
 ```@example 1
 x₁_approx = result.draws[1, :]
 x₂_approx = result.draws[2, :]
