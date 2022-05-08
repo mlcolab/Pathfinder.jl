@@ -136,7 +136,7 @@ We can see that most of the approximations above are not great, because this dis
 
 ```@example 1
 ndraws = 1_000
-result = multipathfinder(logp_banana, ndraws; nruns=20, dim=2, init_scale=4)
+result = multipathfinder(logp_banana, ndraws; nruns=20, dim=2, init_scale=8)
 ```
 
 `result` is a [`MultiPathfinderResult`](@ref).
