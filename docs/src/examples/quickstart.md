@@ -105,7 +105,7 @@ contour(xrange, yrange, (x, y) -> exp(logp_banana([x, y])); xlabel="x₁", ylabe
 Now we run [`pathfinder`](@ref).
 
 ```@example 1
-result = pathfinder(logp_banana; dim=2, init_scale=4)
+result = pathfinder(logp_banana; dim=2, init_scale=8)
 ```
 
 As before we can visualise each iteration of the algorithm.
