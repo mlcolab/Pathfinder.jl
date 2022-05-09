@@ -166,7 +166,7 @@ Here [PSIS.jl](https://psis.julia.arviz.org/stable/), which smooths the importan
 x₁_approx = result.draws[1, :]
 x₂_approx = result.draws[2, :]
 
-contour(xrange, yrange, (x, y) -> exp(logp_banana([x, y])))
+contour(xrange, yrange, exp ∘ logp_banana ∘ Base.vect)
 scatter!(x₁_approx, x₂_approx; msw=0, ms=2, alpha=0.5, color=1)
 plot!(xlims=extrema(xrange), ylims=extrema(yrange), xlabel="x₁", ylabel="x₂", legend=false)
 ```
