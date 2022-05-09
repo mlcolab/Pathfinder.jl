@@ -53,11 +53,41 @@ result.fit_distribution.Σ
 result.draws
 ```
 
-```@example 1
-iterations = length(result.optim_trace) - 1
-trace_points = result.optim_trace.points
-trace_dists = result.fit_distributions
+We can visualize Pathfinder's sequence of multivariate-normal approximations with the following function:
 
+```@example 1
+function plot_pathfinder_trace(
+    result, logp_marginal, xrange, yrange, maxiters;
+    show_elbo=false, flipxy=false, kwargs...,
+)
+    iterations = min(length(result.optim_trace) - 1, maxiters)
+    trace_points = result.optim_trace.points
+    trace_dists = result.fit_distributions
+    anim = @animate for i in 1:iterations
+        contour(xrange, yrange, exp ∘ logp_marginal ∘ Base.vect; label="")
+        trace = trace_points[1:(i + 1)]
+        dist = trace_dists[i + 1]
+        plot!(
+            first.(trace), last.(trace);
+            seriestype=:scatterpath, color=:black, msw=0, label="trace",
+        )
+        covellipse!(
+            dist.μ[1:2], dist.Σ[1:2, 1:2];
+            n_std=2.45, alpha=0.7, color=1, linecolor=1, label="MvNormal 95% ellipsoid",
+        )
+        title = "Iteration $i"
+        if show_elbo
+            est = result.elbo_estimates[i]
+            title *= "  ELBO estimate: " * @sprintf("%.1f", est.value)
+        end
+        plot!(; xlims=extrema(xrange), ylims=extrema(yrange), title, kwargs...)
+    end
+    return anim
+end;
+nothing #hide
+```
+
+```@example 1
 xrange = -5:0.1:5
 yrange = -5:0.1:5
 
