@@ -27,4 +27,4 @@ makedocs(;
     ],
 )
 
-deploydocs(; repo="github.com/sethaxen/Pathfinder.jl", devbranch="main")
+deploydocs(; repo="github.com/sethaxen/Pathfinder.jl", devbranch="main", push_preview=true)
