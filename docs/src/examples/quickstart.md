@@ -98,7 +98,7 @@ and then visualise it:
 
 ```@example 1
 xrange = -3.5:0.05:3.5
-yrange = -15:0.05:12
+yrange = -20:0.05:10
 contour(xrange, yrange, (x, y) -> exp(logp_banana([x, y])); xlabel="x₁", ylabel="x₂")
 ```
 
@@ -114,9 +114,6 @@ As before we can visualise each iteration of the algorithm.
 iterations = length(result.optim_trace) - 1
 trace_points = result.optim_trace.points
 trace_dists = result.fit_distributions
-
-xrange = -5:0.05:5
-yrange = -35:0.05:25
 
 anim = @animate for i in 1:iterations
     contour(xrange, yrange, (x, y) -> exp(logp_banana([x, y])); label="")
