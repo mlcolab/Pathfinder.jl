@@ -107,7 +107,7 @@ gif(anim; fps=5)
 Now we will run Pathfinder on the following banana-shaped distribution:
 
 ```math
-\pi(x_1, x_2) = e^{-x_1^2 / 4} e^{-(x_2 - 2(x_1^2 - 5))^2 / 2}
+\pi(x_1, x_2) = e^{-x_1^2 / 2} e^{-(x_2 - 2(x_1^2 - 5))^2 / 2}
 ```
 
 First we define the distribution,
