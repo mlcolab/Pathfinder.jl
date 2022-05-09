@@ -246,7 +246,7 @@ Here we can see that the bulk of Pathfinder's draws come from the neck of the fu
 τ_approx = result.draws[1, :]
 β₁_approx = result.draws[2, :]
 
-contour(β₁_range, τ_range, (β, τ) -> exp(logp_funnel([τ, β])))
-scatter!(β₁_approx, τ_approx; msw=0, ms=2, alpha=0.5, color=1)
-plot!(xlims=extrema(β₁_range), ylims=extrema(τ_range), xlabel="β₁", ylabel="τ", legend=false)
+contour(τ_range, β₁_range, exp ∘ logp_funnel ∘ Base.vect)
+scatter!(τ_approx, β₁_approx; msw=0, ms=2, alpha=0.5, color=1)
+plot!(; xlims=extrema(τ_range), ylims=extrema(β₁_range), xlabel="τ", ylabel="β₁", legend=false)
 ```
