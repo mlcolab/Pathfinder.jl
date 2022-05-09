@@ -95,16 +95,11 @@ yrange = -5:0.1:5
 P_marginal = inv(Σ[1:2,1:2])
 logp_mvnormal_marginal(x) = -dot(x - μ_marginal, P_marginal, x - μ_marginal) / 2
 
-anim = @animate for i in 1:iterations
-    contour(xrange, yrange, (x, y) -> logp_mvnormal_marginal([x, y]), label="")
-    trace = trace_points[1:(i + 1)]
-    dist = trace_dists[i + 1]
-    plot!(first.(trace), last.(trace); seriestype=:scatterpath, color=:black, msw=0, label="trace")
-    covellipse!(dist.μ[1:2], dist.Σ[1:2, 1:2]; n_std=2.45, alpha=0.7, color=1, linecolor=1, label="MvNormal 95% ellipsoid")
-    title = "Iteration $i"
-    plot!(; xlims=extrema(xrange), ylims=extrema(yrange), xlabel="x₁", ylabel="x₂", legend=:bottomright, title)
-end
-gif(anim, fps=5)
+anim = plot_pathfinder_trace(
+    result, logp_mvnormal_marginal, xrange, yrange, 20;
+    xlabel="x₁", ylabel="x₂",
+)
+gif(anim; fps=5)
 ```
 
 ## A banana shaped distribution
@@ -141,20 +136,11 @@ result = pathfinder(logp_banana; dim=2, init_scale=8)
 As before we can visualise each iteration of the algorithm.
 
 ```@example 1
-iterations = length(result.optim_trace) - 1
-trace_points = result.optim_trace.points
-trace_dists = result.fit_distributions
-
-anim = @animate for i in 1:iterations
-    contour(xrange, yrange, (x, y) -> exp(logp_banana([x, y])); label="")
-    trace = trace_points[1:(i + 1)]
-    dist = trace_dists[i + 1]
-    plot!(first.(trace), last.(trace); seriestype=:scatterpath, color=:black, msw=0, label="trace")
-    covellipse!(dist.μ, dist.Σ; n_std=2.45, alpha=0.7, color=1, linecolor=1, label="MvNormal 95% ellipsoid")
-    title = "Iteration $i"
-    plot!(; xlims=extrema(xrange), ylims=extrema(yrange), xlabel="x₁", ylabel="x₂", legend=:bottomright, title)
-end
-gif(anim, fps=5)
+anim = plot_pathfinder_trace(
+    result, logp_banana, xrange, yrange, 20;
+    xlabel="x₁", ylabel="x₂",
+)
+gif(anim; fps=5)
 ```
 
 Especially for complicated target distributions, it's more useful to run multi-path Pathfinder.
@@ -230,24 +216,14 @@ The distribution that maximizes the evidence lower bound (ELBO) is returned.
 Let's visualize this sequence of multivariate normals for the first two dimensions.
 
 ```@example 1
-iterations = min(length(result_single.optim_trace) - 1, 15)
-trace_points = result_single.optim_trace.points
-trace_dists = result_single.fit_distributions
-
-τ_range = -15:0.01:5
 β₁_range = -5:0.01:5
+τ_range = -15:0.01:5
 
-anim = @animate for i in 1:iterations
-    contour(β₁_range, τ_range, (β, τ) -> exp(logp_funnel([τ, β])), label="")
-    trace = trace_points[1:(i + 1)]
-    dist = trace_dists[i + 1]
-    plot!(map(x -> x[2], trace), first.(trace); seriestype=:scatterpath, color=:black, msw=0, label="trace")
-    covellipse!(dist.μ[[2, 1]] , dist.Σ[[2, 1], [2, 1]]; n_std=2.45, alpha=0.7, color=1, linecolor=1, label="MvNormal 95% ellipsoid")
-    est = result_single.elbo_estimates[i]
-    title = "Iteration $i  ELBO estimate: " * @sprintf("%.1f", est.value)
-    plot!(; xlims=extrema(β₁_range), ylims=extrema(τ_range), xlabel="β₁", ylabel="τ", legend=:bottomright, title)
-end
-gif(anim, fps=2)
+anim = plot_pathfinder_trace(
+    result_single, logp_funnel, τ_range, β₁_range, 15;
+    show_elbo=true, xlabel="τ", ylabel="β₁",
+)
+gif(anim; fps=2)
 ```
 
 For this challenging posterior, we can again see that most of the approximations are not great, because this distribution is not normal.
