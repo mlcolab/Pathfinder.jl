@@ -107,7 +107,7 @@ gif(anim; fps=5)
 Now we will run Pathfinder on the following banana-shaped distribution:
 
 ```math
-\pi(x_1, x_2) = e^{-x_1^2 / 2} e^{-(x_2 - 2(x_1^2 - 5))^2 / 2}
+\pi(x_1, x_2) = e^{-x_1^2 / 2} e^{-5 (x_2 - x_1^2)^2 / 2}
 ```
 
 First we define the distribution,
@@ -115,7 +115,7 @@ First we define the distribution,
 ```@example 1
 Random.seed!(23)
 
-logp_banana(x) = -(x[1]^2 + (x[2] - 2*(x[1]^2 - 5))^2) / 2
+logp_banana(x) = -(x[1]^2 + 5(x[2] - x[1]^2)^2) / 2
 nothing # hide
 ```
 
@@ -123,14 +123,14 @@ and then visualise it:
 
 ```@example 1
 xrange = -3.5:0.05:3.5
-yrange = -20:0.05:10
-contour(xrange, yrange, (x, y) -> exp(logp_banana([x, y])); xlabel="x₁", ylabel="x₂")
+yrange = -3:0.05:7
+contour(xrange, yrange, exp ∘ logp_banana ∘ Base.vect; xlabel="x₁", ylabel="x₂")
 ```
 
 Now we run [`pathfinder`](@ref).
 
 ```@example 1
-result = pathfinder(logp_banana; dim=2, init_scale=8)
+result = pathfinder(logp_banana; dim=2, init_scale=10)
 ```
 
 As before we can visualise each iteration of the algorithm.
@@ -149,7 +149,7 @@ We can see that most of the approximations above are not great, because this dis
 
 ```@example 1
 ndraws = 1_000
-result = multipathfinder(logp_banana, ndraws; nruns=20, dim=2, init_scale=8)
+result = multipathfinder(logp_banana, ndraws; nruns=20, dim=2, init_scale=10)
 ```
 
 `result` is a [`MultiPathfinderResult`](@ref).
