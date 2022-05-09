@@ -20,6 +20,8 @@ Random.seed!(42)
 ]
 μ = [-0.55, 0.49, -0.76, 0.25, 0.94]
 P = inv(Symmetric(Σ))
+dim = length(μ)
+init_scale=4
 
 function logp_mvnormal(x)
     z = x - μ
@@ -31,7 +33,7 @@ nothing # hide
 Now we run [`pathfinder`](@ref).
 
 ```@example 1
-result = pathfinder(logp_mvnormal; dim=5, init_scale=4)
+result = pathfinder(logp_mvnormal; dim, init_scale)
 ```
 
 `result` is a [`PathfinderResult`](@ref).
@@ -118,6 +120,9 @@ First we define the distribution:
 Random.seed!(23)
 
 logp_banana(x) = -(x[1]^2 + 5(x[2] - x[1]^2)^2) / 2
+dim = 2
+init_scale = 10
+
 nothing # hide
 ```
 
@@ -132,7 +137,7 @@ contour(xrange, yrange, exp ∘ logp_banana ∘ Base.vect; xlabel="x₁", ylabel
 Now we run [`pathfinder`](@ref).
 
 ```@example 1
-result = pathfinder(logp_banana; dim=2, init_scale=10)
+result = pathfinder(logp_banana; dim, init_scale)
 ```
 
 As before we can visualise each iteration of the algorithm.
@@ -150,7 +155,7 @@ Especially for such complicated target distributions, it's always a good idea to
 
 ```@example 1
 ndraws = 1_000
-result = multipathfinder(logp_banana, ndraws; nruns=20, dim=2, init_scale=10)
+result = multipathfinder(logp_banana, ndraws; nruns=20, dim, init_scale)
 ```
 
 `result` is a [`MultiPathfinderResult`](@ref).
