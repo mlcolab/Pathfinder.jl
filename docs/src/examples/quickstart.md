@@ -37,7 +37,9 @@ result = pathfinder(logp_mvnormal; dim=5, init_scale=4)
 `result` is a [`PathfinderResult`](@ref).
 See its docstring for a description of its fields.
 
-`result.fit_distribution` is a multivariate normal approximation to our target distribution.
+The L-BFGS optimizer constructs an approximation to the inverse Hessian of the negative log density using the limited history of previous points and gradients.
+For each iteration, Pathfinder uses this estimate as an approximation to the covariance matrix of a multivariate normal that approximates the target distribution.
+The distribution that maximizes the evidence lower bound (ELBO) is stored in `result.fit_distribution`.
 Its mean and covariance are quite close to our target distribution's.
 
 ```@example 1
@@ -104,13 +106,13 @@ gif(anim; fps=5)
 
 ## A banana-shaped distribution
 
-Now we will run Pathfinder on the following banana-shaped distribution:
+Now we will run Pathfinder on the following banana-shaped distribution with density
 
 ```math
-\pi(x_1, x_2) = e^{-x_1^2 / 2} e^{-5 (x_2 - x_1^2)^2 / 2}
+\pi(x_1, x_2) = e^{-x_1^2 / 2} e^{-5 (x_2 - x_1^2)^2 / 2}.
 ```
 
-First we define the distribution,
+First we define the distribution:
 
 ```@example 1
 Random.seed!(23)
@@ -143,9 +145,8 @@ anim = plot_pathfinder_trace(
 gif(anim; fps=5)
 ```
 
-Especially for complicated target distributions, it's more useful to run multi-path Pathfinder.
-
-We can see that most of the approximations above are not great, because this distribution is far from normal. It is always a good idea to run [`multipathfinder`](@ref) directly, which runs single-path Pathfinder multiple times.
+Since the distribution is far from normal, Pathfinder is unable to fit the distribution well.
+Especially for such complicated target distributions, it's always a good idea to run [`multipathfinder`](@ref), which runs single-path Pathfinder multiple times.
 
 ```@example 1
 ndraws = 1_000
@@ -157,10 +158,11 @@ See its docstring for a description of its fields.
 
 `result.fit_distribution` is a uniformly-weighted `Distributions.MixtureModel`.
 Each component is the result of a single Pathfinder run.
-It's possible that some runs fit the target distribution much better than others, so instead of just drawing samples from `result.fit_distribution`, `multipathfinder` draws many samples from each component and then uses Pareto-smoothed importance resampling from these draws to better target `logp_banana`.
+It's possible that some runs fit the target distribution much better than others, so instead of just drawing samples from `result.fit_distribution`, `multipathfinder` draws many samples from each component and then uses Pareto-smoothed importance resampling (using [PSIS.jl](https://psis.julia.arviz.org/stable/)) from these draws to better target `logp_banana`.
 
-The Pareto shape diagnostic also informs us on the quality of these draws.
-Here [PSIS.jl](https://psis.julia.arviz.org/stable/), which smooths the importance weights, warns us that the importance weights are unsuitable for computing estimates, so we should definitely run MCMC to get better draws.
+The Pareto shape diagnostic informs us on the quality of these draws.
+Here the Pareto shape ``k`` diagnostic is bad (``k > 0.7``), which tells us that these draws are unsuitable for computing posterior estimates, so we should definitely run MCMC to get better draws.
+Still, visualizing the draws can still be useful.
 
 ```@example 1
 x₁_approx = result.draws[1, :]
@@ -170,6 +172,8 @@ contour(xrange, yrange, exp ∘ logp_banana ∘ Base.vect)
 scatter!(x₁_approx, x₂_approx; msw=0, ms=2, alpha=0.5, color=1)
 plot!(xlims=extrema(xrange), ylims=extrema(yrange), xlabel="x₁", ylabel="x₂", legend=false)
 ```
+
+While the draws do a poor job of covering the tails of the distribution, they are still useful for identifying the nonlinear correlation between these two parameters.
 
 ## A 100-dimensional funnel
 
@@ -209,10 +213,6 @@ First, let's fit this posterior with single-path Pathfinder.
 result_single = pathfinder(logp_funnel; dim, init_scale)
 ```
 
-The L-BFGS optimizer constructs an approximation to the inverse Hessian of the negative log density using the limited history of previous points and gradients.
-For each iteration, Pathfinder uses this estimate as an approximation to the covariance matrix of a multivariate normal that approximates the target distribution.
-The distribution that maximizes the evidence lower bound (ELBO) is returned.
-
 Let's visualize this sequence of multivariate normals for the first two dimensions.
 
 ```@example 1
@@ -227,20 +227,20 @@ gif(anim; fps=2)
 ```
 
 For this challenging posterior, we can again see that most of the approximations are not great, because this distribution is not normal.
-Also, this distribution has a pole instead of a mode, so there is no MAP estimate, and no Laplace distribution exists.
+Also, this distribution has a pole instead of a mode, so there is no MAP estimate, and no Laplace approximation exists.
 As optimization proceeds, the approximation goes from very bad to less bad and finally extremely bad.
 The ELBO-maximizing distribution is at the neck of the funnel, which would be a good location to initialize MCMC.
 
-It is always a good idea to run [`multipathfinder`](@ref) directly, which runs single-path Pathfinder multiple times.
+Now we run [`multipathfinder`](@ref).
 
 ```@example 1
 ndraws = 1_000
 result = multipathfinder(logp_funnel, ndraws; nruns=20, dim, init_scale)
 ```
 
-Again, PSIS.jl's warning indicates we should follow this up with MCMC.
+Again, the poor Pareto shape diagnostic indicates we should run MCMC to get draws suitable for computing posterior estimates.
 
-Here we can see that the bulk of Pathfinder's draws come from the neck of the funnel, where the fit from the single path we examined was located.
+We can see that the bulk of Pathfinder's draws come from the neck of the funnel, where the fit from the single path we examined was located.
 
 ```@example 1
 τ_approx = result.draws[1, :]
