@@ -15,9 +15,16 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "Single-path Pathfinder" => "pathfinder.md",
-        "Multi-path Pathfinder" => "multipathfinder.md",
+        "Library" => [
+            "Public" => "lib/public.md",
+            "Internals" => "lib/internals.md",
+        ],
+        "Examples" => [
+            "Quickstart" => "examples/quickstart.md",
+            "Initializing HMC" => "examples/initializing-hmc.md",
+            "Turing usage" => "examples/turing.md",
+        ]
     ],
 )
 
-deploydocs(; repo="github.com/sethaxen/Pathfinder.jl", devbranch="main")
+deploydocs(; repo="github.com/sethaxen/Pathfinder.jl", devbranch="main", push_preview=true)

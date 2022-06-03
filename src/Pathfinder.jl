@@ -3,17 +3,19 @@ module Pathfinder
 using AbstractDifferentiation: AD
 using Distributions: Distributions
 using Folds: Folds
-# ensure that ForwardDiff is conditionally loaded by GalacticOptim
+# ensure that ForwardDiff is conditionally loaded by Optimization
 using ForwardDiff: ForwardDiff
 using IrrationalConstants: log2π
 using LinearAlgebra
-using GalacticOptim: GalacticOptim
 using Optim: Optim, LineSearches
+using Optimization: Optimization
+using OptimizationOptimJL: OptimizationOptimJL
 using PDMats: PDMats
 using ProgressLogging: ProgressLogging
 using PSIS: PSIS
 using Random
 using Requires: Requires
+using SciMLBase: SciMLBase
 using Statistics: Statistics
 using StatsBase: StatsBase
 using Transducers: Transducers
@@ -53,6 +55,9 @@ function __init__()
         Requires.@require TransformVariables = "84d833dd-6860-57f9-a1a7-6da5db126cff" begin
             include("integration/measuretheory.jl")
         end
+    end
+    Requires.@require Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0" begin
+        include("integration/turing.jl")
     end
 end
 

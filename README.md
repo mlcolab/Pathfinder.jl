@@ -1,4 +1,4 @@
-# Pathfinder
+# Pathfinder.jl: Parallel quasi-Newton variational inference
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://sethaxen.github.io/Pathfinder.jl/stable)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://sethaxen.github.io/Pathfinder.jl/dev)

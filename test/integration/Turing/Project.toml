@@ -1,0 +1,10 @@
+[deps]
+Pathfinder = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
+
+[compat]
+Pathfinder = "0.4"
+Turing = "0.21"
+julia = "1.6"

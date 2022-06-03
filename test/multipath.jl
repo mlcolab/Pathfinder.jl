@@ -2,10 +2,11 @@ using AbstractDifferentiation
 using Distributions
 using ForwardDiff
 using LinearAlgebra
-using GalacticOptim
+using Optimization
 using Pathfinder
 using PSIS
 using ReverseDiff
+using SciMLBase
 using Test
 using Transducers
 
@@ -36,7 +37,7 @@ using Transducers
             )
             @test result isa MultiPathfinderResult
             @test result.input === (logp, ∇logp)
-            @test result.optim_fun isa GalacticOptim.OptimizationFunction
+            @test result.optim_fun isa SciMLBase.OptimizationFunction
             @test result.rng === rng
             @test result.optimizer ===
                 Pathfinder.default_optimizer(Pathfinder.DEFAULT_HISTORY_LENGTH)
@@ -102,7 +103,7 @@ using Transducers
     @testset "errors if no gradient provided" begin
         logp(x) = -sum(abs2, x) / 2
         init = [randn(5) for _ in 1:10]
-        fun = GalacticOptim.OptimizationFunction(logp, GalacticOptim.AutoForwardDiff())
+        fun = SciMLBase.OptimizationFunction(logp, Optimization.AutoForwardDiff())
         @test_throws ArgumentError multipathfinder(fun, 10; init)
     end
     @testset "errors if neither dim nor init valid" begin

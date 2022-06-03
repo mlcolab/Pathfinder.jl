@@ -8,7 +8,7 @@ Container for results of multi-path Pathfinder.
     `optim_prob`, or another object.
 - `optimizer`: Optimizer used for maximizing the log-density
 - `rng`: Pseudorandom number generator that was used for sampling
-- `optim_prob::GalacticOptim.OptimizationProblem`: Otimization problem used for
+- `optim_prob::SciMLBase.OptimizationProblem`: Otimization problem used for
     optimization
 - `logp`: Log-density function
 - `fit_distribution::Distributions.MixtureModel`: uniformly-weighted mixture of ELBO-
@@ -47,7 +47,7 @@ end
 function Base.show(io::IO, ::MIME"text/plain", result::MultiPathfinderResult)
     println(io, "Multi-path Pathfinder result")
     println(io, "  runs: $(length(result.pathfinder_results))")
-    print(io, "  draws: $(size(result.draws, 1))")
+    print(io, "  draws: $(size(result.draws, 2))")
     psis_result = result.psis_result
     if psis_result !== nothing
         println(io)
@@ -69,7 +69,7 @@ end
 """
     multipathfinder(logp, ndraws; kwargs...)
     multipathfinder(logp, ∇logp, ndraws; kwargs...)
-    multipathfinder(fun::GalacticOptim.OptimizationFunction, ndraws; kwargs...)
+    multipathfinder(fun::SciMLBase.OptimizationFunction, ndraws; kwargs...)
 
 Run [`pathfinder`](@ref) multiple times to fit a multivariate normal mixture model.
 
@@ -94,10 +94,10 @@ for approximating expectations with respect to ``p``.
 - `logp`: a callable that computes the log-density of the target distribution.
 - `∇logp`: a callable that computes the gradient of `logp`. If not provided, `logp` is
     automatically differentiated using the backend specified in `ad_backend`.
-- `fun::GalacticOptim.OptimizationFunction`: an optimization function that represents
+- `fun::SciMLBase.OptimizationFunction`: an optimization function that represents
     `-logp(x)` with its gradient. It must have the necessary features (e.g. a Hessian
     function) for the chosen optimization algorithm. For details, see
-    [GalacticOptim.jl: OptimizationFunction](https://galacticoptim.sciml.ai/stable/API/optimization_function/).
+    [Optimization.jl: OptimizationFunction](https://optimization.sciml.ai/stable/API/optimization_function/).
 - `ndraws::Int`: number of approximate draws to return
 
 # Keywords
@@ -114,8 +114,8 @@ for approximating expectations with respect to ``p``.
     use a parallelization-friendly PRNG like the default PRNG on Julia 1.7 and up.
 - `executor::Transducers.Executor`: Transducers.jl executor that determines if and how
     to run the single-path runs in parallel. If `rng` is known to be thread-safe, the
-    default is `Transducers.PreferParallel(; basesize=1)` (parallel executation, defaulting
-    to multi-threading). Otherwise, it is `Transducers.SequentialEx()` (no parallelization).
+    default is `Transducers.PreferParallel()` (parallel executation, defaulting to
+    multi-threading). Otherwise, it is `Transducers.SequentialEx()` (no parallelization).
 - `executor_per_run::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl
     executor used within each run to parallelize PRNG calls. Defaults to no parallelization.
     See [`pathfinder`](@ref) for a description.
@@ -144,7 +144,7 @@ function multipathfinder(
     )
 end
 function multipathfinder(
-    optim_fun::GalacticOptim.OptimizationFunction,
+    optim_fun::SciMLBase.OptimizationFunction,
     ndraws::Int;
     init=nothing,
     input=optim_fun,
@@ -154,7 +154,7 @@ function multipathfinder(
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     history_length::Int=DEFAULT_HISTORY_LENGTH,
     optimizer=default_optimizer(history_length),
-    executor::Transducers.Executor=_default_executor(rng; basesize=1),
+    executor::Transducers.Executor=_default_executor(rng),
     executor_per_run=Transducers.SequentialEx(),
     importance::Bool=true,
     kwargs...,
