@@ -523,9 +523,9 @@ version = "0.64.3"
 
 [[deps.GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Pkg", "Qt5Base_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "cd6efcf9dc746b06709df14e462f0a3fe0786b1e"
+git-tree-sha1 = "1e5490a51b4e9d07e8b04836f6008f46b48aaa87"
 uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
-version = "0.64.2+0"
+version = "0.64.3+0"
 
 [[deps.GalacticOptim]]
 deps = ["ArrayInterfaceCore", "ConsoleProgressMonitor", "DiffResults", "DocStringExtensions", "Logging", "LoggingExtras", "Pkg", "Printf", "ProgressLogging", "Reexport", "Requires", "SciMLBase", "TerminalLoggers"]
