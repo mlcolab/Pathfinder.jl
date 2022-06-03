@@ -97,7 +97,7 @@ for approximating expectations with respect to ``p``.
 - `fun::SciMLBase.OptimizationFunction`: an optimization function that represents
     `-logp(x)` with its gradient. It must have the necessary features (e.g. a Hessian
     function) for the chosen optimization algorithm. For details, see
-    [GalacticOptim.jl: OptimizationFunction](https://galacticoptim.sciml.ai/stable/API/optimization_function/).
+    [Optimization.jl: OptimizationFunction](https://optimization.sciml.ai/stable/API/optimization_function/).
 - `ndraws::Int`: number of approximate draws to return
 
 # Keywords

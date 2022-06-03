@@ -1,7 +1,7 @@
 name = "Pathfinder"
 uuid = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
 authors = ["Seth Axen <seth.axen@gmail.com> and contributors"]
-version = "0.4.5"
+version = "0.4.6"
 
 [deps]
 AbstractDifferentiation = "c29ec348-61ec-40c8-8164-b8c60e9d9f3d"
@@ -9,11 +9,11 @@ Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Folds = "41a02a25-b8f0-4f67-bc48-60067656b558"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-GalacticOptim = "a75be94c-b780-496d-a8a9-0878b188d577"
-GalacticOptimJL = "9d3c5eb1-403b-401b-8c0f-c11105342e6b"
 IrrationalConstants = "92d709cd-6900-40b7-9082-c6be49f344b6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
+OptimizationOptimJL = "36348300-93cb-4f02-beb5-3c3902f8871e"
 PDMats = "90014a1f-27ba-587c-ab20-58faa44d9150"
 PSIS = "ce719bf2-d5d0-4fb9-925d-10a81b42ad04"
 ProgressLogging = "33c8b6b6-d38a-422a-b730-caa89a2f386c"
@@ -31,10 +31,10 @@ Accessors = "0.1"
 Distributions = "0.25"
 Folds = "0.2"
 ForwardDiff = "0.10"
-GalacticOptim = "3"
-GalacticOptimJL = "0.1"
 IrrationalConstants = "0.1.1"
 Optim = "1.4"
+Optimization = "3"
+OptimizationOptimJL = "0.1"
 PDMats = "0.11"
 PSIS = "0.2, 0.3, 0.4, 0.5"
 ProgressLogging = "0.1.4"
@@ -46,9 +46,9 @@ UnPack = "1"
 julia = "1.6"
 
 [extras]
-GalacticNLopt = "792012fa-ebfb-4b3a-ab44-69908522effd"
+OptimizationNLopt = "4e6fcdb7-1186-4e1f-a706-475e75c168bb"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["GalacticNLopt", "ReverseDiff", "Test"]
+test = ["OptimizationNLopt", "ReverseDiff", "Test"]

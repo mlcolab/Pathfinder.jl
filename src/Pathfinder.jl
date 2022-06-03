@@ -3,13 +3,13 @@ module Pathfinder
 using AbstractDifferentiation: AD
 using Distributions: Distributions
 using Folds: Folds
-# ensure that ForwardDiff is conditionally loaded by GalacticOptim
+# ensure that ForwardDiff is conditionally loaded by Optimization
 using ForwardDiff: ForwardDiff
 using IrrationalConstants: log2π
 using LinearAlgebra
-using GalacticOptim: GalacticOptim
-using GalacticOptimJL: GalacticOptimJL
 using Optim: Optim, LineSearches
+using Optimization: Optimization
+using OptimizationOptimJL: OptimizationOptimJL
 using PDMats: PDMats
 using ProgressLogging: ProgressLogging
 using PSIS: PSIS

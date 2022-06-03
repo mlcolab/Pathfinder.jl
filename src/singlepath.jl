@@ -86,7 +86,7 @@ constructed using at most the previous `history_length` steps.
 - `fun::SciMLBase.OptimizationFunction`: an optimization function that represents
     `-logp(x)` with its gradient. It must have the necessary features (e.g. a Hessian
     function) for the chosen optimization algorithm. For details, see
-    [GalacticOptim.jl: OptimizationFunction](https://galacticoptim.sciml.ai/stable/API/optimization_function/).
+    [Optimization.jl: OptimizationFunction](https://optimization.sciml.ai/stable/API/optimization_function/).
 - `prob::SciMLBase.OptimizationProblem`: an optimization problem containing a function with
     the same properties as `fun`, as well as an initial point, in which case `init` and
     `dim` are ignored.
@@ -114,13 +114,13 @@ constructed using at most the previous `history_length` steps.
 - `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
     inverse Hessian.
 - `optimizer`: Optimizer to be used for constructing trajectory. Can be any optimizer
-    compatible with GalacticOptim, so long as it supports callbacks. Defaults to
+    compatible with Optimization.jl, so long as it supports callbacks. Defaults to
     `Optim.LBFGS(; m=history_length, linesearch=LineSearches.MoreThuente())`. See
-    the [GalacticOptim.jl documentation](https://galacticoptim.sciml.ai/stable) for details.
+    the [Optimization.jl documentation](https://optimization.sciml.ai/stable) for details.
 - `ntries::Int=1_000`: Number of times to try the optimization, restarting if it fails. Before
     every restart, a new initial point is drawn using `init_sampler`.
 - `kwargs...` : Remaining keywords are forwarded to
-    [`GalacticOptim.solve`](https://galacticoptim.sciml.ai/stable/API/solve).
+    [`Optimization.solve`](https://optimization.sciml.ai/stable/API/solve).
 
 # Returns
 - [`PathfinderResult`](@ref)
