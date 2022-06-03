@@ -1,9 +1,9 @@
 using AbstractDifferentiation
 using Distributions
 using ForwardDiff
-using GalacticOptim
 using LinearAlgebra
 using Optim
+using Optimization
 using Pathfinder
 using Random
 using ReverseDiff
@@ -164,7 +164,7 @@ using Transducers
         init = randn(5)
         prob = SciMLBase.OptimizationProblem(logp, init, nothing)
         @test_throws ArgumentError pathfinder(prob)
-        fun = SciMLBase.OptimizationFunction(logp, GalacticOptim.AutoForwardDiff())
+        fun = SciMLBase.OptimizationFunction(logp, Optimization.AutoForwardDiff())
         prob = SciMLBase.OptimizationProblem(fun, init, nothing)
         @test_throws ArgumentError pathfinder(prob)
     end

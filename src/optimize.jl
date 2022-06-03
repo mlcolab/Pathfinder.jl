@@ -4,7 +4,7 @@ function build_optim_function(f; ad_backend=AD.ForwardDiffBackend())
 end
 function build_optim_function(f, ∇f; ad_backend=AD.ForwardDiffBackend())
     # because we need explicit access to grad, we generate these ourselves instead of using
-    # GalacticOptim's auto-AD feature.
+    # Optimization.jl's auto-AD feature.
     # TODO: switch to caching API if available, see
     # https://github.com/JuliaDiff/AbstractDifferentiation.jl/issues/41
     function grad(res, x, p...)
@@ -56,13 +56,13 @@ function optimize_with_trace(
         # some backends mutate x, so we must copy it
         push!(xs, copy(x))
         push!(fxs, -nfx)
-        # NOTE: GalacticOptim doesn't have an interface for accessing the gradient trace,
+        # NOTE: Optimization doesn't have an interface for accessing the gradient trace,
         # so we need to recompute it ourselves
-        # see https://github.com/SciML/GalacticOptim.jl/issues/149
+        # see https://github.com/SciML/Optimization.jl/issues/149
         push!(∇fxs, rmul!(grad!(similar(x), x, nothing), -1))
         return ret
     end
-    sol = GalacticOptim.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
+    sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
     return sol, OptimizationTrace(xs, fxs, ∇fxs)
 end
 
@@ -84,7 +84,7 @@ function optimize_with_trace(
         return ret
     end
     new_kwargs = merge(NamedTuple(kwargs), (; store_trace=true, extended_trace=true))
-    sol = GalacticOptim.solve(prob, optimizer; callback=_callback, maxiters, new_kwargs...)
+    sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, new_kwargs...)
 
     u0 = prob.u0
     xs = Vector{typeof(u0)}(undef, iteration)
