@@ -14,14 +14,14 @@ Container for results of single-path Pathfinder.
 - `logp`: Log-density function
 - `dist_optimizer`: Optimizer used to compute `fit_iteration` and `fit_distribution` from
     `logp`, `optim_solution`, `optim_trace`, and `fit_distributions`.
-- `fit_distribution::Distributions.MvNormal`: ELBO-maximizing multivariate normal
-    distribution
+- `fit_distribution::Distributions.MvNormal`: multivariate normal distribution returned by
+    `dist_optimizer`
 - `draws::AbstractMatrix{<:Real}`: draws from multivariate normal with size `(dim, ndraws)`
 - `fit_distribution_transformed`: `fit_distribution` transformed to the same space as the
     user-supplied target distribution. This is only different from `fit_distribution` when
     integrating with other packages, and its type depends on the type of `input`.
 - `draws_transformed`: `draws` transformed to be draws from `fit_distribution_transformed`.
-- `fit_iteration::Int`: Iteration at which ELBO estimate was maximized
+- `fit_iteration::Int`: Iteration at which `fit_distribution` occurred
 - `num_tries::Int`: Number of tries until Pathfinder succeeded
 - `optim_solution::SciMLBase.OptimizationSolution`: Solution object of optimization.
 - `optim_trace::Pathfinder.OptimizationTrace`: container for optimization trace of points,
@@ -77,9 +77,11 @@ end
 Find the best multivariate normal approximation encountered while maximizing `logp`.
 
 From an optimization trajectory, Pathfinder constructs a sequence of (multivariate normal)
-approximations to the distribution specified by `logp`. The approximation that maximizes the
-evidence lower bound (ELBO), or equivalently, minimizes the KL divergence between the
-approximation and the true distribution, is returned.
+approximations to the distribution specified by `logp`.
+
+By default, the approximation that maximizes the evidence lower bound (ELBO), or
+equivalently, minimizes the KL divergence between the approximation and the true
+distribution, is returned. This can be changed by providing a different `dist_optimizer`.
 
 The covariance of the multivariate normal distribution is an inverse Hessian approximation
 constructed using at most the previous `history_length` steps.

@@ -11,8 +11,8 @@ Container for results of multi-path Pathfinder.
 - `optim_prob::SciMLBase.OptimizationProblem`: Otimization problem used for
     optimization
 - `logp`: Log-density function
-- `fit_distribution::Distributions.MixtureModel`: uniformly-weighted mixture of ELBO-
-    maximizing multivariate normal distributions from each run.
+- `fit_distribution::Distributions.MixtureModel`: uniformly-weighted mixture of
+    multivariate normal distributions returned by each run.
 - `draws::AbstractMatrix{<:Real}`: draws from `fit_distribution` with size `(dim, ndraws)`,
     potentially resampled using importance resampling to be closer to the target
     distribution.
