@@ -101,22 +101,25 @@ constructed using at most the previous `history_length` steps.
     entries uniformly in the range ``[-s, s]``
 - `init_sampler`: function with the signature `(rng, x) -> x` that modifies a vector of
     length `dims` in-place to generate an initial point
-- `ndraws_elbo::Int=$DEFAULT_NDRAWS_ELBO`: Number of draws used to estimate the ELBO
-- `ndraws::Int=ndraws_elbo`: number of approximate draws to return
+- `ndraws::Int`: number of approximate draws to return. Defaults to 0 unless draws from
+    `dist_optimizer` can be resued.
 - `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend.
 - `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
-- `executor::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl executor that
-    determines if and how to perform ELBO computation in parallel. The default
-    (`SequentialEx()`) performs no parallelization. If `rng` is known to be thread-safe, and
-    the log-density function is known to have no internal state, then
-    `Transducers.PreferParallel()` may be used to parallelize log-density evaluation.
-    This is generally only faster for expensive log density functions.
 - `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
     inverse Hessian.
 - `optimizer`: Optimizer to be used for constructing trajectory. Can be any optimizer
     compatible with Optimization.jl, so long as it supports callbacks. Defaults to
     `Optim.LBFGS(; m=history_length, linesearch=LineSearches.MoreThuente())`. See
     the [Optimization.jl documentation](https://optimization.sciml.ai/stable) for details.
+- `dist_optimizer`: Callable that selects the returned distribution. Its signature must be
+    `(logp, optim_solution, optim_trace, fit_distributions) -> (success, fit_distribution, fit_iteration, fit_stats)`, where
+    `optim_solution` is a `SciMLBase.OptimizationSolution`,
+    `optim_trace` is a `Pathfinder.OptimizationTrace`,
+    `success` indicates whether the optimization succeeded,
+    `fit_iteration` is an integer such that
+    `fit_distributions[iteration + 1] === fit_distribution` or `nothing`, and
+    `fit_stats` is an arbitrary container of statistics computed during optimization.
+    Defaults to [`Pathfinder.MaximumELBO`](@ref).
 - `ntries::Int=1_000`: Number of times to try the optimization, restarting if it fails. Before
     every restart, a new initial point is drawn using `init_sampler`.
 - `kwargs...` : Remaining keywords are forwarded to
@@ -163,8 +166,8 @@ function pathfinder(
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     history_length::Int=DEFAULT_HISTORY_LENGTH,
     optimizer=default_optimizer(history_length),
-    ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
-    ndraws::Int=ndraws_elbo,
+    dist_optimizer=MaximumELBO(; rng),
+    ndraws::Int=dist_optimizer isa MaximumELBO{true} ? dist_optimizer.ndraws : 0,
     input=prob,
     kwargs...,
 )
@@ -180,7 +183,7 @@ function pathfinder(
             history_length,
             optimizer,
             progress_id,
-            ndraws_elbo,
+            dist_optimizer,
             kwargs...,
         )
     end
@@ -190,6 +193,7 @@ function pathfinder(
         optim_solution,
         optim_trace,
         fit_distributions,
+        fit_distribution,
         fit_iteration,
         elbo_estimates,
     ) = path_result
@@ -223,6 +227,7 @@ function pathfinder(
         rng,
         optim_solution.prob,
         logp,
+        dist_optimizer,
         fit_distribution,
         draws,
         fit_distribution_transformed,
@@ -268,38 +273,30 @@ function _pathfinder(
     logp;
     history_length::Int=DEFAULT_HISTORY_LENGTH,
     optimizer=default_optimizer(history_length),
-    ndraws_elbo=DEFAULT_NDRAWS_ELBO,
-    executor::Transducers.Executor=Transducers.SequentialEx(),
+    dist_optimizer=MaximumELBO(; rng),
     kwargs...,
 )
     # compute trajectory
     optim_solution, optim_trace = optimize_with_trace(prob, optimizer; kwargs...)
-    L = length(optim_trace) - 1
-    success = L > 0
 
     # fit mv-normal distributions to trajectory
     fit_distributions = fit_mvnormals(
         optim_trace.points, optim_trace.gradients; history_length
     )
 
-    # find ELBO-maximizing distribution
-    fit_iteration, elbo_estimates = @views maximize_elbo(
-        rng, logp, fit_distributions[(begin + 1):end], ndraws_elbo, executor
+    success, fit_distribution, fit_iteration, fit_stats = dist_optimizer(
+        logp, optim_solution, optim_trace, fit_distributions
     )
-    if isempty(elbo_estimates)
-        success = false
-    else
-        elbo = elbo_estimates[fit_iteration].value
-        success &= !isnan(elbo) & (elbo != -Inf)
-    end
+    success &= length(optim_trace) < 2
 
     return (;
         success,
         optim_solution,
         optim_trace,
         fit_distributions,
+        fit_distribution,
         fit_iteration,
-        elbo_estimates,
+        fit_stats,
     )
 end
 
