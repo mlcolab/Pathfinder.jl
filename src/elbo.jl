@@ -30,13 +30,13 @@ end
 function (optimizer::MaximumELBO{save_draws})(logp, _, _, dists) where {save_draws}
     (; rng, ndraws, executor) = optimizer
     EE = Core.Compiler.return_type(
-        _compute_elbo, Tuple{typeof(rng),typeof(logp),eltype(dists),Int}
+        _compute_elbo, Tuple{typeof(rng),typeof(logp),eltype(dists),Int,Val{save_draws}}
     )
     dists_not_init = @views dists[(begin + 1):end]
     estimates = similar(dists_not_init, EE)
     isempty(estimates) && return false, first(dists), 0, estimates
     Folds.map!(estimates, dists_not_init, executor) do dist
-        return _compute_elbo(rng, logp, dist, ndraws)
+        return _compute_elbo(rng, logp, dist, ndraws, Val(save_draws))
     end
     _, iteration_opt = _findmax(estimates |> Transducers.Map(est -> est.value))
     elbo_opt = estimates[iteration_opt].value
@@ -44,14 +44,14 @@ function (optimizer::MaximumELBO{save_draws})(logp, _, _, dists) where {save_dra
     return success, dists[iteration_opt + 1], iteration_opt, estimates
 end
 
-function _compute_elbo(rng, logp, dist, ndraws)
+function _compute_elbo(rng, logp, dist, ndraws, ::Val{save_draws}) where {save_draws}
     ϕ, logqϕ = rand_and_logpdf(rng, dist, ndraws)
     logpϕ = similar(logqϕ)
     logpϕ .= logp.(eachcol(ϕ))
     logr = logpϕ - logqϕ
     elbo = Statistics.mean(logr)
     elbo_se = sqrt(Statistics.var(logr) / length(logr))
-    return ELBOEstimate(elbo, elbo_se, ϕ, logpϕ, logqϕ, logr)
+    return ELBOEstimate(elbo, elbo_se, save_draws ? ϕ : nothing, logpϕ, logqϕ, logr)
 end
 
 """
