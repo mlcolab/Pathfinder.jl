@@ -12,6 +12,8 @@ Container for results of single-path Pathfinder.
 - `optim_prob::SciMLBase.OptimizationProblem`: Otimization problem used for
     optimization
 - `logp`: Log-density function
+- `dist_optimizer`: Optimizer used to compute `fit_iteration` and `fit_distribution` from
+    `logp`, `optim_solution`, `optim_trace`, and `fit_distributions`.
 - `fit_distribution::Distributions.MvNormal`: ELBO-maximizing multivariate normal
     distribution
 - `draws::AbstractMatrix{<:Real}`: draws from multivariate normal with size `(dim, ndraws)`
@@ -27,28 +29,28 @@ Container for results of single-path Pathfinder.
 - `fit_distributions::AbstractVector{Distributions.MvNormal}`: Multivariate normal
     distributions for each point in `optim_trace`, where
     `fit_distributions[fit_iteration + 1] == fit_distribution`
-- `elbo_estimates::AbstractVector{<:Pathfinder.ELBOEstimate}`: ELBO estimates for all but
-    the first distribution in `fit_distributions`.
+- `fit_stats`: Additional statistics computed by `dist_optimizer`.
 
 # Returns
 - [`PathfinderResult`](@ref)
 """
-struct PathfinderResult{I,O,R,OP,LP,FD,D,FDT,DT,OS,OT,EE}
+struct PathfinderResult{I,O,R,OP,LP,DO,FD,D,FDT,DT,FI,OS,OT,FS}
     input::I
     optimizer::O
     rng::R
     optim_prob::OP
     logp::LP
+    dist_optimizer::DO
     fit_distribution::FD
     draws::D
     fit_distribution_transformed::FDT
     draws_transformed::DT
-    fit_iteration::Int
+    fit_iteration::FI
     num_tries::Int
     optim_solution::OS
     optim_trace::OT
     fit_distributions::Vector{FD}
-    elbo_estimates::EE
+    fit_stats::FS
 end
 
 function Base.show(io::IO, ::MIME"text/plain", result::PathfinderResult)
@@ -56,9 +58,12 @@ function Base.show(io::IO, ::MIME"text/plain", result::PathfinderResult)
     println(io, "  tries: $(result.num_tries)")
     println(io, "  draws: $(size(result.draws, 2))")
     println(
-        io, "  fit iteration: $(result.fit_iteration) (total: $(length(result.optim_trace) - 1))"
+        io,
+        "  fit iteration: $(string(result.fit_iteration)) (total: $(length(result.optim_trace) - 1))",
     )
-    println(io, "  fit ELBO: $(_to_string(result.elbo_estimates[result.fit_iteration]))")
+    if result.fit_stats isa AbstractVector{<:ELBOEstimate}
+        println(io, "  fit ELBO: $(_to_string(result.fit_stats[result.fit_iteration]))")
+    end
     print(io, "  fit distribution: ", result.fit_distribution)
     return nothing
 end
