@@ -125,7 +125,9 @@ constructed using at most the previous `history_length` steps.
     `success` indicates whether the optimization succeeded,
     `fit_iteration` is an integer such that
     `fit_distributions[iteration + 1] === fit_distribution` or `nothing`, and
-    `fit_stats` is an arbitrary container of statistics computed during optimization.
+    `fit_stats` is an arbitrary container of statistics computed during optimization. If
+    the optimizer draws from `fit_distribution`, these draws can be reused by storing them
+    in `fit_stats` and overloading [`Pathfinder.draws_from_fit_stats`](@ref).
     Defaults to [`Pathfinder.MaximumELBO`](@ref).
 - `ntries::Int=1_000`: Number of times to try the optimization, restarting if it fails. Before
     every restart, a new initial point is drawn using `init_sampler`.
@@ -208,14 +210,14 @@ function pathfinder(
     success ||
         @warn "Pathfinder failed after $itry tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
 
-    draws = if dist_optimizer isa MaximumELBO{true} && success
+    stats_draws = draws_from_fit_stats(fit_stats, fit_iteration)
+    draws = if success && stats_draws !== nothing
         # reuse existing draws if available; draw additional ones if necessary
-        elbo_draws = fit_stats[fit_iteration].draws
-        ndraws_elbo = size(elbo_draws, 2)
-        if ndraws_elbo < ndraws
-            hcat(elbo_draws, rand(rng, fit_distribution, ndraws - ndraws_elbo))
+        ndraws_stats = size(stats_draws, 2)
+        if ndraws_stats < ndraws
+            hcat(stats_draws, rand(rng, fit_distribution, ndraws - ndraws_stats))
         else
-            elbo_draws[:, 1:ndraws]
+            stats_draws[:, 1:ndraws]
         end
     else
         rand(rng, fit_distribution, ndraws)

@@ -54,11 +54,25 @@ function _compute_elbo(rng, logp, dist, ndraws)
     return ELBOEstimate(elbo, elbo_se, ϕ, logpϕ, logqϕ, logr)
 end
 
+"""
+    ELBOEstimate
+
+Container of results of ELBO estimation via Monte Carlo.
+
+# Fields
+- `value`: value of estimate
+- `std_err`: Monte Carlo standard error of estimate
+- `draws`: Draws used to compute estimate
+- `log_densities_actual`: log density of actual distribution evaluated on `draws`.
+- `log_densities_fit`: log density of fit distribution evaluated on `draws`.
+- `log_density_ratios`: log of ratio of actual to fit density. `value` is the mean of this
+    array.
+"""
 struct ELBOEstimate{T,P,L<:AbstractVector{T}}
     value::T
     std_err::T
     draws::P
-    log_densities_target::L
+    log_densities_actual::L
     log_densities_fit::L
     log_density_ratios::L
 end
@@ -71,3 +85,17 @@ end
 function _to_string(est::ELBOEstimate; digits=2)
     return "$(round(est.value; digits)) ± $(round(est.std_err; digits))"
 end
+
+
+"""
+    draws_from_fit_stats(fit_stats, fit_iteration) -> draws
+
+If applicable, return draws the fit distribution from `fit_iteration` stored in `fit_stats`.
+
+The draws must be the same type and layout as one would get by calling
+`rand(fit_distribution)`.
+"""
+function draws_from_stats end
+
+draws_from_stats(fit_stats, fit_iteration) = nothing
+draws_from_stats(estimates::AbstractVector{<:ELBOEstimate}, i::Int) = estimates[i].draws
