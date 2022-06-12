@@ -1,3 +1,12 @@
+"""
+    MaximumELBO(; save_draws=false, rng, ndraws, executor)
+
+An optimizer over the trace of fit distributions that returns the ELBO-maximizing distribution.
+
+The ELBO is approximated using Monte Carlo sampling with `ndraws` and the provided `rng`.
+This draws can be reused by Pathfinder to avoid extra log-density evaluations. To enable
+this, set `save_draws=true`.
+"""
 struct MaximumELBO{save_draws,R,E}
     rng::R
     ndraws::Int
