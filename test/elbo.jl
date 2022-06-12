@@ -43,18 +43,23 @@ using Transducers
             rng = Random.seed!(Random.default_rng(), 42)
             opt = Pathfinder.MaximumELBO(; rng, executor, ndraws=100, save_draws=true)
             success, dist, lopt, estimates = @inferred opt(logp, nothing, nothing, dists)
+            @test success
+            @test dist == dists[lopt + 1]
             @test lopt == 2
             @test estimates[lopt].value ≈ 0
             Random.seed!(rng, 42)
             success2, dist2, lopt2, estimates2 = @inferred opt(
                 logp, nothing, nothing, dists
             )
+            @test dist2 == dist
             @test lopt2 == lopt
             @test getproperty.(estimates2, :value) == getproperty.(estimates, :value)
             @test getproperty.(estimates2, :std_err) == getproperty.(estimates, :std_err)
             success3, dist3, lopt3, estimates3 = @inferred opt(
                 logp, nothing, nothing, dists[1:1]
             )
+            @test !success3
+            @test dist3 == dists[1]
             @test lopt3 == 0
             @test isempty(estimates3)
         end
