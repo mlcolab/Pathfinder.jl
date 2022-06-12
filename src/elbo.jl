@@ -6,6 +6,12 @@ An optimizer over the trace of fit distributions that returns the ELBO-maximizin
 The ELBO is approximated using Monte Carlo sampling with `ndraws` and the provided `rng`.
 This draws can be reused by Pathfinder to avoid extra log-density evaluations. To enable
 this, set `save_draws=true`.
+
+`executors` is a Transducers.jl executor that determines if and how to perform ELBO
+computation in parallel. The default (`Transducers.SequentialEx()`) performs no
+parallelization. If `rng` is known to be thread-safe, and the log-density function is known
+to have no internal state, then `Transducers.PreferParallel()` may be used to parallelize
+log-density evaluation. This is generally only faster for expensive log density functions.
 """
 struct MaximumELBO{save_draws,R,E}
     rng::R
