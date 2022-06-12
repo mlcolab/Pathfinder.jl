@@ -290,7 +290,7 @@ function _pathfinder(
     success, fit_distribution, fit_iteration, fit_stats = dist_optimizer(
         logp, optim_solution, optim_trace, fit_distributions
     )
-    success &= length(optim_trace) < 2
+    success &= length(optim_trace) > 1
 
     return (;
         success,
