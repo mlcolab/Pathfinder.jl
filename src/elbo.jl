@@ -27,7 +27,7 @@ function MaximumELBO(;
     return MaximumELBO{save_draws,typeof(rng),typeof(executor)}(rng, ndraws, executor)
 end
 
-function (optimizer::MaximumELBO{R,E,save_draws})(logp, _, _, dists) where {R,E,save_draws}
+function (optimizer::MaximumELBO{save_draws})(logp, _, _, dists) where {save_draws}
     (; rng, ndraws, executor) = optimizer
     EE = Core.Compiler.return_type(
         _compute_elbo, Tuple{typeof(rng),typeof(logp),eltype(dists),Int}
@@ -86,7 +86,6 @@ function _to_string(est::ELBOEstimate; digits=2)
     return "$(round(est.value; digits)) ± $(round(est.std_err; digits))"
 end
 
-
 """
     draws_from_fit_stats(fit_stats, fit_iteration) -> draws
 
@@ -95,7 +94,7 @@ If applicable, return draws the fit distribution from `fit_iteration` stored in 
 The draws must be the same type and layout as one would get by calling
 `rand(fit_distribution)`.
 """
-function draws_from_stats end
+function draws_from_fit_stats end
 
-draws_from_stats(fit_stats, fit_iteration) = nothing
-draws_from_stats(estimates::AbstractVector{<:ELBOEstimate}, i::Int) = estimates[i].draws
+draws_from_fit_stats(fit_stats, fit_iteration) = nothing
+draws_from_fit_stats(estimates::AbstractVector{<:ELBOEstimate}, i::Int) = estimates[i].draws

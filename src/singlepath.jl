@@ -210,14 +210,18 @@ function pathfinder(
     success ||
         @warn "Pathfinder failed after $itry tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
 
-    stats_draws = draws_from_fit_stats(fit_stats, fit_iteration)
-    draws = if success && stats_draws !== nothing
-        # reuse existing draws if available; draw additional ones if necessary
-        ndraws_stats = size(stats_draws, 2)
-        if ndraws_stats < ndraws
-            hcat(stats_draws, rand(rng, fit_distribution, ndraws - ndraws_stats))
+    draws = if success
+        stats_draws = draws_from_fit_stats(fit_stats, fit_iteration)
+        if stats_draws !== nothing
+            # reuse existing draws if available; draw additional ones if necessary
+            ndraws_stats = size(stats_draws, 2)
+            if ndraws_stats < ndraws
+                hcat(stats_draws, rand(rng, fit_distribution, ndraws - ndraws_stats))
+            else
+                stats_draws[:, 1:ndraws]
+            end
         else
-            stats_draws[:, 1:ndraws]
+            rand(rng, fit_distribution, ndraws)
         end
     else
         rand(rng, fit_distribution, ndraws)

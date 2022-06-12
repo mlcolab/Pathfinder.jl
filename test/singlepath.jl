@@ -91,7 +91,9 @@ using Transducers
         optimizer = Optim.LBFGS(; m=6)
         @testset for rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
-            dist_optimizer = Pathfinder.MaximumELBO(; rng, executor, ndraws=100, save_draws=true)
+            dist_optimizer = Pathfinder.MaximumELBO(;
+                rng, executor, ndraws=100, save_draws=true
+            )
 
             Random.seed!(rng, seed)
             result = @inferred pathfinder(
