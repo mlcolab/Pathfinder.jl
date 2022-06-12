@@ -253,7 +253,7 @@ function _pathfinder_try_until_succeed(
 )
     itry = 1
     progress_name = "Optimizing (try 1)"
-    result = _pathfinder(rng, prob, logp; progress_name, kwargs...)
+    result = _pathfinder(prob, logp; progress_name, kwargs...)
     _prob = prob
     while !result.success && itry < ntries
         if itry == 1 && !allow_mutating_init
@@ -262,13 +262,12 @@ function _pathfinder_try_until_succeed(
         itry += 1
         init_sampler(rng, _prob.u0)
         progress_name = "Optimizing (try $itry)"
-        result = _pathfinder(rng, _prob, logp; progress_name, kwargs...)
+        result = _pathfinder(_prob, logp; progress_name, kwargs...)
     end
     return (; itry, result...)
 end
 
 function _pathfinder(
-    rng,
     prob,
     logp;
     history_length::Int=DEFAULT_HISTORY_LENGTH,
