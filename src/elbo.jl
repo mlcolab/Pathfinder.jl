@@ -28,7 +28,9 @@ function MaximumELBO(;
 end
 
 function (optimizer::MaximumELBO{save_draws})(logp, _, _, dists) where {save_draws}
-    (; rng, ndraws, executor) = optimizer
+    rng = optimizer.rng
+    ndraws = optimizer.ndraws
+    executor = optimizer.executor
     EE = Core.Compiler.return_type(
         _compute_elbo, Tuple{typeof(rng),typeof(logp),eltype(dists),Int,Val{save_draws}}
     )
