@@ -100,6 +100,8 @@ using Transducers
             @test result.input === logp
             @test result.fit_distribution.Σ ≈ Σ rtol = 1e-1
             @test result.optimizer == optimizer
+            @test size(result.draws) == (5, 100)
+            @test result.draws == result.fit_stats[result.fit_iteration].draws
             Random.seed!(rng, seed)
             result2 = pathfinder(logp; rng, dim, optimizer, dist_optimizer, ad_backend)
             @test result2.fit_distribution == result.fit_distribution
