@@ -47,6 +47,7 @@ using Transducers
             @test dist == dists[lopt + 1]
             @test lopt == 2
             @test estimates[lopt].value ≈ 0
+            @test estimates[lopt].draws isa Array
             Random.seed!(rng, 42)
             success2, dist2, lopt2, estimates2 = @inferred opt(
                 logp, nothing, nothing, dists
@@ -62,6 +63,11 @@ using Transducers
             @test dist3 == dists[1]
             @test lopt3 == 0
             @test isempty(estimates3)
+            opt = Pathfinder.MaximumELBO(; rng, executor, ndraws=100, save_draws=false)
+            success4, dist4, lopt4, estimates4 = @inferred opt(
+                logp, nothing, nothing, dists
+            )
+            @test estimates4[lopt4].draws === nothing
         end
     end
 end
