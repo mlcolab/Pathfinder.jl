@@ -56,7 +56,8 @@ function Base.show(io::IO, ::MIME"text/plain", result::PathfinderResult)
     println(io, "  tries: $(result.num_tries)")
     println(io, "  draws: $(size(result.draws, 2))")
     println(
-        io, "  fit iteration: $(result.fit_iteration) (total: $(length(result.optim_trace) - 1))"
+        io,
+        "  fit iteration: $(result.fit_iteration) (total: $(length(result.optim_trace) - 1))",
     )
     println(io, "  fit ELBO: $(_to_string(result.elbo_estimates[result.fit_iteration]))")
     print(io, "  fit distribution: ", result.fit_distribution)
