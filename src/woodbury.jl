@@ -118,7 +118,7 @@ function LinearAlgebra.diag(W::WoodburyPDMat)
     return diag(W.A) + map(b -> dot(b, D, b), eachrow(W.B))
 end
 
-function LinearAlgebra.lmul!(W::WoodburyPDMat, x::StridedVecOrMat)
+function LinearAlgebra.lmul!(W::WoodburyPDMat, x::AbstractVecOrMat)
     UA = W.UA
     UC = W.UC
     Q = W.Q
@@ -133,10 +133,7 @@ function LinearAlgebra.lmul!(W::WoodburyPDMat, x::StridedVecOrMat)
     return x
 end
 
-function LinearAlgebra.mul!(y::AbstractVector, W::WoodburyPDMat, x::StridedVecOrMat)
-    return lmul!(W, copyto!(y, x))
-end
-function LinearAlgebra.mul!(y::AbstractMatrix, W::WoodburyPDMat, x::StridedVecOrMat)
+function LinearAlgebra.mul!(y::AbstractVector, W::WoodburyPDMat, x::AbstractVecOrMat)
     return lmul!(W, copyto!(y, x))
 end
 
@@ -159,7 +156,7 @@ function PDMats.invquad(W::WoodburyPDMat, x::AbstractVector{T}) where {T}
     return @views sum(abs2, W.UC' \ v[1:k]) + sum(abs2, v[(k + 1):n])
 end
 
-function PDMats.invquad!(r::AbstractArray, W::WoodburyPDMat, x::StridedMatrix{T}) where {T}
+function PDMats.invquad!(r::AbstractArray, W::WoodburyPDMat, x::AbstractMatrix{T}) where {T}
     v = lmul!(W.Q', W.UA' \ x)
     k = minimum(size(W.B))
     @views ldiv!(W.UC', v[1:k, :])
@@ -167,7 +164,7 @@ function PDMats.invquad!(r::AbstractArray, W::WoodburyPDMat, x::StridedMatrix{T}
     return r
 end
 
-function PDMats.quad!(r::AbstractArray, W::WoodburyPDMat, x::StridedMatrix{T}) where {T}
+function PDMats.quad!(r::AbstractArray, W::WoodburyPDMat, x::AbstractMatrix{T}) where {T}
     v = lmul!(W.Q', W.UA * x)
     k = minimum(size(W.B))
     @views lmul!(W.UC, v[1:k, :])
@@ -183,7 +180,7 @@ function PDMats.quad(W::WoodburyPDMat, x::AbstractVector{T}) where {T}
 end
 
 function PDMats.unwhiten!(
-    r::StridedVecOrMat{T}, W::WoodburyPDMat, x::StridedVecOrMat{T}
+    r::AbstractVecOrMat{T}, W::WoodburyPDMat, x::AbstractVecOrMat{T}
 ) where {T}
     k = minimum(size(W.B))
     copyto!(r, x)
@@ -194,7 +191,7 @@ function PDMats.unwhiten!(
 end
 
 function invunwhiten!(
-    r::StridedVecOrMat{T}, W::WoodburyPDMat, x::StridedVecOrMat{T}
+    r::AbstractVecOrMat{T}, W::WoodburyPDMat, x::AbstractVecOrMat{T}
 ) where {T}
     k = minimum(size(W.B))
     copyto!(r, x)
