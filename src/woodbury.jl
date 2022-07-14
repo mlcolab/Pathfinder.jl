@@ -72,13 +72,6 @@ function WoodburyPDMat(A, B, D)
     )
 end
 
-function Base.getproperty(W::WoodburyPDMat, k::Symbol)
-    k === :dim && return size(W, 1)
-    return getfield(W, k)
-end
-
-Base.propertynames(W::WoodburyPDMat) = (:dim, fieldnames(typeof(W))...)
-
 Base.Matrix(W::WoodburyPDMat) = Matrix(Symmetric(muladd(W.B, W.D * W.B', W.A)))
 
 function Base.AbstractMatrix{T}(W::WoodburyPDMat) where {T}
@@ -116,6 +109,15 @@ end
 function LinearAlgebra.diag(W::WoodburyPDMat)
     D = W.D isa Diagonal ? W.D : Symmetric(W.D)
     return diag(W.A) + map(b -> dot(b, D, b), eachrow(W.B))
+end
+
+# workaround for PDMats requiring `.dim` property only here
+# see https://github.com/JuliaStats/PDMats.jl/pull/170
+function Base.:+(a::WoodburyPDMat, b::LinearAlgebra.UniformScaling)
+    return a + PDMats.ScalMat(size(a, 1), b.λ)
+end
+function Base.:+(a::LinearAlgebra.UniformScaling, b::WoodburyPDMat)
+    return PDMats.ScalMat(size(b, 1), a.λ) + b
 end
 
 function LinearAlgebra.lmul!(W::WoodburyPDMat, x::AbstractVecOrMat)
