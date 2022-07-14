@@ -15,15 +15,12 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "Library" => [
-            "Public" => "lib/public.md",
-            "Internals" => "lib/internals.md",
-        ],
+        "Library" => ["Public" => "lib/public.md", "Internals" => "lib/internals.md"],
         "Examples" => [
             "Quickstart" => "examples/quickstart.md",
             "Initializing HMC" => "examples/initializing-hmc.md",
             "Turing usage" => "examples/turing.md",
-        ]
+        ],
     ],
 )
 

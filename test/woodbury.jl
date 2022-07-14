@@ -29,7 +29,7 @@ function test_decompositions(W)
 end
 
 @testset "WoodburyPDMat" begin
-    @testset "A $Atype, D $Dtype" for T in (Float64, Float32),
+    @testset "A $Atype, D $Dtype eltype $T" for T in (Float64, Float32),
         Atype in (:dense, :diag),
         Dtype in (:dense, :diag),
         n in (5, 10),
@@ -45,6 +45,8 @@ end
             @test eltype(W) === T
             @test eltype(Wmat) === T
             @test size(W) == (n, n)
+            @test size(W, 1) == n
+            @test size(W, 2) == n
             @test Matrix(W) ≈ Wmat
             @test W[3, 5] ≈ Wmat[3, 5]
             @test W ≈ Wmat
@@ -83,6 +85,12 @@ end
         @testset "adjoint/transpose" begin
             @test W' === W
             @test transpose(W) === W
+        end
+
+        @testset "+ ::UniformScaling" begin
+            c = randn(T) * I
+            @test W + c ≈ Wmat + c
+            @test c + W ≈ c + Wmat
         end
 
         @testset "lmul!" begin
