@@ -72,6 +72,13 @@ function WoodburyPDMat(A, B, D)
     )
 end
 
+function Base.getproperty(W::WoodburyPDMat, k::Symbol)
+    k === :dim && return size(W, 1)
+    return getfield(W, k)
+end
+
+Base.propertynames(W::WoodburyPDMat) = (:dim, fieldnames(typeof(W))...)
+
 Base.Matrix(W::WoodburyPDMat) = Matrix(Symmetric(muladd(W.B, W.D * W.B', W.A)))
 
 function Base.AbstractMatrix{T}(W::WoodburyPDMat) where {T}
