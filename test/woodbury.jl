@@ -45,6 +45,8 @@ end
             @test eltype(W) === T
             @test eltype(Wmat) === T
             @test size(W) == (n, n)
+            @test size(W, 1) == n
+            @test size(W, 2) == n
             @test Matrix(W) ≈ Wmat
             @test W[3, 5] ≈ Wmat[3, 5]
             @test W ≈ Wmat
