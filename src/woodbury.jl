@@ -203,12 +203,12 @@ end
 
 # adapted from https://github.com/JuliaStats/PDMats.jl/blob/master/src/utils.jl
 function colwise_sumsq!(r::AbstractArray, a::AbstractMatrix)
-    n = length(r)
-    @assert n == size(a, 2)
-    @inbounds for j in 1:n
+    eachindex(r) == axes(a, 2) ||
+        throw(DimensionMismatch("Inconsistent argument dimensions."))
+    for j in axes(a, 2)
         v = zero(eltype(a))
         @simd for i in axes(a, 1)
-            v += abs2(a[i, j])
+            @inbounds v += abs2(a[i, j])
         end
         r[j] = v
     end
