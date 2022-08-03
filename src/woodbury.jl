@@ -43,7 +43,7 @@ struct WoodburyPDMat{
     TB<:AbstractMatrix{T},
     TD<:AbstractMatrix{T},
     TUA<:Union{Diagonal{T},UpperTriangular{T}},
-    TQ<:LinearAlgebra.AbstractQ{T},
+    TQ, # wide type to support any Q
     TUC<:Union{Diagonal{T},UpperTriangular{T}},
 } <: PDMats.AbstractPDMat{T}
     A::TA
