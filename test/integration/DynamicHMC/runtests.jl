@@ -9,6 +9,7 @@ using DynamicHMC,
     StatsFuns,
     Test,
     TransformVariables
+using TransformedLogDensities: TransformedLogDensity
 
 Random.seed!(1)
 
