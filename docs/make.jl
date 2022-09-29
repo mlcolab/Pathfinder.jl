@@ -6,11 +6,11 @@ DocMeta.setdocmeta!(Pathfinder, :DocTestSetup, :(using Pathfinder); recursive=tr
 makedocs(;
     modules=[Pathfinder],
     authors="Seth Axen <seth.axen@gmail.com> and contributors",
-    repo="https://github.com/sethaxen/Pathfinder.jl/blob/{commit}{path}#{line}",
+    repo="https://github.com/mlcolab/Pathfinder.jl/blob/{commit}{path}#{line}",
     sitename="Pathfinder.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://sethaxen.github.io/Pathfinder.jl",
+        canonical="https://mlcolab.github.io/Pathfinder.jl",
         assets=String[],
     ),
     pages=[
@@ -24,4 +24,4 @@ makedocs(;
     ],
 )
 
-deploydocs(; repo="github.com/sethaxen/Pathfinder.jl", devbranch="main", push_preview=true)
+deploydocs(; repo="github.com/mlcolab/Pathfinder.jl", devbranch="main", push_preview=true)
