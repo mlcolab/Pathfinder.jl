@@ -40,7 +40,13 @@ function optimize_with_trace(
 )
     u0 = prob.u0
     fun = prob.f
-    grad! = fun.grad
+    function ∇f(x)
+        SciMLBase.isinplace(fun) || return fun.grad(x, nothing)
+        res = similar(x)
+        fun.grad(res, x, nothing)
+        rmul!(res, -1)
+        return res
+    end
     # caches for the trace of x and f(x)
     xs = typeof(u0)[]
     fxs = typeof(fun.f(u0, nothing))[]
@@ -59,7 +65,7 @@ function optimize_with_trace(
         # NOTE: Optimization doesn't have an interface for accessing the gradient trace,
         # so we need to recompute it ourselves
         # see https://github.com/SciML/Optimization.jl/issues/149
-        push!(∇fxs, rmul!(grad!(similar(x), x, nothing), -1))
+        push!(∇fxs, ∇f(x))
         return ret
     end
     sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
