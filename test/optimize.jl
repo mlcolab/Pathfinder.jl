@@ -65,9 +65,12 @@ end
     prob = Pathfinder.build_optim_problem(fun, x0)
 
     optimizers = [
-        Optim.BFGS(), Optim.LBFGS(), Optim.ConjugateGradient(), NLopt.Opt(:LD_LBFGS, n)
+        "Optim.BFGS" => Optim.BFGS(),
+        "Optim.LBFGS" => Optim.LBFGS(),
+        "Optim.ConjugateGradient" => Optim.ConjugateGradient(),
+        "NLopt.Opt" => NLopt.Opt(:LD_LBFGS, n),
     ]
-    @testset "$(typeof(optimizer))" for optimizer in optimizers
+    @testset "$name" for (name, optimizer) in optimizers
         optim_sol, optim_trace = Pathfinder.optimize_with_trace(prob, optimizer)
         @test optim_sol isa SciMLBase.OptimizationSolution
         @test optim_trace isa Pathfinder.OptimizationTrace
