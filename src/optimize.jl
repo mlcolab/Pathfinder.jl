@@ -72,37 +72,6 @@ function optimize_with_trace(
     return sol, OptimizationTrace(xs, fxs, ∇fxs)
 end
 
-function optimize_with_trace(
-    prob,
-    optimizer::Union{Optim.FirstOrderOptimizer,Optim.SecondOrderOptimizer};
-    progress_name="Optimizing",
-    progress_id=nothing,
-    maxiters=1_000,
-    callback=nothing,
-    kwargs...,
-)
-    iteration = 0
-    function _callback(x, nfx, args...)
-        ret = callback !== nothing && callback(x, nfx, args...)
-        Base.@logmsg ProgressLogging.ProgressLevel progress_name progress =
-            iteration / maxiters _id = progress_id
-        iteration += 1
-        return ret
-    end
-    new_kwargs = merge(NamedTuple(kwargs), (; store_trace=true, extended_trace=true))
-    sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, new_kwargs...)
-
-    u0 = prob.u0
-    xs = Vector{typeof(u0)}(undef, iteration)
-    ∇fxs = Vector{typeof(u0)}(undef, iteration)
-    result = sol.original
-    copyto!(xs, Optim.x_trace(result))
-    fxs = -Optim.f_trace(result)
-    map!(tr -> -tr.metadata["g(x)"], ∇fxs, Optim.trace(result))
-
-    return sol, OptimizationTrace(xs::Vector{typeof(u0)}, fxs, ∇fxs::Vector{typeof(u0)})
-end
-
 struct OptimizationTrace{P,L}
     points::P
     log_densities::L
