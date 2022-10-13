@@ -22,7 +22,8 @@ include("test_utils.jl")
     ]
     @testset "$name" for (name, fun) in funs
         @test fun isa SciMLBase.OptimizationFunction
-        @test fun.f(x) ≈ -f(x)
+        @test SciMLBase.isinplace(fun)
+        @test fun.f(x, nothing) ≈ -f(x)
         ∇fx = similar(x)
         fun.grad(∇fx, x, nothing)
         @test ∇fx ≈ -∇f(x)

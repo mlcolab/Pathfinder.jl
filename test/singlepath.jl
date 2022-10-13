@@ -161,10 +161,11 @@ using Transducers
     end
     @testset "errors if no gradient provided" begin
         logp(x) = -sum(abs2, x) / 2
+        f(x, p) = -logp(x)
         init = randn(5)
-        prob = SciMLBase.OptimizationProblem(logp, init, nothing)
+        prob = SciMLBase.OptimizationProblem(f, init, nothing)
         @test_throws ArgumentError pathfinder(prob)
-        fun = SciMLBase.OptimizationFunction(logp, Optimization.AutoForwardDiff())
+        fun = SciMLBase.OptimizationFunction(f, Optimization.AutoForwardDiff())
         prob = SciMLBase.OptimizationProblem(fun, init, nothing)
         @test_throws ArgumentError pathfinder(prob)
     end
