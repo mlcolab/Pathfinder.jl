@@ -45,6 +45,7 @@ end
     x0 = randn(n)
     fun = Pathfinder.build_optim_function(f; ad_backend)
     prob = Pathfinder.build_optim_problem(fun, x0)
+    @test SciMLBase.isinplace(prob)
     @test prob isa SciMLBase.OptimizationProblem
     @test prob.f === fun
     @test prob.u0 == x0
