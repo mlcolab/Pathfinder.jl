@@ -53,7 +53,7 @@ function optimize_with_trace(
     fxs = typeof(fun.f(u0, nothing))[]
     ∇fxs = typeof(u0)[]
     _callback = _make_optimization_callback(
-        xs, fxs, ∇fxs, ∇f; progress_name, progress_id, callback, fail_on_nonfinite
+        xs, fxs, ∇fxs, ∇f; progress_name, progress_id, maxiters, callback, fail_on_nonfinite
     )
     sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
     return sol, OptimizationTrace(xs, fxs, ∇fxs)
