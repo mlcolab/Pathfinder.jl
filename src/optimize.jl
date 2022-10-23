@@ -51,14 +51,22 @@ function optimize_with_trace(
     xs = typeof(u0)[]
     fxs = typeof(fun.f(u0, nothing))[]
     ∇fxs = typeof(u0)[]
-    iteration = 0
-    function _callback(x, nfx, args...)
-        ret = callback !== nothing && callback(x, nfx, args...)
+    _callback = _make_optimization_callback(
+        xs, fxs, ∇fxs, ∇f; progress_name, progress_id, callback
+    )
+    sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
+    return sol, OptimizationTrace(xs, fxs, ∇fxs)
+end
 
+function _make_optimization_callback(
+    xs, fxs, ∇fxs, ∇f; progress_name, progress_id, maxiters, callback
+)
+    return function (x, nfx, args...)
+        ret = callback !== nothing && callback(x, nfx, args...)
+        iteration = length(xs)
         Base.@logmsg ProgressLogging.ProgressLevel progress_name progress =
             iteration / maxiters _id = progress_id
 
-        iteration += 1
         # some backends mutate x, so we must copy it
         push!(xs, copy(x))
         push!(fxs, -nfx)
@@ -68,8 +76,6 @@ function optimize_with_trace(
         push!(∇fxs, ∇f(x))
         return ret
     end
-    sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
-    return sol, OptimizationTrace(xs, fxs, ∇fxs)
 end
 
 struct OptimizationTrace{P,L}
