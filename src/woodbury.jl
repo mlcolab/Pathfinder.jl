@@ -43,7 +43,7 @@ struct WoodburyPDMat{
     TB<:AbstractMatrix{T},
     TD<:AbstractMatrix{T},
     TUA<:Union{Diagonal{T},UpperTriangular{T}},
-    TQ<:AbstractMatrix{T},
+    TQ, # wide type to support any Q
     TUC<:Union{Diagonal{T},UpperTriangular{T}},
 } <: PDMats.AbstractPDMat{T}
     A::TA
@@ -111,7 +111,16 @@ function LinearAlgebra.diag(W::WoodburyPDMat)
     return diag(W.A) + map(b -> dot(b, D, b), eachrow(W.B))
 end
 
-function LinearAlgebra.lmul!(W::WoodburyPDMat, x::StridedVecOrMat)
+# workaround for PDMats requiring `.dim` property only here
+# see https://github.com/JuliaStats/PDMats.jl/pull/170
+function Base.:+(a::WoodburyPDMat, b::LinearAlgebra.UniformScaling)
+    return a + PDMats.ScalMat(size(a, 1), b.λ)
+end
+function Base.:+(a::LinearAlgebra.UniformScaling, b::WoodburyPDMat)
+    return PDMats.ScalMat(size(b, 1), a.λ) + b
+end
+
+function LinearAlgebra.lmul!(W::WoodburyPDMat, x::AbstractVecOrMat)
     UA = W.UA
     UC = W.UC
     Q = W.Q
@@ -126,16 +135,18 @@ function LinearAlgebra.lmul!(W::WoodburyPDMat, x::StridedVecOrMat)
     return x
 end
 
-function LinearAlgebra.mul!(y::AbstractVector, W::WoodburyPDMat, x::StridedVecOrMat)
-    return lmul!(W, copyto!(y, x))
-end
-function LinearAlgebra.mul!(y::AbstractMatrix, W::WoodburyPDMat, x::StridedVecOrMat)
+function LinearAlgebra.mul!(y::AbstractVector, W::WoodburyPDMat, x::AbstractVecOrMat)
     return lmul!(W, copyto!(y, x))
 end
 
 function Base.:*(W::WoodburyPDMat, c::Real)
     c > 0 || return Matrix(W) * c
     return WoodburyPDMat(W.A * c, W.B * one(c), W.D * c)
+end
+
+function Base.size(W::WoodburyPDMat)
+    n = size(W.A, 1)
+    return (n, n)
 end
 
 PDMats.dim(W::WoodburyPDMat) = size(W.A, 1)
@@ -147,7 +158,7 @@ function PDMats.invquad(W::WoodburyPDMat, x::AbstractVector{T}) where {T}
     return @views sum(abs2, W.UC' \ v[1:k]) + sum(abs2, v[(k + 1):n])
 end
 
-function PDMats.invquad!(r::AbstractArray, W::WoodburyPDMat, x::StridedMatrix{T}) where {T}
+function PDMats.invquad!(r::AbstractArray, W::WoodburyPDMat, x::AbstractMatrix{T}) where {T}
     v = lmul!(W.Q', W.UA' \ x)
     k = minimum(size(W.B))
     @views ldiv!(W.UC', v[1:k, :])
@@ -155,7 +166,7 @@ function PDMats.invquad!(r::AbstractArray, W::WoodburyPDMat, x::StridedMatrix{T}
     return r
 end
 
-function PDMats.quad!(r::AbstractArray, W::WoodburyPDMat, x::StridedMatrix{T}) where {T}
+function PDMats.quad!(r::AbstractArray, W::WoodburyPDMat, x::AbstractMatrix{T}) where {T}
     v = lmul!(W.Q', W.UA * x)
     k = minimum(size(W.B))
     @views lmul!(W.UC, v[1:k, :])
@@ -171,7 +182,7 @@ function PDMats.quad(W::WoodburyPDMat, x::AbstractVector{T}) where {T}
 end
 
 function PDMats.unwhiten!(
-    r::StridedVecOrMat{T}, W::WoodburyPDMat, x::StridedVecOrMat{T}
+    r::AbstractVecOrMat{T}, W::WoodburyPDMat, x::AbstractVecOrMat{T}
 ) where {T}
     k = minimum(size(W.B))
     copyto!(r, x)
@@ -182,7 +193,7 @@ function PDMats.unwhiten!(
 end
 
 function invunwhiten!(
-    r::StridedVecOrMat{T}, W::WoodburyPDMat, x::StridedVecOrMat{T}
+    r::AbstractVecOrMat{T}, W::WoodburyPDMat, x::AbstractVecOrMat{T}
 ) where {T}
     k = minimum(size(W.B))
     copyto!(r, x)
@@ -194,12 +205,12 @@ end
 
 # adapted from https://github.com/JuliaStats/PDMats.jl/blob/master/src/utils.jl
 function colwise_sumsq!(r::AbstractArray, a::AbstractMatrix)
-    n = length(r)
-    @assert n == size(a, 2)
-    @inbounds for j in 1:n
+    eachindex(r) == axes(a, 2) ||
+        throw(DimensionMismatch("Inconsistent argument dimensions."))
+    for j in axes(a, 2)
         v = zero(eltype(a))
         @simd for i in axes(a, 1)
-            v += abs2(a[i, j])
+            @inbounds v += abs2(a[i, j])
         end
         r[j] = v
     end

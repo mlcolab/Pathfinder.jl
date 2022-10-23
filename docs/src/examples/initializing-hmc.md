@@ -86,6 +86,7 @@ To use DynamicHMC, we first need to transform our model to an unconstrained spac
 
 ```@example 1
 using DynamicHMC, LogDensityProblems, TransformVariables
+using TransformedLogDensities: TransformedLogDensity
 
 transform = as((σ=asℝ₊, α=asℝ, β=as(Array, J)))
 P = TransformedLogDensity(transform, model)

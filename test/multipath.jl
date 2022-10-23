@@ -110,8 +110,9 @@ using Transducers
     end
     @testset "errors if no gradient provided" begin
         logp(x) = -sum(abs2, x) / 2
+        f(x, p) = -logp(x)
         init = [randn(5) for _ in 1:10]
-        fun = SciMLBase.OptimizationFunction(logp, Optimization.AutoForwardDiff())
+        fun = SciMLBase.OptimizationFunction(f, Optimization.AutoForwardDiff())
         @test_throws ArgumentError multipathfinder(fun, 10; init)
     end
     @testset "errors if neither dim nor init valid" begin

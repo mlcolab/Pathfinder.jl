@@ -22,7 +22,8 @@ include("test_utils.jl")
     ]
     @testset "$name" for (name, fun) in funs
         @test fun isa SciMLBase.OptimizationFunction
-        @test fun.f(x) ≈ -f(x)
+        @test SciMLBase.isinplace(fun)
+        @test fun.f(x, nothing) ≈ -f(x)
         ∇fx = similar(x)
         fun.grad(∇fx, x, nothing)
         @test ∇fx ≈ -∇f(x)
@@ -44,6 +45,7 @@ end
     x0 = randn(n)
     fun = Pathfinder.build_optim_function(f; ad_backend)
     prob = Pathfinder.build_optim_problem(fun, x0)
+    @test SciMLBase.isinplace(prob)
     @test prob isa SciMLBase.OptimizationProblem
     @test prob.f === fun
     @test prob.u0 == x0
@@ -63,9 +65,12 @@ end
     prob = Pathfinder.build_optim_problem(fun, x0)
 
     optimizers = [
-        Optim.BFGS(), Optim.LBFGS(), Optim.ConjugateGradient(), NLopt.Opt(:LD_LBFGS, n)
+        "Optim.BFGS" => Optim.BFGS(),
+        "Optim.LBFGS" => Optim.LBFGS(),
+        "Optim.ConjugateGradient" => Optim.ConjugateGradient(),
+        "NLopt.Opt" => NLopt.Opt(:LD_LBFGS, n),
     ]
-    @testset "$(typeof(optimizer))" for optimizer in optimizers
+    @testset "$name" for (name, optimizer) in optimizers
         optim_sol, optim_trace = Pathfinder.optimize_with_trace(prob, optimizer)
         @test optim_sol isa SciMLBase.OptimizationSolution
         @test optim_trace isa Pathfinder.OptimizationTrace
