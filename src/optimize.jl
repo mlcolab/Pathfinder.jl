@@ -36,6 +36,7 @@ function optimize_with_trace(
     progress_id=nothing,
     maxiters=1_000,
     callback=nothing,
+    fail_on_nonfinite=true,
     kwargs...,
 )
     u0 = prob.u0
@@ -52,14 +53,14 @@ function optimize_with_trace(
     fxs = typeof(fun.f(u0, nothing))[]
     ∇fxs = typeof(u0)[]
     _callback = _make_optimization_callback(
-        xs, fxs, ∇fxs, ∇f; progress_name, progress_id, callback
+        xs, fxs, ∇fxs, ∇f; progress_name, progress_id, callback, fail_on_nonfinite
     )
     sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
     return sol, OptimizationTrace(xs, fxs, ∇fxs)
 end
 
 function _make_optimization_callback(
-    xs, fxs, ∇fxs, ∇f; progress_name, progress_id, maxiters, callback
+    xs, fxs, ∇fxs, ∇f; progress_name, progress_id, maxiters, callback, fail_on_nonfinite
 )
     return function (x, nfx, args...)
         ret = callback !== nothing && callback(x, nfx, args...)
@@ -73,7 +74,13 @@ function _make_optimization_callback(
         # NOTE: Optimization doesn't have an interface for accessing the gradient trace,
         # so we need to recompute it ourselves
         # see https://github.com/SciML/Optimization.jl/issues/149
-        push!(∇fxs, ∇f(x))
+        ∇fx = ∇f(x)
+        push!(∇fxs, ∇fx)
+
+        if fail_on_nonfinite && !ret
+            ret = (isnan(nfx) || nfx == -Inf || any(!isfinite, ∇fx))::Bool
+        end
+
         return ret
     end
 end
