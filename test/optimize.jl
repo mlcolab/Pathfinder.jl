@@ -53,12 +53,11 @@ end
 end
 
 @testset "_make_optimization_callback" begin
-    progress_name = "Optimizing"
-    progress_id = nothing
-    maxiters = 1_000
-    fail_on_nonfinite = true
-    x = randn(5)
-    @testset "fail_on_nonfinite" begin
+    @testset "callback return value" begin
+        progress_name = "Optimizing"
+        progress_id = nothing
+        maxiters = 1_000
+        x = randn(5)
         check_vals = [0.0, NaN, -Inf, Inf]
         @testset for fail_on_nonfinite in [true, false],
             fval in check_vals,
