@@ -52,6 +52,46 @@ end
     @test prob.p === nothing
 end
 
+@testset "_make_optimization_callback" begin
+    @testset "callback return value" begin
+        progress_name = "Optimizing"
+        progress_id = nothing
+        maxiters = 1_000
+        x = randn(5)
+        check_vals = [0.0, NaN, -Inf, Inf]
+        @testset for fail_on_nonfinite in [true, false],
+            fval in check_vals,
+            gval in check_vals,
+            cbfail in [true, false]
+
+            xs = Vector{Float64}[]
+            fxs = Float64[]
+            ∇fxs = Vector{Float64}[]
+            ∇f = function (x)
+                g = -x
+                g[end] = gval
+                return g
+            end
+            callback = (x, fx, args...) -> cbfail
+            cb = Pathfinder._make_optimization_callback(
+                xs,
+                fxs,
+                ∇fxs,
+                ∇f;
+                progress_name,
+                progress_id,
+                maxiters,
+                callback,
+                fail_on_nonfinite,
+            )
+            should_fail =
+                cbfail ||
+                (fail_on_nonfinite && (isnan(fval) || fval == Inf || !isfinite(gval)))
+            @test cb(x, -fval) == should_fail
+        end
+    end
+end
+
 @testset "optimize_with_trace" begin
     n = 10
     P = inv(rand_pd_mat(Float64, n))

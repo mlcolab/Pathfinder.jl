@@ -120,6 +120,9 @@ constructed using at most the previous `history_length` steps.
     the [Optimization.jl documentation](https://optimization.sciml.ai/stable) for details.
 - `ntries::Int=1_000`: Number of times to try the optimization, restarting if it fails. Before
     every restart, a new initial point is drawn using `init_sampler`.
+- `fail_on_nonfinite::Bool=true`: If `true`, optimization fails if the log-density is a
+    `NaN` or `Inf` or if the gradient is ever non-finite. If `nretries > 0`, then
+    optimization will be retried after reinitialization.
 - `kwargs...` : Remaining keywords are forwarded to
     [`Optimization.solve`](https://optimization.sciml.ai/stable/API/solve).
 
