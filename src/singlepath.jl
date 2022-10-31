@@ -191,6 +191,7 @@ function pathfinder(
     @unpack (
         itry,
         success,
+        optim_prob,
         optim_solution,
         optim_trace,
         fit_distributions,
@@ -225,7 +226,7 @@ function pathfinder(
         input,
         optimizer,
         rng,
-        optim_solution.prob,
+        optim_prob,
         logp,
         fit_distribution,
         draws,
@@ -263,7 +264,7 @@ function _pathfinder_try_until_succeed(
         progress_name = "Optimizing (try $itry)"
         result = _pathfinder(rng, _prob, logp; progress_name, kwargs...)
     end
-    return (; itry, result...)
+    return (; itry, optim_prob=_prob, result...)
 end
 
 function _pathfinder(
