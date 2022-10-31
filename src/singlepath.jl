@@ -226,7 +226,7 @@ function pathfinder(
         input,
         optimizer,
         rng,
-        optim_solution.prob,
+        optim_prob,
         logp,
         fit_distribution,
         draws,

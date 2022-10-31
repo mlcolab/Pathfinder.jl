@@ -115,7 +115,6 @@ end
         @test optim_sol isa SciMLBase.OptimizationSolution
         @test optim_trace isa Pathfinder.OptimizationTrace
         @test optim_trace.points[1] ≈ x0
-        @test optim_sol.prob.u0 ≈ x0
         @test optim_trace.points[end] ≈ μ
         @test optim_sol.u ≈ μ
         @test optim_trace.log_densities ≈ f.(optim_trace.points)
