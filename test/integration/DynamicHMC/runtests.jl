@@ -36,13 +36,13 @@ end
 
 function mean_and_mcse(f, θs)
     zs = map(f, θs)
-    ms = mean(zs)
-    ses = map(mcse, eachrow(reduce(hcat, zs)))
+    ms = mean(zs,dims=2)
+    ses = map(mcse, eachrow(zs))
     return ms, ses
 end
 
 function compare_estimates(f, xs1, xs2, α=0.05)
-    nparams = length(first(xs1))
+    nparams = first(size(xs1))
     α /= nparams  # bonferroni correction
     p = α / 2
     m1, s1 = mean_and_mcse(f, xs1)
@@ -117,7 +117,7 @@ end
                 reporter=NoProgressReport(),
             )
             @test result_hmc2.κ.M⁻¹ isa Diagonal
-            compare_estimates(identity, result_hmc2.chain, result_hmc1.chain)
+            compare_estimates(identity, result_hmc2.posterior_matrix, result_hmc1.posterior_matrix)
         end
 
         @testset "Initial point and metric" begin
@@ -133,7 +133,7 @@ end
                 reporter=NoProgressReport(),
             )
             @test result_hmc3.κ.M⁻¹ isa Symmetric
-            compare_estimates(identity, result_hmc3.chain, result_hmc1.chain)
+            compare_estimates(identity, result_hmc3.posterior_matrix, result_hmc1.posterior_matrix)
         end
 
         @testset "Initial point and final metric" begin
@@ -149,7 +149,7 @@ end
                 reporter=NoProgressReport(),
             )
             @test result_hmc4.κ.M⁻¹ === result_pf.fit_distribution.Σ
-            compare_estimates(identity, result_hmc4.chain, result_hmc1.chain)
+            compare_estimates(identity, result_hmc4.posterior_matrix, result_hmc1.posterior_matrix)
         end
     end
 end
