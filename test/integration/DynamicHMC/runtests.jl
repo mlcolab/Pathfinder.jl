@@ -36,7 +36,7 @@ end
 
 function mean_and_mcse(f, θs)
     zs = map(f, θs)
-    ms = mean(zs,dims=2)
+    ms = mean(zs; dims=2)
     ses = map(mcse, eachrow(zs))
     return ms, ses
 end
