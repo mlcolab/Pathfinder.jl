@@ -72,7 +72,7 @@ function plot_pathfinder_trace(
         trace = trace_points[1:(i + 1)]
         dist = trace_dists[i + 1]
         plot!(
-            first.(trace), last.(trace);
+            first.(trace), getindex.(trace, 2);
             seriestype=:scatterpath, color=:black, msw=0, label="trace",
         )
         covellipse!(
