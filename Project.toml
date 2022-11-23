@@ -1,7 +1,7 @@
 name = "Pathfinder"
 uuid = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
 authors = ["Seth Axen <seth.axen@gmail.com> and contributors"]
-version = "0.5.2"
+version = "0.5.3"
 
 [deps]
 AbstractDifferentiation = "c29ec348-61ec-40c8-8164-b8c60e9d9f3d"
@@ -36,7 +36,7 @@ Optim = "1.4"
 Optimization = "3"
 OptimizationOptimJL = "0.1"
 PDMats = "0.11"
-PSIS = "0.2, 0.3, 0.4, 0.5"
+PSIS = "0.2, 0.3, 0.4, 0.5, 0.6"
 ProgressLogging = "0.1.4"
 Requires = "1"
 SciMLBase = "1.8.1"
