@@ -1,6 +1,7 @@
 using DynamicHMC,
     LinearAlgebra,
     LogDensityProblems,
+    LogDensityProblemsAD,
     MCMCDiagnosticTools,
     Optim,
     Pathfinder,

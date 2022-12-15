@@ -85,7 +85,7 @@ nothing # hide
 To use DynamicHMC, we first need to transform our model to an unconstrained space using [TransformVariables.jl](https://tamaspapp.eu/TransformVariables.jl/stable/) and wrap it in a type that implements the [LogDensityProblems.jl](https://github.com/tpapp/LogDensityProblems.jl) interface:
 
 ```@example 1
-using DynamicHMC, LogDensityProblems, TransformVariables
+using DynamicHMC, LogDensityProblems, LogDensityProblemsAD, TransformVariables
 using TransformedLogDensities: TransformedLogDensity
 
 transform = as((σ=asℝ₊, α=asℝ, β=as(Array, J)))
