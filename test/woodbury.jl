@@ -24,7 +24,7 @@ function test_decompositions(W)
     C = I + R * W.D * R'
     UC = cholesky(Symmetric(C)).U
     @test W.UA ≈ UA
-    @test W.Q ≈ Q
+    @test Matrix(W.Q) ≈ Matrix(Q)
     @test W.UC ≈ UC
 end
 

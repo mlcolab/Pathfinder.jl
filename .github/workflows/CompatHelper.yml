@@ -12,12 +12,7 @@ jobs:
       - name: CompatHelper.main()
         run: |
           using CompatHelper
-          subdirs = [
-              "",
-              "test/integration/AdvancedHMC",
-              "test/integration/DynamicHMC",
-              "docs",
-            ]
+          subdirs = [""; "docs"; readdir("test/integration"; join=true)]
           CompatHelper.main(; subdirs)
         shell: julia --color=yes {0}
         env:
