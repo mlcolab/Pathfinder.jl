@@ -7,14 +7,15 @@ jobs:
   CompatHelper:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - name: Pkg.add("CompatHelper")
         run: julia -e 'using Pkg; Pkg.add("CompatHelper")'
       - name: CompatHelper.main()
         run: |
           using CompatHelper
-          subdirs = [""; "docs"; readdir("test/integration"; join=true)]
+          subdirs = ["", "docs", readdir("test/integration"; join=true)...]
           CompatHelper.main(; subdirs)
         shell: julia --color=yes {0}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COMPATHELPER_PRIV: ${{ secrets.COMPATHELPER_KEY }}
+          COMPATHELPER_PRIV: ${{ secrets.DOCUMENTER_KEY }}
