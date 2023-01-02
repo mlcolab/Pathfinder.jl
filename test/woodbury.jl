@@ -3,6 +3,8 @@ using Pathfinder:
     WoodburyPDMat,
     WoodburyPDFactorization,
     WoodburyPDRightFactor,
+    pdfactorize,
+    pdunfactorize
 using PDMats
 using Test
 
@@ -109,6 +111,42 @@ test_factorization(W::WoodburyPDMat) = test_factorization(W.A, W.B, W.D, W.F)
         end
     end
 
+    @testset "pdfactorize" begin
+        @testset "A $Atype, D $Dtype eltype $T, n=$n" for T in (Float64, Float32),
+            Atype in (:dense, :diag),
+            Dtype in (:dense, :diag),
+            n in (5, 10)
+
+            m = 8
+            A = Atype === :diag ? rand_pd_diag_mat(T, n) : rand_pd_mat(T, n)
+            B = randn(T, n, m)
+            D = Dtype === :diag ? rand_pd_diag_mat(T, m) : rand_pd_mat(T, m)
+            Wmat = A + B * D * B'
+            F = @inferred WoodburyPDFactorization{T} pdfactorize(A, B, D)
+            test_factorization(A, B, D, F)
+
+            W = WoodburyPDMat(A, B, D)
+            @test pdfactorize(W) === W.F
+        end
+    end
+
+    @testset "pdunfactorize" begin
+        @testset "A $Atype, D $Dtype eltype $T" for T in (Float64, Float32),
+            Atype in (:dense, :diag),
+            Dtype in (:dense, :diag),
+            n in (5, 10)
+
+            k = 8
+            A = Atype === :diag ? rand_pd_diag_mat(T, n) : rand_pd_mat(T, n)
+            B = randn(T, n, k)
+            D = Dtype === :diag ? rand_pd_diag_mat(T, k) : rand_pd_mat(T, k)
+            Wmat = A + B * D * B'
+            F = pdfactorize(A, B, D)
+            A′, B′, D′ = @inferred pdunfactorize(F)
+            @test A′ ≈ A
+            @test A′ + B′ * D′ * B′' ≈ Wmat
+        end
+    end
 end
 
 @testset "WoodburyPDMat" begin

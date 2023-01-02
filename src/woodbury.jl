@@ -171,6 +171,58 @@ function LinearAlgebra.logabsdet(R::WoodburyPDRightFactor)
 end
 
 """
+    pdfactorize(A, B, D) -> WoodburyPDFactorization
+
+Factorize the positive definite matrix ``W = A + B D B^\\mathrm{T}``.
+
+The result is the "square root" factorization `(L, R)`, where ``W = L R`` and
+``L = R^\\mathrm{T}``.
+
+Let ``U^\\mathrm{T} U = A`` be the Cholesky decomposition of ``A``, and let
+``Q X = U^{-\\mathrm{T}} B`` be a thin QR decomposition. Define ``C = I + XDX^\\mathrm{T}``,
+with the Cholesky decomposition ``V^\\mathrm{T} V = C``. Then, ``W = R^\\mathrm{T} R``,
+where
+```math
+R = \\begin{pmatrix} U & 0 \\\\ 0 & I \\end{pmatrix} Q^\\mathrm{T} V.
+```
+
+The positive definite requirement is equivalent to the requirement that both ``A`` and
+``C`` are positive definite.
+
+For a derivation of this decomposition for the special case of diagonal ``A``, see
+appendix A of [^Zhang2021].
+
+[^Zhang2021]: Lu Zhang, Bob Carpenter, Andrew Gelman, Aki Vehtari (2021).
+                Pathfinder: Parallel quasi-Newton variational inference.
+                arXiv: [2108.03782](https://arxiv.org/abs/2108.03782) [stat.ML]
+
+See [`pdunfactorize`](@ref), [`WoodburyPDRightFactor`](@ref), [`WoodburyPDMat`](@ref)
+"""
+function pdfactorize(A::AbstractMatrix, B::AbstractMatrix, D::AbstractMatrix)
+    cholA = cholesky(Symmetric(A))
+    U = cholA.U
+    Q, R = qr(U' \ B)
+    V = cholesky(Symmetric(muladd(R, D * R', I))).U
+    return WoodburyPDFactorization(U, Q, V)
+end
+
+"""
+    pdunfactorize(F::WoodburyPDFactorization) -> (A, B, D)
+
+Perform a reverse operation to [`pdfactorize`](@ref).
+
+Note that this function does not compute the inverse of `pdfactorize`. It only computes
+matrices that produce the same matrix ``W = A + B D B^\\mathrm{T}`` as for the inputs to
+`pdfactorize`.
+"""
+function pdunfactorize(F::WoodburyPDFactorization)
+    A = F.U' * F.U
+    B = F.U' * Matrix(F.Q)
+    D = muladd(F.V', F.V, -I)
+    return A, B, D
+end
+
+"""
     WoodburyPDMat <: PDMats.AbstractPDMat
 
 Lazily represents a real positive definite (PD) matrix as an update to a full-rank PD matrix.
