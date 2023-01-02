@@ -58,27 +58,11 @@ end
     D = exp(Symmetric(randn(2, 2)))
     M⁻¹ = Pathfinder.WoodburyPDMat(A, B, D)
 
-    @testset "Pathfinder.WoodburyLeftInvFactor" begin
-        L = Pathfinder.WoodburyLeftInvFactor(M⁻¹)
-        v = randn(5)
-        V = randn(5, 2)
-        @test L.A === M⁻¹
-        @test size(L) === size(M⁻¹)
-        Lmat = @inferred Matrix(L)
-        @test Lmat isa Matrix
-        @test Lmat * Lmat' ≈ inv(M⁻¹)
-        @test L * v ≈ Lmat * v
-        @test L * V ≈ Lmat * V
-        @test AbstractMatrix{Float32}(L) isa Pathfinder.WoodburyLeftInvFactor{Float32}
-        for i in axes(L, 1), j in axes(L, 2)
-            @test L[i, j] ≈ Lmat[i, j]
-        end
-    end
-
     @testset "DynamicHMC.GaussianKineticEnergy" begin
         κ = DynamicHMC.GaussianKineticEnergy(M⁻¹)
         @test κ.M⁻¹ === M⁻¹
-        @test κ.W === Pathfinder.WoodburyLeftInvFactor(M⁻¹)
+        @test κ.W isa Transpose{T,<:Pathfinder.WoodburyPDRightFactor{T}} where {T}
+        @test κ.W * κ.W' ≈ inv(M⁻¹)
         κdense = DynamicHMC.GaussianKineticEnergy(Symmetric(Matrix(M⁻¹)))
         κdense2 = DynamicHMC.GaussianKineticEnergy(Symmetric(Matrix(M⁻¹)), Matrix(κ.W))
         p = randn(5)
@@ -118,7 +102,9 @@ end
                 reporter=NoProgressReport(),
             )
             @test result_hmc2.κ.M⁻¹ isa Diagonal
-            compare_estimates(identity, result_hmc2.posterior_matrix, result_hmc1.posterior_matrix)
+            compare_estimates(
+                identity, result_hmc2.posterior_matrix, result_hmc1.posterior_matrix
+            )
         end
 
         @testset "Initial point and metric" begin
@@ -134,7 +120,9 @@ end
                 reporter=NoProgressReport(),
             )
             @test result_hmc3.κ.M⁻¹ isa Symmetric
-            compare_estimates(identity, result_hmc3.posterior_matrix, result_hmc1.posterior_matrix)
+            compare_estimates(
+                identity, result_hmc3.posterior_matrix, result_hmc1.posterior_matrix
+            )
         end
 
         @testset "Initial point and final metric" begin
@@ -150,7 +138,9 @@ end
                 reporter=NoProgressReport(),
             )
             @test result_hmc4.κ.M⁻¹ === result_pf.fit_distribution.Σ
-            compare_estimates(identity, result_hmc4.posterior_matrix, result_hmc1.posterior_matrix)
+            compare_estimates(
+                identity, result_hmc4.posterior_matrix, result_hmc1.posterior_matrix
+            )
         end
     end
 end
