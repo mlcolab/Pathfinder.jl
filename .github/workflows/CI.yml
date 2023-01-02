@@ -29,11 +29,7 @@ jobs:
           - x64
         num_threads:
           - 1
-        include:
-          - version: '1'
-            os: ubuntu-latest
-            arch: x64
-            num_threads: 2
+          - 2
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
