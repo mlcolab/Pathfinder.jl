@@ -1,12 +1,11 @@
 module DynamicHMCExt
 
+using PDMats: PDMats
 if isdefined(Base, :get_extension)
     using Pathfinder: Pathfinder
-    using PDMats: PDMats
     using DynamicHMC: DynamicHMC
 else  # using Requires
     using ..Pathfinder: Pathfinder
-    using ..PDMats: PDMats
     using ..DynamicHMC: DynamicHMC
 end
 
