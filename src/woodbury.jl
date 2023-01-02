@@ -199,7 +199,7 @@ appendix A of [^Zhang2021].
 See [`pdunfactorize`](@ref), [`WoodburyPDRightFactor`](@ref), [`WoodburyPDMat`](@ref)
 """
 function pdfactorize(A::AbstractMatrix, B::AbstractMatrix, D::AbstractMatrix)
-    cholA = cholesky(Symmetric(A))
+    cholA = cholesky(A isa Diagonal ? A : Symmetric(A))
     U = cholA.U
     Q, R = qr(U' \ B)
     V = cholesky(Symmetric(muladd(R, D * R', I))).U
