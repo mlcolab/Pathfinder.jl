@@ -1,31 +1,114 @@
 using LinearAlgebra
-using Pathfinder: WoodburyPDMat
+using Pathfinder:
+    WoodburyPDMat,
+    WoodburyPDFactorization,
+    WoodburyPDRightFactor,
 using PDMats
 using Test
 
 include("test_utils.jl")
 
-function decompose(W)
-    n, m = size(W.B)
-    k = min(n, m)
-    UA = W.UA
-    Q = W.Q
-    UC = W.UC
-    X = zeros(eltype(UC), n, n)
-    X[diagind(X)] .= true
-    X[1:k, 1:k] .= UC'
-    T = UA' * Q * X
-    return T
+function test_factorization(A, B, D, F)
+    A′, B′, D′ = pdunfactorize(F)
+    @test A′ ≈ A
+    @test A′ + B′ * D′ * B′' ≈ A + B * D * B'
 end
+test_factorization(W::WoodburyPDMat) = test_factorization(W.A, W.B, W.D, W.F)
 
-function test_decompositions(W)
-    UA = cholesky(W.A).U
-    Q, R = qr(UA' \ W.B)
-    C = I + R * W.D * R'
-    UC = cholesky(Symmetric(C)).U
-    @test W.UA ≈ UA
-    @test Matrix(W.Q) ≈ Matrix(Q)
-    @test W.UC ≈ UC
+@testset "Woodbury factorization" begin
+    @testset "WoodburyPDRightFactor" begin
+        @testset "T=$T, n=$n" for T in (Float64, Float32), n in (5, 10)
+            m = 8
+            k = min(n, m)
+            U = cholesky(rand_pd_mat(T, n)).U
+            Q = qr(randn(T, n, k)).Q
+            V = cholesky(rand_pd_mat(T, k)).U
+            if n > k
+                p = max(n - k, 0)
+                Rmat = [V zeros(T, k, p); zeros(T, p, k) I(p)] * Q' * U
+            else
+                Rmat = V * Q' * U
+            end
+            R = @inferred WoodburyPDRightFactor(U, Q, V)
+            @test R isa AbstractMatrix{T}
+            @test transpose(transpose(R)) === R
+            @test adjoint(adjoint(R)) === R
+            @test @inferred(Matrix(R)) ≈ Rmat
+            @test @inferred(Matrix(R')) ≈ Rmat'
+            @test Matrix{BigFloat}(R) isa Matrix{BigFloat}
+            @test @inferred(copy(R)) isa Matrix
+            @test copy(R) ≈ Rmat
+            Rinv = @inferred inv(R)
+            @test Rinv isa Transpose{T,<:WoodburyPDRightFactor{T}}
+            @test Matrix(Rinv) ≈ inv(Rmat)
+            for i in 1:n, j in 1:k
+                @test R[i, j] ≈ Rmat[i, j]
+            end
+            @testset for (Z, Zmat) in
+                         zip([R, R', Rinv, Rinv'], [Rmat, Rmat', inv(Rmat), inv(Rmat')]),
+                sz in [(n,), (n, 2)]
+
+                x = randn(T, sz...)
+                @test Z * x ≈ Zmat * x
+                @test Z' * x ≈ Zmat' * x
+                @test Z \ x ≈ Zmat \ x
+                @test Z' \ x ≈ Zmat' \ x
+                @test mul!(similar(x), Z, x) ≈ Zmat * x
+                @test lmul!(Z, copy(x)) ≈ Zmat * x
+                @test ldiv!(Z, copy(x)) ≈ Zmat \ x
+            end
+            @test det(R) ≈ det(Rmat)
+            @test logabsdet(R)[1] ≈ logabsdet(Rmat)[1]
+            @test logabsdet(R)[2] == logabsdet(Rmat)[2]
+        end
+    end
+
+    @testset "WoodburyPDFactorization" begin
+        @testset "T=$T, n=$n" for T in (Float64, Float32), n in (5, 10)
+            m = 8
+            k = min(n, m)
+            U = cholesky(rand_pd_mat(T, n)).U
+            Q = qr(randn(T, n, k)).Q
+            V = cholesky(rand_pd_mat(T, k)).U
+            if n > k
+                p = max(n - k, 0)
+                Rmat = [V zeros(T, k, p); zeros(T, p, k) I(p)] * Q' * U
+            else
+                Rmat = V * Q' * U
+            end
+            Fmat = Rmat' * Rmat
+            F = @inferred WoodburyPDFactorization(U, Q, V)
+            @test F isa LinearAlgebra.Factorization{T}
+            @test transpose(F) === F
+            @test adjoint(F) === F
+            @test propertynames(F) == (:L, :R)
+            @test propertynames(F, true) == (:L, :R, :U, :Q, :V)
+            L, R = F
+            @test R isa WoodburyPDRightFactor{T}
+            @test L isa Transpose{T,<:WoodburyPDRightFactor{T}}
+            @test R == F.R
+            @test L == F.L == R'
+            @test @inferred(Matrix(F)) ≈ Fmat
+            @test Matrix{BigFloat}(F) isa Matrix{BigFloat}
+            Finv = @inferred inv(F)
+            @test Finv isa WoodburyPDFactorization{T}
+            @test Matrix(Finv) ≈ inv(Fmat)
+            @test sprint(show, "text/plain", F) ==
+                (summary(F) * "\nR factor:\n" * sprint(show, "text/plain", F.R))
+            @testset for (Z, Zmat) in zip([F, inv(F)], [Fmat, inv(Fmat)]),
+                sz in [(n,), (n, 2)]
+
+                x = randn(T, sz...)
+                @test lmul!(Z, copy(x)) ≈ Zmat * x
+                @test ldiv!(Z, copy(x)) ≈ Zmat \ x
+            end
+            @test det(F) ≈ det(Fmat)
+            @test logabsdet(F)[1] ≈ logabsdet(Fmat)[1]
+            @test logabsdet(F)[2] == logabsdet(Fmat)[2]
+            @test logdet(F) ≈ logdet(Fmat)
+        end
+    end
+
 end
 
 @testset "WoodburyPDMat" begin

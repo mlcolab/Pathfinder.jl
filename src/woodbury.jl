@@ -3,6 +3,174 @@
 # PDMatsExtras.WoodburyPDMat
 
 """
+    WoodburyPDFactorization{T,F} <: Factorization{T}
+
+A "square root" factorization of a positive definite Woodbury matrix.
+
+See [`pdfactorize`](@ref), [`WoodburyPDRightFactor`](@ref), [`WoodburyPDMat`](@ref).
+"""
+struct WoodburyPDFactorization{
+    T<:Real,
+    TU<:Union{Diagonal{T},LinearAlgebra.AbstractTriangular{T}},
+    TQ, # wide type to support any Q
+    TV<:Union{Diagonal{T},LinearAlgebra.AbstractTriangular{T}},
+} <: Factorization{T}
+    U::TU
+    Q::TQ
+    V::TV
+end
+
+function Base.getproperty(F::WoodburyPDFactorization, s::Symbol)
+    if s === :R
+        return WoodburyPDRightFactor(getfield(F, :U), getfield(F, :Q), getfield(F, :V))
+    elseif s === :L
+        return transpose(
+            WoodburyPDRightFactor(getfield(F, :U), getfield(F, :Q), getfield(F, :V))
+        )
+    else
+        return getfield(F, s)
+    end
+end
+
+function Base.propertynames(F::WoodburyPDFactorization, private::Bool=false)
+    return (:L, :R, (private ? fieldnames(typeof(F)) : ())...)
+end
+
+Base.iterate(F::WoodburyPDFactorization) = (F.L, Val(:R))
+Base.iterate(F::WoodburyPDFactorization, ::Val{:R}) = (F.R, Val(:done))
+Base.iterate(F::WoodburyPDFactorization, ::Val{:done}) = nothing
+
+Base.size(F::WoodburyPDFactorization, i::Int...) = size(F.U, i...)
+
+function Base.Matrix{S}(F::WoodburyPDFactorization{T}) where {S,T}
+    return convert(Matrix{S}, lmul!(F.L, Matrix{T}(F.R)))
+end
+Base.Matrix(F::WoodburyPDFactorization{T}) where {T} = Matrix{T}(F)
+
+function Base.inv(F::WoodburyPDFactorization)
+    return WoodburyPDFactorization(inv(F.U'), F.Q, inv(F.V'))
+end
+
+function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, F::WoodburyPDFactorization)
+    summary(io, F)
+    println(io)
+    println(io, "R factor:")
+    return Base.show(io, mime, F.R)
+end
+
+LinearAlgebra.transpose(F::WoodburyPDFactorization) = F
+LinearAlgebra.adjoint(F::WoodburyPDFactorization) = F
+
+function LinearAlgebra.lmul!(F::WoodburyPDFactorization, x::StridedVecOrMat)
+    lmul!(F.R, x)
+    lmul!(F.L, x)
+    return x
+end
+
+function LinearAlgebra.ldiv!(F::WoodburyPDFactorization, x::StridedVecOrMat)
+    ldiv!(F.L, x)
+    ldiv!(F.R, x)
+    return x
+end
+
+LinearAlgebra.det(F::WoodburyPDFactorization) = (det(F.U) * det(F.V))^2
+function LinearAlgebra.logabsdet(F::WoodburyPDFactorization)
+    l = 2 * (logdet(F.U) + logdet(F.V))
+    return (l, one(l))
+end
+
+"""
+    WoodburyPDRightFactor{T,TA,Q,TC} <: AbstractMatrix{T}
+
+The right factor ``R`` of a [`WoodburyPDFactorization`](@ref).
+"""
+struct WoodburyPDRightFactor{
+    T<:Real,
+    TU<:Union{Diagonal{T},LinearAlgebra.AbstractTriangular{T}},
+    TQ, # wide type to support any Q
+    TV<:Union{Diagonal{T},LinearAlgebra.AbstractTriangular{T}},
+} <: AbstractMatrix{T}
+    U::TU
+    Q::TQ
+    V::TV
+end
+
+const WoodburyPDLeftFactor{T,U,Q,V} = LinearAlgebra.AdjOrTrans{
+    T,WoodburyPDRightFactor{T,U,Q,V}
+}
+
+Base.size(R::WoodburyPDRightFactor, dims::Int...) = size(R.U, dims...)
+
+function Base.Matrix{S}(R::WoodburyPDRightFactor{T}) where {S,T}
+    return convert(Matrix{S}, lmul!(R, Matrix{T}(I, size(R))))
+end
+
+Base.copy(R::WoodburyPDRightFactor) = Matrix(R)
+
+Base.getindex(R::WoodburyPDRightFactor, i::Int, j::Int) = getindex(copy(R), i, j)
+
+function Base.inv(R::WoodburyPDRightFactor)
+    return transpose(WoodburyPDRightFactor(inv(R.U'), R.Q, inv(R.V')))
+end
+
+function LinearAlgebra.mul!(
+    r::StridedVecOrMat{T}, R::WoodburyPDRightFactor{T}, x::StridedVecOrMat{T}
+) where {T}
+    copyto!(r, x)
+    return lmul!(R, copyto!(r, x))
+end
+
+function Base.:*(R::WoodburyPDRightFactor, x::StridedVecOrMat)
+    T = Base.promote_eltype(R, x)
+    y = copyto!(similar(x, T), x)
+    return lmul!(R, y)
+end
+
+function LinearAlgebra.lmul!(R::WoodburyPDRightFactor, x::StridedVecOrMat)
+    k = min(size(R.U, 1), size(R.V, 1))
+    lmul!(R.U, x)
+    lmul!(R.Q', x)
+    @views lmul!(R.V, x isa AbstractVector ? x[1:k] : x[1:k, :])
+    return x
+end
+function LinearAlgebra.lmul!(L::WoodburyPDLeftFactor, x::StridedVecOrMat)
+    R = parent(L)
+    k = min(size(R.U, 1), size(R.V, 1))
+    @views lmul!(R.V', x isa AbstractVector ? x[1:k] : x[1:k, :])
+    lmul!(R.Q, x)
+    lmul!(R.U', x)
+    return x
+end
+
+function Base.:\(F::Union{WoodburyPDLeftFactor,WoodburyPDRightFactor}, x::StridedVecOrMat)
+    T = Base.promote_eltype(F, x)
+    y = copyto!(similar(x, T), x)
+    return ldiv!(F, y)
+end
+
+function LinearAlgebra.ldiv!(R::WoodburyPDRightFactor, x::StridedVecOrMat)
+    k = min(size(R.U, 1), size(R.V, 1))
+    @views ldiv!(R.V, x isa AbstractVector ? x[1:k] : x[1:k, :])
+    lmul!(R.Q, x)
+    ldiv!(R.U, x)
+    return x
+end
+function LinearAlgebra.ldiv!(L::WoodburyPDLeftFactor, x::StridedVecOrMat)
+    R = parent(L)
+    k = min(size(R.U, 1), size(R.V, 1))
+    ldiv!(R.U', x)
+    lmul!(R.Q', x)
+    @views ldiv!(R.V', x isa AbstractVector ? x[1:k] : x[1:k, :])
+    return x
+end
+
+LinearAlgebra.det(R::WoodburyPDRightFactor) = det(R.V) * det(R.Q) * det(R.U)
+function LinearAlgebra.logabsdet(R::WoodburyPDRightFactor)
+    lQ, s = logabsdet(R.Q)
+    return (logdet(R.V) + lQ + logdet(R.U), s)
+end
+
+"""
     WoodburyPDMat <: PDMats.AbstractPDMat
 
 Lazily represents a real positive definite (PD) matrix as an update to a full-rank PD matrix.
