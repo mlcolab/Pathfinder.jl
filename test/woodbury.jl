@@ -150,17 +150,18 @@ test_factorization(W::WoodburyPDMat) = test_factorization(W.A, W.B, W.D, W.F)
 end
 
 @testset "WoodburyPDMat" begin
-    @testset "A $Atype, D $Dtype eltype $T" for T in (Float64, Float32),
+    @testset "A $Atype, D $Dtype eltype $T, n=$n" for T in (Float64, Float32),
         Atype in (:dense, :diag),
         Dtype in (:dense, :diag),
-        n in (5, 10),
-        k in (5, 10)
+        n in (5, 10)
 
+        m = 8
         A = Atype === :diag ? rand_pd_diag_mat(T, n) : rand_pd_mat(T, n)
-        B = randn(T, n, k)
-        D = Dtype === :diag ? rand_pd_diag_mat(T, k) : rand_pd_mat(T, k)
+        B = randn(T, n, m)
+        D = Dtype === :diag ? rand_pd_diag_mat(T, m) : rand_pd_mat(T, m)
         W = @inferred WoodburyPDMat{T} WoodburyPDMat(A, B, D)
         Wmat = A + B * D * B'
+        invWmat = inv(Wmat)
 
         @testset "basic" begin
             @test eltype(W) === T
@@ -171,25 +172,28 @@ end
             @test Matrix(W) ≈ Wmat
             @test W[3, 5] ≈ Wmat[3, 5]
             @test W ≈ Wmat
-            test_decompositions(W)
-            M = decompose(W)
-            @test M * M' ≈ Wmat
             @test WoodburyPDMat(A, B, big.(D)) isa WoodburyPDMat{BigFloat}
             @test Matrix(WoodburyPDMat(A, B, big.(D))) ≈ Wmat
             Wbig = convert(AbstractMatrix{BigFloat}, W)
             @test Wbig isa WoodburyPDMat{BigFloat}
             @test Wbig ≈ Wmat
-            test_decompositions(W)
             @test convert(AbstractMatrix{T}, W) === W
+            @test W.F isa WoodburyPDFactorization
+            @test Matrix(W.F) ≈ Wmat
+            test_factorization(W)
+        end
+
+        @testset "factorize" begin
+            @test factorize(W) === W.F
         end
 
         @testset "inv" begin
-            invW = @inferred WoodburyPDMat{T} inv(W)
+            invW = @inferred inv(W)
             @test eltype(invW) === T
-            invWmat = inv(Matrix(W))
             @test invW isa WoodburyPDMat
             @test invW ≈ invWmat
-            test_decompositions(invW)
+            @test Matrix(invW.F) ≈ invWmat
+            test_factorization(invW)
         end
 
         @testset "determinant" begin
@@ -209,7 +213,7 @@ end
         end
 
         @testset "+ ::UniformScaling" begin
-            c = randn(T) * I
+            c = rand(T) * I
             @test W + c ≈ Wmat + c
             @test c + W ≈ c + Wmat
         end
@@ -242,8 +246,8 @@ end
             @inferred Union{WoodburyPDMat{Float64},Matrix{Float64}} W * 5.0
             @test W * 5.0 isa WoodburyPDMat
             @test W * 5.0 ≈ Wmat * 5
-            test_decompositions(W * 5.0)
-            test_decompositions(W * 3)
+            test_factorization(W * 5.0)
+            test_factorization(W * 3)
             @test W * -2 isa Matrix
             @test W * -2 ≈ Wmat * -2
 
@@ -259,23 +263,23 @@ end
         end
 
         @testset "unwhiten" begin
-            M = decompose(W)
+            L, _ = factorize(W)
 
             x = randn(T, n)
-            @test @inferred(unwhiten(W, x)) ≈ M * x
+            @test @inferred(unwhiten(W, x)) ≈ L * x
 
             X = randn(T, n, 100)
-            @test @inferred(unwhiten(W, X)) ≈ M * X
+            @test @inferred(unwhiten(W, X)) ≈ L * X
         end
 
         @testset "invunwhiten!" begin
-            M = decompose(W)
+            _, R = factorize(W)
 
             x = randn(T, n)
-            @test @inferred(Pathfinder.invunwhiten!(similar(x), W, x)) ≈ M' \ x
+            @test @inferred(Pathfinder.invunwhiten!(similar(x), W, x)) ≈ R \ x
 
             X = randn(T, n, 100)
-            @test @inferred(Pathfinder.invunwhiten!(similar(X), W, X)) ≈ M' \ X
+            @test @inferred(Pathfinder.invunwhiten!(similar(X), W, X)) ≈ R \ X
         end
 
         @testset "PDMats.quad" begin
