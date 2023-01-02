@@ -14,12 +14,14 @@ using PDMats: PDMats
 using ProgressLogging: ProgressLogging
 using PSIS: PSIS
 using Random
-using Requires: Requires
 using SciMLBase: SciMLBase
 using Statistics: Statistics
 using StatsBase: StatsBase
 using Transducers: Transducers
 using UnPack: @unpack
+if !isdefined(Base, :get_extension)
+    using Requires: Requires
+end
 
 export PathfinderResult, MultiPathfinderResult
 export pathfinder, multipathfinder
@@ -45,14 +47,16 @@ include("singlepath.jl")
 include("multipath.jl")
 
 function __init__()
-    Requires.@require DynamicHMC = "bbc10e6e-7c05-544b-b16e-64fede858acb" begin
-        include("integration/dynamichmc.jl")
-    end
     Requires.@require AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d" begin
         include("integration/advancedhmc.jl")
     end
-    Requires.@require Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0" begin
-        include("integration/turing.jl")
+    @static if !isdefined(Base, :get_extension)
+        Requires.@require DynamicHMC = "bbc10e6e-7c05-544b-b16e-64fede858acb" begin
+            include("../ext/DynamicHMCExt.jl")
+        end
+        Requires.@require Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0" begin
+            include("../ext/TuringExt.jl")
+        end
     end
 end
 
