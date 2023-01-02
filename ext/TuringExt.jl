@@ -1,11 +1,20 @@
 module TuringExt
 
-using Accessors: Accessors
-using DynamicPPL: DynamicPPL
-using MCMCChains: MCMCChains
-using Pathfinder: Pathfinder
-using Random: Random
-using Turing: Turing
+if isdefined(Base, :get_extension)
+    using Accessors: Accessors
+    using DynamicPPL: DynamicPPL
+    using MCMCChains: MCMCChains
+    using Pathfinder: Pathfinder
+    using Random: Random
+    using Turing: Turing
+else  # using Requires
+    using ..Accessors: Accessors
+    using ..DynamicPPL: DynamicPPL
+    using ..MCMCChains: MCMCChains
+    using ..Pathfinder: Pathfinder
+    using ..Random: Random
+    using ..Turing: Turing
+end
 
 # utilities for working with Turing model parameter names using only the DynamicPPL API
 
