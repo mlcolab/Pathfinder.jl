@@ -196,7 +196,7 @@ appendix A of [^Zhang2021].
                 Pathfinder: Parallel quasi-Newton variational inference.
                 arXiv: [2108.03782](https://arxiv.org/abs/2108.03782) [stat.ML]
 
-See [`pdunfactorize`](@ref), [`WoodburyPDRightFactor`](@ref), [`WoodburyPDMat`](@ref)
+See [`pdunfactorize`](@ref), [`WoodburyPDFactorization`](@ref), [`WoodburyPDMat`](@ref)
 """
 function pdfactorize(A::AbstractMatrix, B::AbstractMatrix, D::AbstractMatrix)
     cholA = cholesky(A isa Diagonal ? A : Symmetric(A))
