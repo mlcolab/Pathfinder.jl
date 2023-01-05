@@ -56,6 +56,7 @@ test_factorization(W::WoodburyPDMat) = test_factorization(W.A, W.B, W.D, W.F)
                 @test Z \ x ≈ Zmat \ x
                 @test Z' \ x ≈ Zmat' \ x
                 @test mul!(similar(x), Z, x) ≈ Zmat * x
+                @test mul!(similar(x), Z', x) ≈ Zmat' * x
                 @test lmul!(Z, copy(x)) ≈ Zmat * x
                 @test ldiv!(Z, copy(x)) ≈ Zmat \ x
             end
@@ -230,6 +231,18 @@ end
             @test X ≈ Y
         end
 
+        @testset "ldiv!" begin
+            x = randn(T, n)
+            y = Wmat \ x
+            @test ldiv!(W, x) === x
+            @test x ≈ y
+
+            X = randn(T, n, 5)
+            Y = Wmat \ X
+            @test ldiv!(W, X) === X
+            @test X ≈ Y
+        end
+
         @testset "mul!" begin
             x = randn(T, n)
             y = similar(x)
@@ -254,8 +267,24 @@ end
             x = randn(T, n)
             @test W * x ≈ Wmat * x
 
-            X = randn(T, n)
+            X = randn(T, n, 2)
             @test W * X ≈ Wmat * X
+        end
+
+        @testset "\\" begin
+            x = randn(T, n)
+            @test W \ x ≈ Wmat \ x
+
+            X = randn(T, n, 2)
+            @test W \ X ≈ Wmat \ X
+        end
+
+        @testset "/" begin
+            x = randn(T, n)
+            @test x' / W ≈ x' / Wmat
+
+            X = randn(T, 2, n)
+            @test X / W ≈ X / Wmat
         end
 
         @testset "PDMats.dim" begin
