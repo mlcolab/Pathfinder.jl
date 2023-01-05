@@ -331,9 +331,7 @@ end
 
 LinearAlgebra.ldiv!(W::WoodburyPDMat, x::AbstractVecOrMat) = ldiv!(factorize(W), x)
 
-function LinearAlgebra.mul!(
-    y::AbstractVecOrMat, W::WoodburyPDMat, x::AbstractVecOrMat, alpha::Number, beta::Number
-)
+function LinearAlgebra.mul!(y::AbstractVecOrMat, W::WoodburyPDMat, x::AbstractVecOrMat)
     copyto!(y, x)
     return lmul!(W, y)
 end
