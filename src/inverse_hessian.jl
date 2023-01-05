@@ -34,6 +34,7 @@ function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_len
     H = lbfgs_inverse_hessian(Diagonal(α), S, Y, history_ind, history_length_effective) # H₀ = I
     Hs = [H] # trace of H
 
+    num_bfgs_updates_rejected = 0
     for l in 1:L
         θlp1, ∇logpθlp1 = θs[l + 1], ∇logpθs[l + 1]
         s .= θlp1 .- θ
@@ -48,7 +49,7 @@ function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_len
             # initial diagonal estimate of H
             α = Hinit(α, s, y)
         else
-            @debug "Skipping inverse Hessian update from iteration $l to avoid negative curvature."
+            num_bfgs_updates_rejected += 1
         end
 
         θ, ∇logpθ = θlp1, ∇logpθlp1
