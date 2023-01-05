@@ -117,13 +117,13 @@ function LinearAlgebra.mul!(
     r::StridedVecOrMat{T}, R::WoodburyPDRightFactor{T}, x::StridedVecOrMat{T}
 ) where {T}
     copyto!(r, x)
-    return lmul!(R, copyto!(r, x))
+    return lmul!(R, r)
 end
-
-function Base.:*(R::WoodburyPDRightFactor, x::StridedVecOrMat)
-    T = Base.promote_eltype(R, x)
-    y = copyto!(similar(x, T), x)
-    return lmul!(R, y)
+function LinearAlgebra.mul!(
+    r::StridedVecOrMat{T}, L::WoodburyPDLeftFactor{T}, x::StridedVecOrMat{T}
+) where {T}
+    copyto!(r, x)
+    return lmul!(L, r)
 end
 
 function LinearAlgebra.lmul!(R::WoodburyPDRightFactor, x::StridedVecOrMat)
@@ -329,8 +329,19 @@ function LinearAlgebra.lmul!(W::WoodburyPDMat, x::AbstractVecOrMat)
     return lmul!(factorize(W), x)
 end
 
-function LinearAlgebra.mul!(y::AbstractVector, W::WoodburyPDMat, x::AbstractVecOrMat)
-    return lmul!(W, copyto!(y, x))
+LinearAlgebra.ldiv!(W::WoodburyPDMat, x::AbstractVecOrMat) = ldiv!(factorize(W), x)
+
+function LinearAlgebra.mul!(
+    y::AbstractVecOrMat, W::WoodburyPDMat, x::AbstractVecOrMat, alpha::Number, beta::Number
+)
+    copyto!(y, x)
+    return lmul!(W, y)
+end
+
+function Base.:\(W::WoodburyPDMat, x::AbstractVecOrMat)
+    y = similar(x, Base.promote_eltype(W, x))
+    copyto!(y, x)
+    return ldiv!(W, y)
 end
 
 function Base.:*(W::WoodburyPDMat, c::Real)
