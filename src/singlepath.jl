@@ -283,7 +283,7 @@ function _pathfinder(
     success = L > 0
 
     # fit mv-normal distributions to trajectory
-    fit_distributions = fit_mvnormals(
+    fit_distributions, num_bfgs_updates_rejected = fit_mvnormals(
         optim_trace.points, optim_trace.gradients; history_length
     )
 

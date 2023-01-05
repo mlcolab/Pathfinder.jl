@@ -10,12 +10,17 @@ function gilbert_init(α, s, y)
 end
 
 """
-    lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_length=5, ϵ=1e-12) -> Vector{WoodburyPDMat}
+    lbfgs_inverse_hessians(
+        θs, ∇logpθs; Hinit=gilbert_init, history_length=5, ϵ=1e-12
+    ) -> Tuple{Vector{WoodburyPDMat},Int}
 
 From an L-BFGS trajectory and gradients, compute the inverse Hessian approximations at each point.
 
 Given positions `θs` with gradients `∇logpθs`, construct LBFGS inverse Hessian
 approximations with the provided `history_length`.
+
+The 2nd returned value is the number of BFGS updates to the inverse Hessian matrices that
+were rejected due to keeping the inverse Hessian positive definite.
 """
 function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_length=5, ϵ=1e-12)
     L = length(θs) - 1
@@ -57,7 +62,7 @@ function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_len
         push!(Hs, H)
     end
 
-    return Hs
+    return Hs, num_bfgs_updates_rejected
 end
 
 """
