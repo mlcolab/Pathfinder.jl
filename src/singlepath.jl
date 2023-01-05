@@ -211,6 +211,11 @@ function pathfinder(
         ndraws_elbo_actual = ndraws_elbo
     end
 
+    if num_bfgs_updates_rejected > 0
+        perc = round(num_bfgs_updates_rejected * (100//length(fit_distributions)); digits=1)
+        @warn "$num_bfgs_updates_rejected ($(perc)%) updates to the inverse Hessian estimate were rejected to keep it positive definite."
+    end
+
     fit_distribution = fit_distributions[fit_iteration + 1]
 
     # reuse existing draws; draw additional ones if necessary
