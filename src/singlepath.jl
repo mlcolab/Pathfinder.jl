@@ -29,6 +29,8 @@ Container for results of single-path Pathfinder.
     `fit_distributions[fit_iteration + 1] == fit_distribution`
 - `elbo_estimates::AbstractVector{<:Pathfinder.ELBOEstimate}`: ELBO estimates for all but
     the first distribution in `fit_distributions`.
+- `num_bfgs_updates_rejected::Int`: Number of times a BFGS update to the reconstructed
+    inverse Hessian was rejected to keep the inverse Hessian positive definite.
 
 # Returns
 - [`PathfinderResult`](@ref)
@@ -49,6 +51,7 @@ struct PathfinderResult{I,O,R,OP,LP,FD,D,FDT,DT,OS,OT,EE}
     optim_trace::OT
     fit_distributions::Vector{FD}
     elbo_estimates::EE
+    num_bfgs_updates_rejected::Int
 end
 
 function Base.show(io::IO, ::MIME"text/plain", result::PathfinderResult)
@@ -197,6 +200,7 @@ function pathfinder(
         fit_distributions,
         fit_iteration,
         elbo_estimates,
+        num_bfgs_updates_rejected,
     ) = path_result
 
     if !success
@@ -205,6 +209,11 @@ function pathfinder(
     else
         elbo_estimate_opt = elbo_estimates[fit_iteration]
         ndraws_elbo_actual = ndraws_elbo
+    end
+
+    if num_bfgs_updates_rejected > 0
+        perc = round(num_bfgs_updates_rejected * (100//length(fit_distributions)); digits=1)
+        @warn "$num_bfgs_updates_rejected ($(perc)%) updates to the inverse Hessian estimate were rejected to keep it positive definite."
     end
 
     fit_distribution = fit_distributions[fit_iteration + 1]
@@ -238,6 +247,7 @@ function pathfinder(
         optim_trace,
         fit_distributions,
         elbo_estimates,
+        num_bfgs_updates_rejected,
     )
 end
 
@@ -283,7 +293,7 @@ function _pathfinder(
     success = L > 0
 
     # fit mv-normal distributions to trajectory
-    fit_distributions = fit_mvnormals(
+    fit_distributions, num_bfgs_updates_rejected = fit_mvnormals(
         optim_trace.points, optim_trace.gradients; history_length
     )
 
@@ -305,6 +315,7 @@ function _pathfinder(
         fit_distributions,
         fit_iteration,
         elbo_estimates,
+        num_bfgs_updates_rejected,
     )
 end
 
