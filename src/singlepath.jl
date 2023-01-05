@@ -29,6 +29,8 @@ Container for results of single-path Pathfinder.
     `fit_distributions[fit_iteration + 1] == fit_distribution`
 - `elbo_estimates::AbstractVector{<:Pathfinder.ELBOEstimate}`: ELBO estimates for all but
     the first distribution in `fit_distributions`.
+- `num_bfgs_updates_rejected::Int`: Number of times a BFGS update to the reconstructed
+    inverse Hessian was rejected to keep the inverse Hessian positive definite.
 
 # Returns
 - [`PathfinderResult`](@ref)
@@ -49,6 +51,7 @@ struct PathfinderResult{I,O,R,OP,LP,FD,D,FDT,DT,OS,OT,EE}
     optim_trace::OT
     fit_distributions::Vector{FD}
     elbo_estimates::EE
+    num_bfgs_updates_rejected::Int
 end
 
 function Base.show(io::IO, ::MIME"text/plain", result::PathfinderResult)
@@ -197,6 +200,7 @@ function pathfinder(
         fit_distributions,
         fit_iteration,
         elbo_estimates,
+        num_bfgs_updates_rejected,
     ) = path_result
 
     if !success
@@ -238,6 +242,7 @@ function pathfinder(
         optim_trace,
         fit_distributions,
         elbo_estimates,
+        num_bfgs_updates_rejected,
     )
 end
 
@@ -305,6 +310,7 @@ function _pathfinder(
         fit_distributions,
         fit_iteration,
         elbo_estimates,
+        num_bfgs_updates_rejected,
     )
 end
 
