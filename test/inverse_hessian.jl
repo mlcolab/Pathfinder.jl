@@ -61,7 +61,7 @@ end
         sol, optim_trace = Pathfinder.optimize_with_trace(prob, optimizer)
 
         # run lbfgs_inverse_hessians with the same initialization as Optim.LBFGS
-        Hs = Pathfinder.lbfgs_inverse_hessians(
+        Hs, num_bfgs_updates_rejected = Pathfinder.lbfgs_inverse_hessians(
             optim_trace.points,
             optim_trace.gradients;
             history_length,
@@ -72,5 +72,6 @@ end
         # check that next direction computed from Hessian is the same as the actual
         # direction that was taken
         @test all(≈(1), dot.(ps, ss) ./ norm.(ss) ./ norm.(ps))
+        @test num_bfgs_updates_rejected == 0
     end
 end
