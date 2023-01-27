@@ -1,4 +1,3 @@
-using ForwardDiff
 using LinearAlgebra
 using Optim
 using OptimizationNLopt
@@ -8,33 +7,6 @@ using SciMLBase
 using Test
 
 include("test_utils.jl")
-
-struct LogDensityFunctionWithGradHess{F,G,H}
-    logp::F
-    ∇logp::G
-    ∇²logp::H
-    dim::Int
-end
-function LogDensityProblems.capabilities(::Type{<:LogDensityFunctionWithGradHess})
-    return LogDensityProblems.LogDensityOrder{2}()
-end
-LogDensityProblems.dimension(ℓ::LogDensityFunctionWithGradHess) = ℓ.dim
-LogDensityProblems.logdensity(ℓ::LogDensityFunctionWithGradHess, x) = ℓ.logp(x)
-function LogDensityProblems.logdensity_and_gradient(ℓ::LogDensityFunctionWithGradHess, x)
-    return ℓ.logp(x), ℓ.∇logp(x)
-end
-function LogDensityProblems.logdensity_gradient_and_hessian(
-    ℓ::LogDensityFunctionWithGradHess, x
-)
-    return ℓ.logp(x), ℓ.∇logp(x), ℓ.∇²logp(x)
-end
-
-function build_logdensityproblem(f, n)
-    ∇f(x) = ForwardDiff.gradient(f, x)
-    Hf(x) = ForwardDiff.hessian(f, x)
-    ℓ = LogDensityFunctionWithGradHess(f, ∇f, Hf, n)
-    return ℓ
-end
 
 @testset "build_optim_function" begin
     n = 20
