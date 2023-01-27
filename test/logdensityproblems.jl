@@ -1,3 +1,4 @@
+using LinearAlgebra
 using LogDensityProblems
 using LogDensityProblemsAD
 using ForwardDiff
@@ -31,7 +32,6 @@ end
             @test LogDensityProblems.dimension(ℓ) == dim
             x = randn(dim)
             @test LogDensityProblems.logdensity(ℓ, x) == f(x)
-            LogDensityProblems.stresstest(LogDensityProblems.logdensity, ℓ)
         end
     end
 
@@ -41,6 +41,7 @@ end
 
             f(x) = -sum(abs2, x) / 2
             ∇f(x) = -x
+            Hf(x) = -diagm(fill!(similar(x), 1))
 
             @testset for input in (
                 f, Pathfinder.LogDensityFunction(f, n), LogDensityFunctionWithGrad(f, ∇f, n)
@@ -56,12 +57,17 @@ end
                 @test LogDensityProblems.dimension(ℓ) == n
                 x = randn(n)
                 @test LogDensityProblems.logdensity(ℓ, x) == f(x)
-                LogDensityProblems.stresstest(LogDensityProblems.logdensity, ℓ)
-                LogDensityProblems.stresstest(LogDensityProblems.logdensity_and_gradient, ℓ)
+                @test LogDensityProblems.logdensity_and_gradient(ℓ, x)[1] == f(x)
+                @test LogDensityProblems.logdensity_and_gradient(ℓ, x)[2] ≈ ∇f(x)
                 ℓ isa LogDensityFunctionWithGrad && continue
-                LogDensityProblems.stresstest(
-                    LogDensityProblems.logdensity_gradient_and_hessian, ℓ
-                )
+                # tests broken because logdensity_gradient_and_hessian has not been
+                # implemented for any backends yet
+                @test_broken LogDensityProblems.logdensity_gradient_and_hessian(ℓ, x)[1] ==
+                    f(x)
+                @test_broken LogDensityProblems.logdensity_gradient_and_hessian(ℓ, x)[2] ≈
+                    ∇f(x)
+                @test_broken LogDensityProblems.logdensity_gradient_and_hessian(ℓ, x)[3] ≈
+                    Hf(x)
             end
         end
     end
