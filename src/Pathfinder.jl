@@ -1,6 +1,5 @@
 module Pathfinder
 
-using AbstractDifferentiation: AD
 using Distributions: Distributions
 using Folds: Folds
 # ensure that ForwardDiff is conditionally loaded by Optimization
