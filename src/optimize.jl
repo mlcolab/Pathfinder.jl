@@ -1,28 +1,18 @@
-function build_optim_function(f; ad_backend=AD.ForwardDiffBackend())
-    ∇f(x) = only(AD.gradient(ad_backend, f, x))
-    return build_optim_function(f, ∇f; ad_backend)
-end
-function build_optim_function(f, ∇f; ad_backend=AD.ForwardDiffBackend())
-    # because we need explicit access to grad, we generate these ourselves instead of using
-    # Optimization.jl's auto-AD feature.
+function build_optim_function(ℓ)
     # TODO: switch to caching API if available, see
     # https://github.com/JuliaDiff/AbstractDifferentiation.jl/issues/41
+    f(x, p) = -LogDensityProblems.logdensity(ℓ, x)
     function grad(res, x, p)
-        ∇fx = ∇f(x)
+        _, ∇fx = LogDensityProblems.logdensity_and_gradient(ℓ, x)
         @. res = -∇fx
         return res
     end
     function hess(res, x, p)
-        H = only(AD.hessian(ad_backend, f, x))
+        _, _, H = LogDensityProblems.logdensity_gradient_and_hessian(ℓ, x)
         @. res = -H
         return res
     end
-    function hv(res, x, v, p)
-        Hv = only(AD.lazy_hessian(ad_backend, f, x) * v)
-        @. res = -Hv
-        return res
-    end
-    return SciMLBase.OptimizationFunction{true}((x, p) -> -f(x); grad, hess, hv)
+    return SciMLBase.OptimizationFunction{true}(f; grad, hess)
 end
 
 function build_optim_problem(optim_fun, x₀)
