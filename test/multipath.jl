@@ -1,4 +1,3 @@
-using AbstractDifferentiation
 using Distributions
 using ForwardDiff
 using LinearAlgebra
@@ -9,6 +8,8 @@ using ReverseDiff
 using SciMLBase
 using Test
 using Transducers
+
+include("test_utils.jl")
 
 @testset "multi path pathfinder" begin
     @testset "MvNormal" begin
@@ -21,7 +22,7 @@ using Transducers
         μ = randn(dim)
         d = MvNormal(μ, Σ)
         logp(x) = logpdf(d, x)
-        ∇logp(x) = ForwardDiff.gradient(logp, x)
+        ℓ = build_logdensityproblem(logp, dim)
         rngs = if VERSION ≥ v"1.7"
             [MersenneTwister(), Random.default_rng()]
         else
@@ -33,10 +34,10 @@ using Transducers
 
             Random.seed!(rng, seed)
             result = multipathfinder(
-                logp, ∇logp, ndraws; dim, nruns, ndraws_elbo, ndraws_per_run, rng, executor
+                ℓ, ndraws; dim, nruns, ndraws_elbo, ndraws_per_run, rng, executor
             )
             @test result isa MultiPathfinderResult
-            @test result.input === (logp, ∇logp)
+            @test result.input === ℓ
             @test result.optim_fun isa SciMLBase.OptimizationFunction
             @test result.rng === rng
             @test result.optimizer ===
@@ -77,7 +78,7 @@ using Transducers
             @test result2.draw_component_ids == result.draw_component_ids
 
             Random.seed!(rng, seed)
-            ad_backend = AD.ReverseDiffBackend()
+            ad_backend = Val(:ReverseDiff)
             result3 = multipathfinder(
                 logp,
                 ndraws;
@@ -96,7 +97,7 @@ using Transducers
         end
 
         init = [randn(dim) for _ in 1:nruns]
-        result = multipathfinder(logp, ∇logp, ndraws; init)
+        result = multipathfinder(ℓ, ndraws; init)
         @test ncomponents(result.fit_distribution) == nruns
         @test size(result.draws) == (dim, ndraws)
     end

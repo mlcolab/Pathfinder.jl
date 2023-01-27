@@ -127,21 +127,35 @@ for approximating expectations with respect to ``p``.
 function multipathfinder end
 
 function multipathfinder(
-    logp, ndraws::Int; ad_backend=AD.ForwardDiffBackend(), input=logp, kwargs...
-)
-    return multipathfinder(build_optim_function(logp; ad_backend), ndraws; input, kwargs...)
-end
-function multipathfinder(
     logp,
-    ∇logp,
     ndraws::Int;
-    ad_backend=AD.ForwardDiffBackend(),
-    input=(logp, ∇logp),
+    ad_backend=Val(:ForwardDiff),
+    dim::Int=-1,
+    input=logp,
+    init=nothing,
     kwargs...,
 )
-    return multipathfinder(
-        build_optim_function(logp, ∇logp; ad_backend), ndraws; input, kwargs...
-    )
+    if init !== nothing
+        dim > 0 &&
+            length(first(init)) != dim &&
+            throw(
+                ArgumentError(
+                    "Length of elements of provided `init` do not match provided `dim`"
+                ),
+            )
+        dim = length(init)
+    end
+    if LogDensityProblems.capabilities(logp) === nothing && dim < 1
+        throw(
+            ArgumentError(
+                "Must provide positive `dim` if `logp` is not a `LogDensityProblem`"
+            ),
+        )
+    end
+    ℓ = _logdensityproblem(logp, dim, ad_backend)
+    dim = LogDensityProblems.dimension(ℓ)
+    optim_fun = build_optim_function(ℓ)
+    return multipathfinder(optim_fun, ndraws; input, dim, init, kwargs...)
 end
 function multipathfinder(
     optim_fun::SciMLBase.OptimizationFunction,

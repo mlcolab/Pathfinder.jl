@@ -1,4 +1,3 @@
-using AbstractDifferentiation
 using Distributions
 using ForwardDiff
 using LinearAlgebra
@@ -11,11 +10,12 @@ using SciMLBase
 using Test
 using Transducers
 
+include("test_utils.jl")
+
 @testset "single path pathfinder" begin
     @testset "IsoNormal" begin
         # here pathfinder finds the exact solution after 1 iteration
         logp(x) = -sum(abs2, x) / 2
-        ∇logp(x) = -x
         ndraws = 100
         rngs = if VERSION ≥ v"1.7"
             [MersenneTwister(), Random.default_rng()]
@@ -24,13 +24,14 @@ using Transducers
         end
         seed = 42
         @testset for dim in [1, 5, 10, 100], rng in rngs
-            executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
 
+            executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
+            ℓ = build_logdensityproblem(logp, 5)
             init = randn(dim)
             Random.seed!(rng, seed)
-            result = @inferred pathfinder(logp, ∇logp; init, ndraws, rng, executor)
+            result = @inferred pathfinder(ℓ; init, ndraws, rng, executor)
             @test result isa PathfinderResult
-            @test result.input === (logp, ∇logp)
+            @test result.input === ℓ
             @test result.optim_prob isa SciMLBase.OptimizationProblem
             @test result.logp(init) ≈ logp(init)
             @test result.rng === rng
@@ -56,14 +57,14 @@ using Transducers
                 argmax(getproperty.(result.elbo_estimates, :value))
 
             Random.seed!(rng, seed)
-            result2 = pathfinder(logp, ∇logp; init, ndraws, rng, executor)
+            result2 = pathfinder(ℓ; init, ndraws, rng, executor)
             @test result2.fit_iteration == result.fit_iteration
             @test result2.draws == result.draws
             @test getproperty.(result2.elbo_estimates, :value) ==
                 getproperty.(result.elbo_estimates, :value)
 
             ndraws = 2
-            result3 = pathfinder(logp, ∇logp; init, ndraws, executor)
+            result3 = pathfinder(ℓ; init, ndraws, executor)
             @test size(result3.draws) == (dim, ndraws)
         end
     end
@@ -79,9 +80,8 @@ using Transducers
         #! format: on
         P = inv(Symmetric(Σ))
         logp(x) = -dot(x, P, x) / 2
-        ∇logp(x) = -(P * x)
         dim = 5
-        ad_backend = AD.ReverseDiffBackend()
+        ad_backend = Val(:ReverseDiff)
         ndraws_elbo = 100
         rngs = if VERSION ≥ v"1.7"
             [MersenneTwister(), Random.default_rng()]
