@@ -1,6 +1,4 @@
 function build_optim_function(ℓ)
-    # TODO: switch to caching API if available, see
-    # https://github.com/JuliaDiff/AbstractDifferentiation.jl/issues/41
     f(x, p) = -LogDensityProblems.logdensity(ℓ, x)
     function grad(res, x, p)
         _, ∇fx = LogDensityProblems.logdensity_and_gradient(ℓ, x)
