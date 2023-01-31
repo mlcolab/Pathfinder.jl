@@ -1,6 +1,7 @@
 using AdvancedHMC,
     ForwardDiff,
     LinearAlgebra,
+    LogDensityProblems,
     MCMCDiagnosticTools,
     Optim,
     Pathfinder,
@@ -32,6 +33,12 @@ function (m::RegressionModel)(θ)
     end
     return lp
 end
+
+function LogDensityProblems.capabilities(::Type{<:RegressionModel})
+    return LogDensityProblems.LogDensityOrder{0}()
+end
+LogDensityProblems.dimension(m::RegressionModel) = size(m.x, 2) + 2
+LogDensityProblems.logdensity(m::RegressionModel, θ) = m(θ)
 
 function mean_and_mcse(f, θs)
     zs = map(f, θs)
@@ -87,10 +94,11 @@ end
         @test sprint(show, metric) == "RankUpdateEuclideanMetric(diag=$(diag(metric.M⁻¹)))"
         @test AdvancedHMC.neg_energy(h, r, θ) ≈ AdvancedHMC.neg_energy(h_dense, r, θ)
         @test AdvancedHMC.∂H∂r(h, r) ≈ AdvancedHMC.∂H∂r(h_dense, r)
+        kinetic = AdvancedHMC.GaussianKinetic()
         compare_estimates(
             identity,
-            [rand(metric) for _ in 1:10_000],
-            [rand(metric_dense) for _ in 1:10_000],
+            [rand(metric, kinetic) for _ in 1:10_000],
+            [rand(metric_dense, kinetic) for _ in 1:10_000],
         )
     end
 
