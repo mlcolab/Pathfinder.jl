@@ -70,13 +70,16 @@ function Base.rand(
 end
 
 function AdvancedHMC.neg_energy(
-    h::AdvancedHMC.Hamiltonian{<:RankUpdateEuclideanMetric}, r::T, θ::T
+    h::AdvancedHMC.Hamiltonian{<:RankUpdateEuclideanMetric,<:AdvancedHMC.GaussianKinetic},
+    r::T,
+    θ::T,
 ) where {T<:AbstractVecOrMat}
     return -PDMats.quad(h.metric.M⁻¹, r) / 2
 end
 
 function AdvancedHMC.∂H∂r(
-    h::AdvancedHMC.Hamiltonian{<:RankUpdateEuclideanMetric}, r::AbstractVecOrMat
+    h::AdvancedHMC.Hamiltonian{<:RankUpdateEuclideanMetric,<:AdvancedHMC.GaussianKinetic},
+    r::AbstractVecOrMat,
 )
     return h.metric.M⁻¹ * r
 end
