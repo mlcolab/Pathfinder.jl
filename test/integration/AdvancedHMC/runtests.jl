@@ -80,16 +80,20 @@ end
 
         metric2 = Pathfinder.RankUpdateEuclideanMetric(3)
         @test metric2.M⁻¹ ≈ I
-        @test size(metric2) == (3, 3)
+        @test size(metric2) == (3,)
+        @test size(metric2, 2) == 1
         metric2 = Pathfinder.RankUpdateEuclideanMetric((4,))
         @test metric2.M⁻¹ ≈ I
-        @test size(metric2) == (4, 4)
+        @test size(metric2) == (4,)
+        @test size(metric2, 2) == 1
         metric2 = Pathfinder.RankUpdateEuclideanMetric(Float32, (4,))
         @test metric2.M⁻¹ ≈ I
-        @test size(metric2) == (4, 4)
+        @test size(metric2) == (4,)
+        @test size(metric2, 2) == 1
         @test eltype(metric2.M⁻¹) === Float32
 
-        @test size(metric) == (5, 5)
+        @test size(metric) == (5,)
+        @test size(metric, 2) == 1
         @test AdvancedHMC.renew(metric, M⁻¹2).M⁻¹ === M⁻¹2
         @test sprint(show, metric) == "RankUpdateEuclideanMetric(diag=$(diag(metric.M⁻¹)))"
         @test AdvancedHMC.neg_energy(h, r, θ) ≈ AdvancedHMC.neg_energy(h_dense, r, θ)
