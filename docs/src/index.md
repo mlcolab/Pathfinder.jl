@@ -42,7 +42,7 @@ Pathfinder uses several packages for extended functionality:
 - [Optimization.jl](https://optimization.sciml.ai/stable/): This allows the L-BFGS optimizer to be replaced with any of the many Optimization-compatible optimizers and supports use of callbacks. Note that any changes made to Pathfinder using these features would be experimental.
 - [Transducers.jl](https://juliafolds.github.io/Transducers.jl/stable/): parallelization support
 - [Distributions.jl](https://juliastats.org/Distributions.jl/stable/)/[PDMats.jl](https://github.com/JuliaStats/PDMats.jl): fits can be used anywhere a `Distribution` can be used
-- [AbstractDifferentiation.jl](https://github.com/JuliaDiff/AbstractDifferentiation.jl): selecting the AD package used to differentiate the provided log-density function.
+- [LogDensityProblems.jl](https://www.tamaspapp.eu/LogDensityProblems.jl/stable/)/[LogDensityProblemsAD.jl](https://github.com/tpapp/LogDensityProblemsAD.jl): defining the log-density function, gradient, and Hessian, or optionally specifying the AD package used to differentiate a provided log-density function.
 - [ProgressLogging.jl](https://julialogging.github.io/ProgressLogging.jl/stable/): In Pluto, Juno, and VSCode, nested progress bars are shown. In the REPL, use TerminalLoggers.jl to get progress bars.
 
 [^Zhang2021]: Lu Zhang, Bob Carpenter, Andrew Gelman, Aki Vehtari (2021).
