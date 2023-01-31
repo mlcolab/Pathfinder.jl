@@ -1,4 +1,5 @@
 using .AdvancedHMC: AdvancedHMC
+using Random
 
 """
     RankUpdateEuclideanMetric{T,M} <: AdvancedHMC.AbstractMetric
@@ -52,28 +53,33 @@ RankUpdateEuclideanMetric(sz::Tuple{Int}) = RankUpdateEuclideanMetric(Float64, s
 
 AdvancedHMC.renew(::RankUpdateEuclideanMetric, M⁻¹) = RankUpdateEuclideanMetric(M⁻¹)
 
-Base.size(metric::RankUpdateEuclideanMetric, dim...) = size(metric.M⁻¹, dim...)
+Base.size(metric::RankUpdateEuclideanMetric, dim...) = size(metric.M⁻¹.A.diag, dim...)
 
 function Base.show(io::IO, metric::RankUpdateEuclideanMetric)
     print(io, "RankUpdateEuclideanMetric(diag=$(diag(metric.M⁻¹)))")
     return nothing
 end
 
-function Base.rand(rng::AbstractRNG, metric::RankUpdateEuclideanMetric{T}) where {T}
+function Base.rand(
+    rng::AbstractRNG, metric::RankUpdateEuclideanMetric{T}, ::AdvancedHMC.GaussianKinetic
+) where {T}
     M⁻¹ = metric.M⁻¹
-    r = randn(rng, T, size(M⁻¹, 2)...)
+    r = randn(rng, T, size(metric)...)
     invunwhiten!(r, M⁻¹, r)
     return r
 end
 
 function AdvancedHMC.neg_energy(
-    h::AdvancedHMC.Hamiltonian{<:RankUpdateEuclideanMetric}, r::T, θ::T
+    h::AdvancedHMC.Hamiltonian{<:RankUpdateEuclideanMetric,<:AdvancedHMC.GaussianKinetic},
+    r::T,
+    θ::T,
 ) where {T<:AbstractVecOrMat}
     return -PDMats.quad(h.metric.M⁻¹, r) / 2
 end
 
 function AdvancedHMC.∂H∂r(
-    h::AdvancedHMC.Hamiltonian{<:RankUpdateEuclideanMetric}, r::AbstractVecOrMat
+    h::AdvancedHMC.Hamiltonian{<:RankUpdateEuclideanMetric,<:AdvancedHMC.GaussianKinetic},
+    r::AbstractVecOrMat,
 )
     return h.metric.M⁻¹ * r
 end
