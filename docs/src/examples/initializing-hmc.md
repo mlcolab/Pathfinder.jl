@@ -158,8 +158,7 @@ result_dhmc3 = mcmc_with_warmup(
 
 ## AdvancedHMC.jl
 
-Similar to Pathfinder, AdvancedHMC works with an unconstrained log density function and its gradient.
-We'll just use the `logp` we already created above.
+Similar to DynamicHMC, AdvancedHMC can work with an object implementing the LogDensityProblems API:
 
 ```@example 1
 using AdvancedHMC, ForwardDiff
@@ -172,7 +171,7 @@ nothing # hide
 
 ```@example 1
 metric = DiagEuclideanMetric(dim)
-hamiltonian = Hamiltonian(metric, logp, ForwardDiff)
+hamiltonian = Hamiltonian(metric, ∇P)
 ϵ = find_good_stepsize(hamiltonian, init_params)
 integrator = Leapfrog(ϵ)
 proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
@@ -196,7 +195,7 @@ Instead we need to first extract its diagonal for a `DiagonalEuclideanMetric` or
 
 ```@example 1
 metric = DenseEuclideanMetric(Matrix(inv_metric))
-hamiltonian = Hamiltonian(metric, logp, ForwardDiff)
+hamiltonian = Hamiltonian(metric, ∇P)
 ϵ = find_good_stepsize(hamiltonian, init_params)
 integrator = Leapfrog(ϵ)
 proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
@@ -220,7 +219,7 @@ To use Pathfinder's metric with no metric adaptation, we need to use Pathfinder'
 ```@example 1
 nadapts = 75
 metric = Pathfinder.RankUpdateEuclideanMetric(inv_metric)
-hamiltonian = Hamiltonian(metric, logp, ForwardDiff)
+hamiltonian = Hamiltonian(metric, ∇P)
 ϵ = find_good_stepsize(hamiltonian, init_params)
 integrator = Leapfrog(ϵ)
 proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
