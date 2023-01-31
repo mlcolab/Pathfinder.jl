@@ -19,13 +19,14 @@ include("test_utils.jl")
         optimizer = Optim.LBFGS()
         history_length = optimizer.m
         _, optim_trace = Pathfinder.optimize_with_trace(prob, optimizer)
-        Σs = Pathfinder.lbfgs_inverse_hessians(
+        Σs, num_bfgs_updates_rejected1 = Pathfinder.lbfgs_inverse_hessians(
             optim_trace.points, optim_trace.gradients; history_length
         )
-        dists = @inferred Pathfinder.fit_mvnormals(
+        dists, num_bfgs_updates_rejected2 = @inferred Pathfinder.fit_mvnormals(
             optim_trace.points, optim_trace.gradients; history_length
         )
         @test dists isa Vector{<:MvNormal{Float64,<:Pathfinder.WoodburyPDMat}}
+        @test num_bfgs_updates_rejected2 == num_bfgs_updates_rejected1
         @test Σs ≈ getproperty.(dists, :Σ)
         @test optim_trace.points .+ Σs .* optim_trace.gradients ≈ getproperty.(dists, :μ)
     end
