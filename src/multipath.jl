@@ -192,7 +192,7 @@ function multipathfinder(
     # run pathfinder independently from each starting point
     trans = Transducers.Map() do (init_i)
         return pathfinder(
-            optim_fun;
+            deepcopy(optim_fun);  # copy to avoid issues if `optim_fun` is not thread-safe
             rng,
             history_length,
             optimizer,
