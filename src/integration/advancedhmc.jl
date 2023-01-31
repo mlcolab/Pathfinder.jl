@@ -1,4 +1,5 @@
 using .AdvancedHMC: AdvancedHMC
+using Random
 
 """
     RankUpdateEuclideanMetric{T,M} <: AdvancedHMC.AbstractMetric
@@ -59,9 +60,11 @@ function Base.show(io::IO, metric::RankUpdateEuclideanMetric)
     return nothing
 end
 
-function Base.rand(rng::AbstractRNG, metric::RankUpdateEuclideanMetric{T}) where {T}
+function Base.rand(
+    rng::AbstractRNG, metric::RankUpdateEuclideanMetric{T}, ::AdvancedHMC.GaussianKinetic
+) where {T}
     M⁻¹ = metric.M⁻¹
-    r = randn(rng, T, size(M⁻¹, 2)...)
+    r = randn(rng, T, size(metric)...)
     invunwhiten!(r, M⁻¹, r)
     return r
 end
