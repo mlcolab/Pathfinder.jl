@@ -127,7 +127,7 @@ function multipathfinder(ℓ, ndraws::Int; input=ℓ, kwargs...)
     _check_log_density_problem(ℓ)
     dim = LogDensityProblems.dimension(ℓ)
     optim_fun = build_optim_function(ℓ)
-    return multipathfinder(optim_fun, ndraws; input, dim, init, kwargs...)
+    return multipathfinder(optim_fun, ndraws; input, dim, kwargs...)
 end
 function multipathfinder(
     optim_fun::SciMLBase.OptimizationFunction,

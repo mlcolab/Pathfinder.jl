@@ -35,6 +35,16 @@ function _fb(b, x)
 end
 logp_banana(x) = _fb(0.03, x)
 
+struct LogDensityFunction{F}
+    logp::F
+    dim::Int
+end
+function LogDensityProblems.capabilities(::Type{<:LogDensityFunction})
+    return LogDensityProblems.LogDensityOrder{0}()
+end
+LogDensityProblems.dimension(ℓ::LogDensityFunction) = ℓ.dim
+LogDensityProblems.logdensity(ℓ::LogDensityFunction, x) = ℓ.logp(x)
+
 struct LogDensityFunctionWithGradHess{F,G,H}
     logp::F
     ∇logp::G

@@ -4,7 +4,6 @@ using LinearAlgebra
 using Optimization
 using Pathfinder
 using PSIS
-using ReverseDiff
 using SciMLBase
 using Test
 using Transducers
@@ -34,7 +33,7 @@ include("test_utils.jl")
 
             Random.seed!(rng, seed)
             result = multipathfinder(
-                ℓ, ndraws; dim, nruns, ndraws_elbo, ndraws_per_run, rng, executor
+                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, executor
             )
             @test result isa MultiPathfinderResult
             @test result.input === ℓ
@@ -71,24 +70,15 @@ include("test_utils.jl")
 
             Random.seed!(rng, seed)
             result2 = multipathfinder(
-                logp, ndraws; dim, nruns, ndraws_elbo, ndraws_per_run, rng, executor
+                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, executor
             )
             @test result2.fit_distribution == result.fit_distribution
             @test result2.draws == result.draws
             @test result2.draw_component_ids == result.draw_component_ids
 
             Random.seed!(rng, seed)
-            ad_backend = Val(:ReverseDiff)
             result3 = multipathfinder(
-                logp,
-                ndraws;
-                dim,
-                nruns,
-                ndraws_elbo,
-                ndraws_per_run,
-                rng,
-                executor,
-                ad_backend,
+                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, executor
             )
             for (c1, c2) in
                 zip(result.fit_distribution.components, result3.fit_distribution.components)
@@ -108,17 +98,10 @@ include("test_utils.jl")
         fun = SciMLBase.OptimizationFunction(f, Optimization.AutoForwardDiff())
         @test_throws ArgumentError multipathfinder(fun, 10; init)
     end
-    @testset "errors if neither dim nor init valid" begin
-        logp(x) = -sum(abs2, x) / 2
-        nruns = 2
-        @test_throws ArgumentError multipathfinder(logp, 10; nruns)
-        @test_throws ArgumentError multipathfinder(logp, 10; nruns, dim=0)
-        multipathfinder(logp, 10; nruns, dim=2)
-        multipathfinder(logp, 10; init=[randn(2) for _ in 1:nruns])
-    end
     @testset "errors if neither init nor nruns valid" begin
         logp(x) = -sum(abs2, x) / 2
-        @test_throws ArgumentError multipathfinder(logp, 10; dim=5, nruns=0)
-        multipathfinder(logp, 10; dim=5, nruns=2)
+        ℓ = build_logdensityproblem(logp, 5)
+        @test_throws ArgumentError multipathfinder(ℓ, 10; nruns=0)
+        multipathfinder(ℓ, 10; nruns=2)
     end
 end

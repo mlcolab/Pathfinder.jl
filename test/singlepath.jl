@@ -5,7 +5,6 @@ using Optim
 using Optimization
 using Pathfinder
 using Random
-using ReverseDiff
 using SciMLBase
 using Test
 using Transducers
@@ -80,29 +79,26 @@ include("test_utils.jl")
         P = inv(Symmetric(Σ))
         logp(x) = -dot(x, P, x) / 2
         dim = 5
-        ad_backend = Val(:ReverseDiff)
+        ℓ = build_logdensityproblem(logp, dim)
         ndraws_elbo = 100
         rngs = if VERSION ≥ v"1.7"
             [MersenneTwister(), Random.default_rng()]
         else
             [MersenneTwister()]
         end
+        x = randn(dim)
         seed = 38
         optimizer = Optim.LBFGS(; m=6)
         @testset for rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
 
             Random.seed!(rng, seed)
-            result = @inferred pathfinder(
-                logp; rng, dim, optimizer, ndraws_elbo, ad_backend, executor
-            )
-            @test result.input === logp
+            result = @inferred pathfinder(ℓ; rng, optimizer, ndraws_elbo, executor)
+            @test result.input === ℓ
             @test result.fit_distribution.Σ ≈ Σ rtol = 1e-1
             @test result.optimizer == optimizer
             Random.seed!(rng, seed)
-            result2 = pathfinder(
-                logp; rng, dim, optimizer, ndraws_elbo, ad_backend, executor
-            )
+            result2 = pathfinder(ℓ; rng, optimizer, ndraws_elbo, executor)
             @test result2.fit_distribution == result.fit_distribution
             @test result2.draws == result.draws
             @test getproperty.(result2.elbo_estimates, :value) ==
@@ -112,12 +108,12 @@ include("test_utils.jl")
             Random.seed!(42)
             i = 0
             callback = (args...,) -> (i += 1; false)
-            pathfinder(logp; dim, callback)
+            pathfinder(ℓ; callback)
             @test i ≠ 6
 
             Random.seed!(42)
             i = 0
-            pathfinder(logp; dim, callback, maxiters=5)
+            pathfinder(ℓ; callback, maxiters=5)
             @test i == 6
         end
     end
@@ -126,16 +122,17 @@ include("test_utils.jl")
             dim = 5
             nfail = 20
             logp(x) = i ≤ nfail ? NaN : -sum(abs2, x) / 2
+            ℓ = build_logdensityproblem(logp, dim)
             callback = (args...,) -> (i += 1; true)
             i = 1
-            result = pathfinder(logp; dim, callback)
+            result = pathfinder(ℓ; callback)
             @test result.fit_distribution.μ ≈ zeros(dim) atol = 1e-6
             @test result.fit_distribution.Σ ≈ diagm(ones(dim)) atol = 1e-6
             @test result.num_tries == nfail + 1
             @test result.optim_prob.u0 == result.optim_trace.points[1]
             i = 1
             init = randn(dim)
-            result2 = pathfinder(logp; init, callback, ntries=nfail)
+            result2 = pathfinder(ℓ; init, callback, ntries=nfail)
             @test !isapprox(result2.fit_distribution.μ, zeros(dim); atol=1e-6)
             @test result2.fit_iteration == 0
             @test isempty(result2.elbo_estimates)
@@ -171,8 +168,8 @@ include("test_utils.jl")
     @testset "errors if neither dim nor init valid" begin
         logp(x) = -sum(abs2, x) / 2
         @test_throws ArgumentError pathfinder(logp)
-        @test_throws ArgumentError pathfinder(logp; dim=0)
-        pathfinder(logp; dim=3)
-        pathfinder(logp; init=randn(5))
+        @test_throws ArgumentError pathfinder(LogDensityFunction(logp, 3))
+        @test_throws ArgumentError pathfinder(build_logdensityproblem(logp, 0))
+        pathfinder(build_logdensityproblem(logp, 3))
     end
 end
