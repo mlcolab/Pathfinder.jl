@@ -7,7 +7,6 @@ using ForwardDiff: ForwardDiff
 using IrrationalConstants: log2π
 using LinearAlgebra
 using LogDensityProblems: LogDensityProblems
-using LogDensityProblemsAD: LogDensityProblemsAD
 using Optim: Optim, LineSearches
 using Optimization: Optimization
 using OptimizationOptimJL: OptimizationOptimJL
@@ -37,7 +36,6 @@ end
 
 include("transducers.jl")
 include("woodbury.jl")
-include("logdensityproblems.jl")
 include("optimize.jl")
 include("inverse_hessian.jl")
 include("mvnormal.jl")
