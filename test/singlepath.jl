@@ -24,7 +24,6 @@ include("test_utils.jl")
         end
         seed = 42
         @testset for dim in [1, 5, 10, 100], rng in rngs
-
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
             ℓ = build_logdensityproblem(logp, 5)
             init = randn(dim)
