@@ -136,7 +136,7 @@ function pathfinder(ℓ; input=ℓ, kwargs...)
     _check_log_density_problem(ℓ)
     dim = LogDensityProblems.dimension(ℓ)
     optim_fun = build_optim_function(ℓ)
-    return pathfinder(optim_fun; input, init, dim, kwargs...)
+    return pathfinder(optim_fun; input, dim, kwargs...)
 end
 function pathfinder(
     optim_fun::SciMLBase.OptimizationFunction;
@@ -335,6 +335,7 @@ function (s::UniformSampler)(rng::Random.AbstractRNG, point)
 end
 
 function _check_log_density_problem(ℓ)
+    capabilities = LogDensityProblems.capabilities(ℓ)
     if capabilities === nothing
         throw(
             ArgumentError(
