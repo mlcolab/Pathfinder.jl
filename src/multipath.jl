@@ -109,10 +109,10 @@ for approximating expectations with respect to ``p``.
 - `importance::Bool=true`: Perform Pareto smoothed importance resampling of draws.
 - `rng::AbstractRNG=Random.GLOBAL_RNG`: Pseudorandom number generator. It is recommended to
     use a parallelization-friendly PRNG like the default PRNG on Julia 1.7 and up.
-- `executor::Transducers.Executor`: Transducers.jl executor that determines if and how
-    to run the single-path runs in parallel. If `rng` is known to be thread-safe, the
-    default is `Transducers.PreferParallel()` (parallel executation, defaulting to
-    multi-threading). Otherwise, it is `Transducers.SequentialEx()` (no parallelization).
+- `executor::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl executor that
+    determines if and how to run the single-path runs in parallel. If a transducer for
+    multi-threaded computation is selected, you must first verify that `rng` and the log
+    density function are thread-safe.
 - `executor_per_run::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl
     executor used within each run to parallelize PRNG calls. Defaults to no parallelization.
     See [`pathfinder`](@ref) for a description.
@@ -140,7 +140,7 @@ function multipathfinder(
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     history_length::Int=DEFAULT_HISTORY_LENGTH,
     optimizer=default_optimizer(history_length),
-    executor::Transducers.Executor=_default_executor(rng),
+    executor::Transducers.Executor=Transducers.SequentialEx(),
     executor_per_run=Transducers.SequentialEx(),
     importance::Bool=true,
     kwargs...,
@@ -164,7 +164,7 @@ function multipathfinder(
     # run pathfinder independently from each starting point
     trans = Transducers.Map() do (init_i)
         return pathfinder(
-            deepcopy(optim_fun);  # copy to avoid issues if `optim_fun` is not thread-safe
+            optim_fun;
             rng,
             history_length,
             optimizer,
