@@ -1,14 +1,14 @@
-using AbstractDifferentiation
 using Distributions
 using ForwardDiff
 using LinearAlgebra
 using Optimization
 using Pathfinder
 using PSIS
-using ReverseDiff
 using SciMLBase
 using Test
 using Transducers
+
+include("test_utils.jl")
 
 @testset "multi path pathfinder" begin
     @testset "MvNormal" begin
@@ -21,7 +21,7 @@ using Transducers
         μ = randn(dim)
         d = MvNormal(μ, Σ)
         logp(x) = logpdf(d, x)
-        ∇logp(x) = ForwardDiff.gradient(logp, x)
+        ℓ = build_logdensityproblem(logp, dim)
         rngs = if VERSION ≥ v"1.7"
             [MersenneTwister(), Random.default_rng()]
         else
@@ -33,10 +33,10 @@ using Transducers
 
             Random.seed!(rng, seed)
             result = multipathfinder(
-                logp, ∇logp, ndraws; dim, nruns, ndraws_elbo, ndraws_per_run, rng, executor
+                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, executor
             )
             @test result isa MultiPathfinderResult
-            @test result.input === (logp, ∇logp)
+            @test result.input === ℓ
             @test result.optim_fun isa SciMLBase.OptimizationFunction
             @test result.rng === rng
             @test result.optimizer ===
@@ -70,24 +70,15 @@ using Transducers
 
             Random.seed!(rng, seed)
             result2 = multipathfinder(
-                logp, ndraws; dim, nruns, ndraws_elbo, ndraws_per_run, rng, executor
+                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, executor
             )
             @test result2.fit_distribution == result.fit_distribution
             @test result2.draws == result.draws
             @test result2.draw_component_ids == result.draw_component_ids
 
             Random.seed!(rng, seed)
-            ad_backend = AD.ReverseDiffBackend()
             result3 = multipathfinder(
-                logp,
-                ndraws;
-                dim,
-                nruns,
-                ndraws_elbo,
-                ndraws_per_run,
-                rng,
-                executor,
-                ad_backend,
+                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, executor
             )
             for (c1, c2) in
                 zip(result.fit_distribution.components, result3.fit_distribution.components)
@@ -96,7 +87,7 @@ using Transducers
         end
 
         init = [randn(dim) for _ in 1:nruns]
-        result = multipathfinder(logp, ∇logp, ndraws; init)
+        result = multipathfinder(ℓ, ndraws; init)
         @test ncomponents(result.fit_distribution) == nruns
         @test size(result.draws) == (dim, ndraws)
     end
@@ -107,17 +98,10 @@ using Transducers
         fun = SciMLBase.OptimizationFunction(f, Optimization.AutoForwardDiff())
         @test_throws ArgumentError multipathfinder(fun, 10; init)
     end
-    @testset "errors if neither dim nor init valid" begin
-        logp(x) = -sum(abs2, x) / 2
-        nruns = 2
-        @test_throws ArgumentError multipathfinder(logp, 10; nruns)
-        @test_throws ArgumentError multipathfinder(logp, 10; nruns, dim=0)
-        multipathfinder(logp, 10; nruns, dim=2)
-        multipathfinder(logp, 10; init=[randn(2) for _ in 1:nruns])
-    end
     @testset "errors if neither init nor nruns valid" begin
         logp(x) = -sum(abs2, x) / 2
-        @test_throws ArgumentError multipathfinder(logp, 10; dim=5, nruns=0)
-        multipathfinder(logp, 10; dim=5, nruns=2)
+        ℓ = build_logdensityproblem(logp, 5)
+        @test_throws ArgumentError multipathfinder(ℓ, 10; nruns=0)
+        multipathfinder(ℓ, 10; nruns=2)
     end
 end

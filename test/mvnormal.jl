@@ -1,6 +1,4 @@
-using AbstractDifferentiation
 using Distributions
-using ForwardDiff
 using Optim
 using Pathfinder
 using Random
@@ -11,10 +9,9 @@ include("test_utils.jl")
 @testset "MvNormal functions" begin
     @testset "fit_mvnormals" begin
         n = 10
-        logp(x) = logp_banana(x)
+        ℓ = build_logdensityproblem(logp_banana, n)
         θ₀ = 10 * randn(n)
-        ad_backend = AD.ForwardDiffBackend()
-        fun = Pathfinder.build_optim_function(logp; ad_backend)
+        fun = Pathfinder.build_optim_function(ℓ)
         prob = Pathfinder.build_optim_problem(fun, θ₀)
         optimizer = Optim.LBFGS()
         history_length = optimizer.m

@@ -5,8 +5,8 @@
 Container for results of single-path Pathfinder.
 
 # Fields
-- `input`: User-provided input object, e.g. either `logp`, `(logp, ∇logp)`, `optim_fun`,
-    `optim_prob`, or another object.
+- `input`: User-provided input object, e.g. a LogDensityProblem, `optim_fun`, `optim_prob`,
+    or another object.
 - `optimizer`: Optimizer used for maximizing the log-density
 - `rng`: Pseudorandom number generator that was used for sampling
 - `optim_prob::SciMLBase.OptimizationProblem`: Otimization problem used for
@@ -68,36 +68,35 @@ function Base.show(io::IO, ::MIME"text/plain", result::PathfinderResult)
 end
 
 """
-    pathfinder(logp; kwargs...)
-    pathfinder(logp, ∇logp; kwargs...)
+    pathfinder(ℓ; kwargs...)
     pathfinder(fun::SciMLBase::OptimizationFunction; kwargs...)
     pathfinder(prob::SciMLBase::OptimizationProblem; kwargs...)
 
-Find the best multivariate normal approximation encountered while maximizing `logp`.
+Find the best multivariate normal approximation encountered while maximizing a log density.
 
 From an optimization trajectory, Pathfinder constructs a sequence of (multivariate normal)
-approximations to the distribution specified by `logp`. The approximation that maximizes the
-evidence lower bound (ELBO), or equivalently, minimizes the KL divergence between the
-approximation and the true distribution, is returned.
+approximations to the distribution specified by a log density function. The approximation
+that maximizes the evidence lower bound (ELBO), or equivalently, minimizes the KL divergence
+between the approximation and the true distribution, is returned.
 
 The covariance of the multivariate normal distribution is an inverse Hessian approximation
 constructed using at most the previous `history_length` steps.
 
 # Arguments
-- `logp`: a callable that computes the log-density of the target distribution.
-- `∇logp`: a callable that computes the gradient of `logp`. If not provided, `logp` is
-    automatically differentiated using the backend specified in `ad_backend`.
-- `fun::SciMLBase.OptimizationFunction`: an optimization function that represents
-    `-logp(x)` with its gradient. It must have the necessary features (e.g. a Hessian
-    function) for the chosen optimization algorithm. For details, see
+- `ℓ`: an object, representing the log-density of the target distribution and its gradient,
+    that implements the [LogDensityProblems](https://www.tamaspapp.eu/LogDensityProblems.jl)
+    interface.
+- `fun::SciMLBase.OptimizationFunction`: an optimization function that represents the
+    negative log density with its gradient. It must have the necessary features (e.g. a
+    Hessian function, if applicable) for the chosen optimization algorithm. For details, see
     [Optimization.jl: OptimizationFunction](https://optimization.sciml.ai/stable/API/optimization_function/).
 - `prob::SciMLBase.OptimizationProblem`: an optimization problem containing a function with
     the same properties as `fun`, as well as an initial point, in which case `init` and
     `dim` are ignored.
 
 # Keywords
-- `dim::Int`: dimension of the target distribution. If not provided, `init` or must be.
-    Ignored if `init` is provided.
+- `dim::Int`: dimension of the target distribution, needed only if `fun` is provided and
+    `init` is not.
 - `init::AbstractVector{<:Real}`: initial point of length `dim` from which to begin
     optimization. If not provided, an initial point of type `Vector{Float64}` and length
     `dim` is created and filled using `init_sampler`.
@@ -107,7 +106,6 @@ constructed using at most the previous `history_length` steps.
     length `dims` in-place to generate an initial point
 - `ndraws_elbo::Int=$DEFAULT_NDRAWS_ELBO`: Number of draws used to estimate the ELBO
 - `ndraws::Int=ndraws_elbo`: number of approximate draws to return
-- `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend.
 - `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
 - `executor::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl executor that
     determines if and how to perform ELBO computation in parallel. The default
@@ -134,13 +132,11 @@ constructed using at most the previous `history_length` steps.
 """
 function pathfinder end
 
-function pathfinder(logp; ad_backend=AD.ForwardDiffBackend(), kwargs...)
-    return pathfinder(build_optim_function(logp; ad_backend); input=logp, kwargs...)
-end
-function pathfinder(logp, ∇logp; ad_backend=AD.ForwardDiffBackend(), kwargs...)
-    return pathfinder(
-        build_optim_function(logp, ∇logp; ad_backend); input=(logp, ∇logp), kwargs...
-    )
+function pathfinder(ℓ; input=ℓ, kwargs...)
+    _check_log_density_problem(ℓ)
+    dim = LogDensityProblems.dimension(ℓ)
+    optim_fun = build_optim_function(ℓ)
+    return pathfinder(optim_fun; input, dim, kwargs...)
 end
 function pathfinder(
     optim_fun::SciMLBase.OptimizationFunction;
@@ -336,4 +332,22 @@ function (s::UniformSampler)(rng::Random.AbstractRNG, point)
     scale = s.scale
     @. point = rand(rng) * 2scale - scale
     return point
+end
+
+function _check_log_density_problem(ℓ)
+    capabilities = LogDensityProblems.capabilities(ℓ)
+    if capabilities === nothing
+        throw(
+            ArgumentError(
+                "Provided object must implement the LogDensityProblems interface. See https://www.tamaspapp.eu/LogDensityProblems.jl.",
+            ),
+        )
+    elseif capabilities === LogDensityProblems.LogDensityOrder{0}()
+        throw(
+            ArgumentError(
+                "The log density problem must at least support gradient computation. To use automatic differentiation, see https://github.com/tpapp/LogDensityProblemsAD.jl.",
+            ),
+        )
+    end
+    return nothing
 end

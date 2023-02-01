@@ -1,5 +1,3 @@
-using AbstractDifferentiation
-using ForwardDiff
 using LinearAlgebra
 using Optim
 using Pathfinder
@@ -52,8 +50,8 @@ end
         nocedal_wright_scaling(α, s, y) = fill!(similar(α), dot(y, s) / sum(abs2, y))
         θ₀ = 10 * randn(n)
 
-        ad_backend = AD.ForwardDiffBackend()
-        fun = Pathfinder.build_optim_function(logp; ad_backend)
+        ℓ = build_logdensityproblem(logp, n)
+        fun = Pathfinder.build_optim_function(ℓ)
         prob = Pathfinder.build_optim_problem(fun, θ₀)
         optimizer = Optim.LBFGS(;
             m=history_length, linesearch=Optim.LineSearches.MoreThuente()

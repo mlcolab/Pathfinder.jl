@@ -67,8 +67,7 @@ function Base.show(io::IO, ::MIME"text/plain", result::MultiPathfinderResult)
 end
 
 """
-    multipathfinder(logp, ndraws; kwargs...)
-    multipathfinder(logp, ∇logp, ndraws; kwargs...)
+    multipathfinder(ℓ, ndraws; kwargs...)
     multipathfinder(fun::SciMLBase.OptimizationFunction, ndraws; kwargs...)
 
 Run [`pathfinder`](@ref) multiple times to fit a multivariate normal mixture model.
@@ -91,31 +90,29 @@ resulting draws better approximate draws from the target distribution ``p`` inst
 for approximating expectations with respect to ``p``.
 
 # Arguments
-- `logp`: a callable that computes the log-density of the target distribution.
-- `∇logp`: a callable that computes the gradient of `logp`. If not provided, `logp` is
-    automatically differentiated using the backend specified in `ad_backend`.
+- `ℓ`: an object, representing the log-density of the target distribution and its gradient,
+    that implements the [LogDensityProblems](https://www.tamaspapp.eu/LogDensityProblems.jl)
+    interface.
 - `fun::SciMLBase.OptimizationFunction`: an optimization function that represents
-    `-logp(x)` with its gradient. It must have the necessary features (e.g. a Hessian
-    function) for the chosen optimization algorithm. For details, see
+    a negative log density with its gradient. It must have the necessary features (e.g. a
+    Hessian function) for the chosen optimization algorithm. For details, see
     [Optimization.jl: OptimizationFunction](https://optimization.sciml.ai/stable/API/optimization_function/).
 - `ndraws::Int`: number of approximate draws to return
 
 # Keywords
 - `init`: iterator of length `nruns` of initial points of length `dim` from which each
     single-path Pathfinder run will begin. `length(init)` must be implemented. If `init` is
-    not provided, `dim` and `nruns` must be.
+    not provided, `nruns` must be, and `dim` must be if `fun` provided.
 - `nruns::Int`: number of runs of Pathfinder to perform. Ignored if `init` is provided.
-- `ad_backend=AD.ForwardDiffBackend()`: AbstractDifferentiation.jl AD backend used to
-    differentiate `logp` if `∇logp` is not provided.
 - `ndraws_per_run::Int`: The number of draws to take for each component before resampling.
     Defaults to a number such that `ndraws_per_run * nruns > ndraws`.
 - `importance::Bool=true`: Perform Pareto smoothed importance resampling of draws.
 - `rng::AbstractRNG=Random.GLOBAL_RNG`: Pseudorandom number generator. It is recommended to
     use a parallelization-friendly PRNG like the default PRNG on Julia 1.7 and up.
-- `executor::Transducers.Executor`: Transducers.jl executor that determines if and how
-    to run the single-path runs in parallel. If `rng` is known to be thread-safe, the
-    default is `Transducers.PreferParallel()` (parallel executation, defaulting to
-    multi-threading). Otherwise, it is `Transducers.SequentialEx()` (no parallelization).
+- `executor::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl executor that
+    determines if and how to run the single-path runs in parallel. If a transducer for
+    multi-threaded computation is selected, you must first verify that `rng` and the log
+    density function are thread-safe.
 - `executor_per_run::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl
     executor used within each run to parallelize PRNG calls. Defaults to no parallelization.
     See [`pathfinder`](@ref) for a description.
@@ -126,22 +123,11 @@ for approximating expectations with respect to ``p``.
 """
 function multipathfinder end
 
-function multipathfinder(
-    logp, ndraws::Int; ad_backend=AD.ForwardDiffBackend(), input=logp, kwargs...
-)
-    return multipathfinder(build_optim_function(logp; ad_backend), ndraws; input, kwargs...)
-end
-function multipathfinder(
-    logp,
-    ∇logp,
-    ndraws::Int;
-    ad_backend=AD.ForwardDiffBackend(),
-    input=(logp, ∇logp),
-    kwargs...,
-)
-    return multipathfinder(
-        build_optim_function(logp, ∇logp; ad_backend), ndraws; input, kwargs...
-    )
+function multipathfinder(ℓ, ndraws::Int; input=ℓ, kwargs...)
+    _check_log_density_problem(ℓ)
+    dim = LogDensityProblems.dimension(ℓ)
+    optim_fun = build_optim_function(ℓ)
+    return multipathfinder(optim_fun, ndraws; input, dim, kwargs...)
 end
 function multipathfinder(
     optim_fun::SciMLBase.OptimizationFunction,
@@ -154,7 +140,7 @@ function multipathfinder(
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     history_length::Int=DEFAULT_HISTORY_LENGTH,
     optimizer=default_optimizer(history_length),
-    executor::Transducers.Executor=_default_executor(rng),
+    executor::Transducers.Executor=Transducers.SequentialEx(),
     executor_per_run=Transducers.SequentialEx(),
     importance::Bool=true,
     kwargs...,

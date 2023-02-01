@@ -1,4 +1,6 @@
+using ForwardDiff
 using LinearAlgebra
+using LogDensityProblems
 using Pathfinder
 using Random
 
@@ -32,3 +34,40 @@ function _fb(b, x)
     return -dot(y, inv(Σ), y) / 2
 end
 logp_banana(x) = _fb(0.03, x)
+
+struct LogDensityFunction{F}
+    logp::F
+    dim::Int
+end
+function LogDensityProblems.capabilities(::Type{<:LogDensityFunction})
+    return LogDensityProblems.LogDensityOrder{0}()
+end
+LogDensityProblems.dimension(ℓ::LogDensityFunction) = ℓ.dim
+LogDensityProblems.logdensity(ℓ::LogDensityFunction, x) = ℓ.logp(x)
+
+struct LogDensityFunctionWithGradHess{F,G,H}
+    logp::F
+    ∇logp::G
+    ∇²logp::H
+    dim::Int
+end
+function LogDensityProblems.capabilities(::Type{<:LogDensityFunctionWithGradHess})
+    return LogDensityProblems.LogDensityOrder{2}()
+end
+LogDensityProblems.dimension(ℓ::LogDensityFunctionWithGradHess) = ℓ.dim
+LogDensityProblems.logdensity(ℓ::LogDensityFunctionWithGradHess, x) = ℓ.logp(x)
+function LogDensityProblems.logdensity_and_gradient(ℓ::LogDensityFunctionWithGradHess, x)
+    return ℓ.logp(x), ℓ.∇logp(x)
+end
+function LogDensityProblems.logdensity_gradient_and_hessian(
+    ℓ::LogDensityFunctionWithGradHess, x
+)
+    return ℓ.logp(x), ℓ.∇logp(x), ℓ.∇²logp(x)
+end
+
+function build_logdensityproblem(f, n)
+    ∇f(x) = ForwardDiff.gradient(f, x)
+    Hf(x) = ForwardDiff.hessian(f, x)
+    ℓ = LogDensityFunctionWithGradHess(f, ∇f, Hf, n)
+    return ℓ
+end

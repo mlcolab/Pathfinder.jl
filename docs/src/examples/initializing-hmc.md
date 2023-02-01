@@ -85,7 +85,7 @@ nothing # hide
 To use DynamicHMC, we first need to transform our model to an unconstrained space using [TransformVariables.jl](https://tamaspapp.eu/TransformVariables.jl/stable/) and wrap it in a type that implements the [LogDensityProblems.jl](https://github.com/tpapp/LogDensityProblems.jl) interface:
 
 ```@example 1
-using DynamicHMC, LogDensityProblems, LogDensityProblemsAD, TransformVariables
+using DynamicHMC, ForwardDiff, LogDensityProblems, LogDensityProblemsAD, TransformVariables
 using TransformedLogDensities: TransformedLogDensity
 
 transform = as((σ=asℝ₊, α=asℝ, β=as(Array, J)))
@@ -93,12 +93,10 @@ P = TransformedLogDensity(transform, model)
 ∇P = ADgradient(:ForwardDiff, P)
 ```
 
-Pathfinder, on the other hand, expects a log-density function:
+Pathfinder can take any object that implements this interface.
 
 ```@example 1
-logp(x) = LogDensityProblems.logdensity(P, x)
-∇logp(x) = LogDensityProblems.logdensity_and_gradient(∇P, x)[2]
-result_pf = pathfinder(logp, ∇logp; dim)
+result_pf = pathfinder(∇P)
 ```
 
 ```@example 1
@@ -158,10 +156,10 @@ result_dhmc3 = mcmc_with_warmup(
 
 ## AdvancedHMC.jl
 
-Similar to DynamicHMC, AdvancedHMC can work with an object implementing the LogDensityProblems API:
+Similar to Pathfinder and DynamicHMC, AdvancedHMC can also work with a LogDensityProblem:
 
 ```@example 1
-using AdvancedHMC, ForwardDiff
+using AdvancedHMC
 
 nadapts = 500;
 nothing # hide
