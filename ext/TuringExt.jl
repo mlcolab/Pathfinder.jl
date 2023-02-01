@@ -1,5 +1,18 @@
-using .Turing: Turing, DynamicPPL, MCMCChains
+module TuringExt
+
 using Accessors: Accessors
+using Random: Random
+if isdefined(Base, :get_extension)
+    using DynamicPPL: DynamicPPL
+    using MCMCChains: MCMCChains
+    using Pathfinder: Pathfinder
+    using Turing: Turing
+else  # using Requires
+    using ..DynamicPPL: DynamicPPL
+    using ..MCMCChains: MCMCChains
+    using ..Pathfinder: Pathfinder
+    using ..Turing: Turing
+end
 
 # utilities for working with Turing model parameter names using only the DynamicPPL API
 
@@ -119,30 +132,30 @@ function varnames_to_ranges(metadata::DynamicPPL.Metadata)
     return Dict(zip(metadata.vns, ranges))
 end
 
-function pathfinder(
+function Pathfinder.pathfinder(
     model::DynamicPPL.Model;
     rng=Random.GLOBAL_RNG,
     init_scale=2,
-    init_sampler=UniformSampler(init_scale),
+    init_sampler=Pathfinder.UniformSampler(init_scale),
     init=nothing,
     kwargs...,
 )
     var_names = flattened_varnames_list(model)
     prob = Turing.optim_problem(model, Turing.MAP(); constrained=false, init_theta=init)
     init_sampler(rng, prob.prob.u0)
-    result = pathfinder(prob.prob; rng, input=model, kwargs...)
+    result = Pathfinder.pathfinder(prob.prob; rng, input=model, kwargs...)
     draws = reduce(vcat, transpose.(prob.transform.(eachcol(result.draws))))
     chns = MCMCChains.Chains(draws, var_names; info=(; pathfinder_result=result))
     result_new = Accessors.@set result.draws_transformed = chns
     return result_new
 end
 
-function multipathfinder(
+function Pathfinder.multipathfinder(
     model::DynamicPPL.Model,
     ndraws::Int;
     rng=Random.GLOBAL_RNG,
     init_scale=2,
-    init_sampler=UniformSampler(init_scale),
+    init_sampler=Pathfinder.UniformSampler(init_scale),
     nruns::Int,
     kwargs...,
 )
@@ -153,9 +166,11 @@ function multipathfinder(
     for _ in 2:nruns
         push!(init, init_sampler(rng, deepcopy(init1)))
     end
-    result = multipathfinder(fun.func, ndraws; rng, input=model, init, kwargs...)
+    result = Pathfinder.multipathfinder(fun.func, ndraws; rng, input=model, init, kwargs...)
     draws = reduce(vcat, transpose.(fun.transform.(eachcol(result.draws))))
     chns = MCMCChains.Chains(draws, var_names; info=(; pathfinder_result=result))
     result_new = Accessors.@set result.draws_transformed = chns
     return result_new
 end
+
+end  # module

@@ -6,24 +6,27 @@ on:
   pull_request:
 jobs:
   test:
-    name: ${{ matrix.package }}
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.package }} - Julia ${{ matrix.version }} 
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         version: [1]
-        os: [ubuntu-latest]
-        arch: [x64]
         package:
           - DynamicHMC
           - AdvancedHMC
           - Turing
+        include:
+          - package: DynamicHMC
+            version: 'nightly'
+          - package: Turing
+            version: 'nightly'
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
+          arch: x64
       - uses: julia-actions/julia-buildpkg@v1
       - run: |
           julia --code-coverage=user -e '
