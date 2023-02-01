@@ -6,10 +6,27 @@ This page introduces basic Pathfinder usage with examples.
 
 For a simple example, we'll run Pathfinder on a multivariate normal distribution with
 a dense covariance matrix.
+Pathfinder expects an object that implements the [LogDensityProblems](https://www.tamaspapp.eu/LogDensityProblems.jl) interface and has a gradient implemented.
+We can use automatic differentiation to compute the gradient using [LogDensityProblemsAD](https://github.com/tpapp/LogDensityProblemsAD.jl).
 
 ```@example 1
-using LinearAlgebra, Pathfinder, Printf, StatsPlots, Random
+using ForwardDiff, LinearAlgebra, LogDensityProblems, LogDensityProblemsAD,
+      Pathfinder, Printf, StatsPlots, Random
 Random.seed!(42)
+
+ForwardDiff, LogDensityProblems, LogDensityProblemsAD
+struct MvNormalProblem{T,S}
+    μ::T  # mean
+    P::S  # precision matrix
+end
+function LogDensityProblems.capabilities(::Type{<:MvNormalProblem})
+    return LogDensityProblems.LogDensityOrder{0}()
+end
+LogDensityProblems.dimension(ℓ::MvNormalProblem) = length(ℓ.μ)
+function LogDensityProblems.logdensity(ℓ::MvNormalProblem, x)
+    z = x - μ
+    return -dot(z, P, z) / 2
+end
 
 Σ = [
     2.71   0.5    0.19   0.07   1.04
@@ -20,20 +37,15 @@ Random.seed!(42)
 ]
 μ = [-0.55, 0.49, -0.76, 0.25, 0.94]
 P = inv(Symmetric(Σ))
-dim = length(μ)
-init_scale=4
+prob_mvnormal = ADgradient(:ForwardDiff, MvNormalProblem(μ, P))
 
-function logp_mvnormal(x)
-    z = x - μ
-    return -dot(z, P, z) / 2
-end
 nothing # hide
 ```
 
 Now we run [`pathfinder`](@ref).
 
 ```@example 1
-result = pathfinder(logp_mvnormal; dim, init_scale)
+result = pathfinder(prob_mvnormal; init_scale=4)
 ```
 
 `result` is a [`PathfinderResult`](@ref).
@@ -114,14 +126,21 @@ Now we will run Pathfinder on the following banana-shaped distribution with dens
 \pi(x_1, x_2) = e^{-x_1^2 / 2} e^{-5 (x_2 - x_1^2)^2 / 2}.
 ```
 
-First we define the distribution:
+First we define the log density problem:
 
 ```@example 1
 Random.seed!(23)
 
-logp_banana(x) = -(x[1]^2 + 5(x[2] - x[1]^2)^2) / 2
-dim = 2
-init_scale = 10
+struct BananaProblem end
+function LogDensityProblems.capabilities(::Type{<:BananaProblem})
+    return LogDensityProblems.LogDensityOrder{0}()
+end
+LogDensityProblems.dimension(ℓ::BananaProblem) = 2
+function LogDensityProblems.logdensity(ℓ::BananaProblem, x)
+    return -(x[1]^2 + 5(x[2] - x[1]^2)^2) / 2
+end
+
+prob_banana = ADgradient(:ForwardDiff, BananaProblem())
 
 nothing # hide
 ```
@@ -131,13 +150,14 @@ and then visualise it:
 ```@example 1
 xrange = -3.5:0.05:3.5
 yrange = -3:0.05:7
+logp_banana(x) = LogDensityProblems.logdensity(prob_banana, x)
 contour(xrange, yrange, exp ∘ logp_banana ∘ Base.vect; xlabel="x₁", ylabel="x₂")
 ```
 
 Now we run [`pathfinder`](@ref).
 
 ```@example 1
-result = pathfinder(logp_banana; dim, init_scale)
+result = pathfinder(prob_banana; init_scale=10)
 ```
 
 As before we can visualise each iteration of the algorithm.
@@ -155,7 +175,7 @@ Especially for such complicated target distributions, it's always a good idea to
 
 ```@example 1
 ndraws = 1_000
-result = multipathfinder(logp_banana, ndraws; nruns=20, dim, init_scale)
+result = multipathfinder(prob_banana, ndraws; nruns=20, init_scale=10)
 ```
 
 `result` is a [`MultiPathfinderResult`](@ref).
@@ -163,7 +183,7 @@ See its docstring for a description of its fields.
 
 `result.fit_distribution` is a uniformly-weighted `Distributions.MixtureModel`.
 Each component is the result of a single Pathfinder run.
-It's possible that some runs fit the target distribution much better than others, so instead of just drawing samples from `result.fit_distribution`, `multipathfinder` draws many samples from each component and then uses Pareto-smoothed importance resampling (using [PSIS.jl](https://psis.julia.arviz.org/stable/)) from these draws to better target `logp_banana`.
+It's possible that some runs fit the target distribution much better than others, so instead of just drawing samples from `result.fit_distribution`, `multipathfinder` draws many samples from each component and then uses Pareto-smoothed importance resampling (using [PSIS.jl](https://psis.julia.arviz.org/stable/)) from these draws to better target `prob_banana`.
 
 The Pareto shape diagnostic informs us on the quality of these draws.
 Here the Pareto shape ``k`` diagnostic is bad (``k > 0.7``), which tells us that these draws are unsuitable for computing posterior estimates, so we should definitely run MCMC to get better draws.
@@ -207,15 +227,23 @@ function logp_funnel(x)
     return ((τ / 3)^2 + (n - 1) * τ + sum(b -> abs2(b * exp(-τ / 2)), β)) / -2
 end
 
-dim = 100
-init_scale = 10
+struct FunnelProblem
+    dim::Int
+end
+function LogDensityProblems.capabilities(::Type{<:FunnelProblem})
+    return LogDensityProblems.LogDensityOrder{0}()
+end
+LogDensityProblems.dimension(ℓ::FunnelProblem) = ℓ.dim
+LogDensityProblems.logdensity(::FunnelProblem, x) = logp_funnel(x)
+
+prob_funnel = ADgradient(:ForwardDiff, FunnelProblem(100))
 nothing # hide
 ```
 
 First, let's fit this posterior with single-path Pathfinder.
 
 ```@example 1
-result_single = pathfinder(logp_funnel; dim, init_scale)
+result_single = pathfinder(prob_funnel; init_scale=10)
 ```
 
 Let's visualize this sequence of multivariate normals for the first two dimensions.
@@ -240,7 +268,7 @@ Now we run [`multipathfinder`](@ref).
 
 ```@example 1
 ndraws = 1_000
-result = multipathfinder(logp_funnel, ndraws; nruns=20, dim, init_scale)
+result = multipathfinder(prob_funnel, ndraws; nruns=20, init_scale=10)
 ```
 
 Again, the poor Pareto shape diagnostic indicates we should run MCMC to get draws suitable for computing posterior estimates.

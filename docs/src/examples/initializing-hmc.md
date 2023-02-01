@@ -96,7 +96,7 @@ P = TransformedLogDensity(transform, model)
 Pathfinder can take any object that implements this interface.
 
 ```@example 1
-result_pf = pathfinder(∇P; dim)
+result_pf = pathfinder(∇P)
 ```
 
 ```@example 1
