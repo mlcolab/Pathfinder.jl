@@ -1,28 +1,31 @@
 using AdvancedHMC,
     ForwardDiff,
     LinearAlgebra,
+    LogDensityProblems,
+    LogDensityProblemsAD,
     MCMCDiagnosticTools,
     Optim,
     Pathfinder,
     Random,
     Statistics,
     StatsFuns,
-    Test
+    Test,
+    TransformVariables
+using TransformedLogDensities: TransformedLogDensity
 
 Random.seed!(0)
 
-struct RegressionModel{X,Y}
+struct RegressionProblem{X,Y}
     x::X
     y::Y
 end
 
-function (m::RegressionModel)(θ)
-    logσ = θ[1]
-    σ = exp(logσ)
-    α = θ[2]
-    β = θ[3:end]
-    x = m.x
-    y = m.y
+function (prob::RegressionProblem)(θ)
+    σ = θ.σ
+    α = θ.α
+    β = θ.β
+    x = prob.x
+    y = prob.y
     lp = normlogpdf(σ) + logtwo
     lp += normlogpdf(α)
     lp += sum(normlogpdf, β)
@@ -73,24 +76,29 @@ end
 
         metric2 = Pathfinder.RankUpdateEuclideanMetric(3)
         @test metric2.M⁻¹ ≈ I
-        @test size(metric2) == (3, 3)
+        @test size(metric2) == (3,)
+        @test size(metric2, 2) == 1
         metric2 = Pathfinder.RankUpdateEuclideanMetric((4,))
         @test metric2.M⁻¹ ≈ I
-        @test size(metric2) == (4, 4)
+        @test size(metric2) == (4,)
+        @test size(metric2, 2) == 1
         metric2 = Pathfinder.RankUpdateEuclideanMetric(Float32, (4,))
         @test metric2.M⁻¹ ≈ I
-        @test size(metric2) == (4, 4)
+        @test size(metric2) == (4,)
+        @test size(metric2, 2) == 1
         @test eltype(metric2.M⁻¹) === Float32
 
-        @test size(metric) == (5, 5)
+        @test size(metric) == (5,)
+        @test size(metric, 2) == 1
         @test AdvancedHMC.renew(metric, M⁻¹2).M⁻¹ === M⁻¹2
         @test sprint(show, metric) == "RankUpdateEuclideanMetric(diag=$(diag(metric.M⁻¹)))"
         @test AdvancedHMC.neg_energy(h, r, θ) ≈ AdvancedHMC.neg_energy(h_dense, r, θ)
         @test AdvancedHMC.∂H∂r(h, r) ≈ AdvancedHMC.∂H∂r(h_dense, r)
+        kinetic = AdvancedHMC.GaussianKinetic()
         compare_estimates(
             identity,
-            [rand(metric) for _ in 1:10_000],
-            [rand(metric_dense) for _ in 1:10_000],
+            [rand(metric, kinetic) for _ in 1:10_000],
+            [rand(metric_dense, kinetic) for _ in 1:10_000],
         )
     end
 
@@ -102,10 +110,13 @@ end
         y = sin.(x) .+ randn.() .* 0.2 .+ x
         X = [x x .^ 2 x .^ 3]
         θ₀ = randn(nparams)
-        ℓπ = RegressionModel(X, y)
+        prob = RegressionProblem(X, y)
+        trans = as((σ=asℝ₊, α=asℝ, β=as(Array, size(X, 2))))
+        P = TransformedLogDensity(trans, prob)
+        ∇P = ADgradient(:ForwardDiff, P)
 
         metric = DiagEuclideanMetric(nparams)
-        hamiltonian = Hamiltonian(metric, ℓπ, ForwardDiff)
+        hamiltonian = Hamiltonian(metric, ∇P)
         ϵ = find_good_stepsize(hamiltonian, θ₀)
         integrator = Leapfrog(ϵ)
         proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
@@ -123,11 +134,11 @@ end
             progress=false,
         )
 
-        result_pf = pathfinder(ℓπ; dim=5, optimizer=Optim.LBFGS(; m=6))
+        result_pf = pathfinder(∇P; dim=5, optimizer=Optim.LBFGS(; m=6))
 
         @testset "Initial point" begin
             metric = DiagEuclideanMetric(nparams)
-            hamiltonian = Hamiltonian(metric, ℓπ, ForwardDiff)
+            hamiltonian = Hamiltonian(metric, ∇P)
             ϵ = find_good_stepsize(hamiltonian, θ₀)
             integrator = Leapfrog(ϵ)
             proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
@@ -147,7 +158,7 @@ end
 
         @testset "Initial point and metric" begin
             metric = DiagEuclideanMetric(diag(result_pf.fit_distribution.Σ))
-            hamiltonian = Hamiltonian(metric, ℓπ, ForwardDiff)
+            hamiltonian = Hamiltonian(metric, ∇P)
             ϵ = find_good_stepsize(hamiltonian, θ₀)
             integrator = Leapfrog(ϵ)
             proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
@@ -167,7 +178,7 @@ end
 
         @testset "Initial point and final metric" begin
             metric = Pathfinder.RankUpdateEuclideanMetric(result_pf.fit_distribution.Σ)
-            hamiltonian = Hamiltonian(metric, ℓπ, ForwardDiff)
+            hamiltonian = Hamiltonian(metric, ∇P)
             ϵ = find_good_stepsize(hamiltonian, θ₀)
             integrator = Leapfrog(ϵ)
             proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)

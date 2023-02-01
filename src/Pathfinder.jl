@@ -1,12 +1,12 @@
 module Pathfinder
 
-using AbstractDifferentiation: AD
 using Distributions: Distributions
 using Folds: Folds
 # ensure that ForwardDiff is conditionally loaded by Optimization
 using ForwardDiff: ForwardDiff
 using IrrationalConstants: log2π
 using LinearAlgebra
+using LogDensityProblems: LogDensityProblems
 using Optim: Optim, LineSearches
 using Optimization: Optimization
 using OptimizationOptimJL: OptimizationOptimJL

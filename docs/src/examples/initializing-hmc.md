@@ -85,7 +85,7 @@ nothing # hide
 To use DynamicHMC, we first need to transform our model to an unconstrained space using [TransformVariables.jl](https://tamaspapp.eu/TransformVariables.jl/stable/) and wrap it in a type that implements the [LogDensityProblems.jl](https://github.com/tpapp/LogDensityProblems.jl) interface:
 
 ```@example 1
-using DynamicHMC, LogDensityProblems, LogDensityProblemsAD, TransformVariables
+using DynamicHMC, ForwardDiff, LogDensityProblems, LogDensityProblemsAD, TransformVariables
 using TransformedLogDensities: TransformedLogDensity
 
 transform = as((σ=asℝ₊, α=asℝ, β=as(Array, J)))
@@ -93,12 +93,10 @@ P = TransformedLogDensity(transform, model)
 ∇P = ADgradient(:ForwardDiff, P)
 ```
 
-Pathfinder, on the other hand, expects a log-density function:
+Pathfinder can take any object that implements this interface.
 
 ```@example 1
-logp(x) = LogDensityProblems.logdensity(P, x)
-∇logp(x) = LogDensityProblems.logdensity_and_gradient(∇P, x)[2]
-result_pf = pathfinder(logp, ∇logp; dim)
+result_pf = pathfinder(∇P)
 ```
 
 ```@example 1
@@ -158,11 +156,10 @@ result_dhmc3 = mcmc_with_warmup(
 
 ## AdvancedHMC.jl
 
-Similar to Pathfinder, AdvancedHMC works with an unconstrained log density function and its gradient.
-We'll just use the `logp` we already created above.
+Similar to Pathfinder and DynamicHMC, AdvancedHMC can also work with a LogDensityProblem:
 
 ```@example 1
-using AdvancedHMC, ForwardDiff
+using AdvancedHMC
 
 nadapts = 500;
 nothing # hide
@@ -172,7 +169,7 @@ nothing # hide
 
 ```@example 1
 metric = DiagEuclideanMetric(dim)
-hamiltonian = Hamiltonian(metric, logp, ForwardDiff)
+hamiltonian = Hamiltonian(metric, ∇P)
 ϵ = find_good_stepsize(hamiltonian, init_params)
 integrator = Leapfrog(ϵ)
 proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
@@ -196,7 +193,7 @@ Instead we need to first extract its diagonal for a `DiagonalEuclideanMetric` or
 
 ```@example 1
 metric = DenseEuclideanMetric(Matrix(inv_metric))
-hamiltonian = Hamiltonian(metric, logp, ForwardDiff)
+hamiltonian = Hamiltonian(metric, ∇P)
 ϵ = find_good_stepsize(hamiltonian, init_params)
 integrator = Leapfrog(ϵ)
 proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
@@ -220,7 +217,7 @@ To use Pathfinder's metric with no metric adaptation, we need to use Pathfinder'
 ```@example 1
 nadapts = 75
 metric = Pathfinder.RankUpdateEuclideanMetric(inv_metric)
-hamiltonian = Hamiltonian(metric, logp, ForwardDiff)
+hamiltonian = Hamiltonian(metric, ∇P)
 ϵ = find_good_stepsize(hamiltonian, init_params)
 integrator = Leapfrog(ϵ)
 proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
