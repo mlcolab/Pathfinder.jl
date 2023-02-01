@@ -7,7 +7,6 @@ Random.seed!(0)
 @testset "Pathfinder.jl" begin
     include("transducers.jl")
     include("woodbury.jl")
-    include("logdensityproblems.jl")
     include("optimize.jl")
     include("inverse_hessian.jl")
     include("mvnormal.jl")
