@@ -37,7 +37,7 @@ include("test_utils.jl")
             )
             @test result isa MultiPathfinderResult
             @test result.input === ℓ
-            @test result.optim_fun isa SciMLBase.OptimizationFunction
+            @test result.optim_fun isa Pathfinder.OptimJLFunction
             @test result.rng === rng
             @test result.optimizer ===
                 Pathfinder.default_optimizer(Pathfinder.DEFAULT_HISTORY_LENGTH)
