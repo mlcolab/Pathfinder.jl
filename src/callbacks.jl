@@ -108,11 +108,11 @@ A callback to log progress with a `reporter`
 
 $(FIELDS)
 """
-Base.@kwdef mutable struct ProgressCallback{R} <: AbstractOptimizationCallback
+Base.@kwdef mutable struct ProgressCallback{R,U} <: AbstractOptimizationCallback
     "Reporter function, called with signature `report(progress_id, maxiters, try_id, iter_id)`"
     @const reporter::R
     "An identifier for the progress bar."
-    @const progress_id::Base.UUID
+    @const progress_id::U
     "Maximum number of iterations"
     @const maxiters::Int
     "Index of the current try"
@@ -133,7 +133,7 @@ $(SIGNATURES)
 
 Report progress using ProgressLogging.jl.
 """
-function report_progress(progress_id::Base.UUID, maxiters::Int, try_id::Int, iter_id::Int)
+function report_progress(progress_id, maxiters::Int, try_id::Int, iter_id::Int)
     Base.@logmsg ProgressLogging.ProgressLevel "Optimizing (try $(try_id))" progress =
         iter_id / maxiters _id = progress_id
     return nothing
