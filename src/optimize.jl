@@ -72,16 +72,3 @@ function _make_optimization_callback(
         return ret
     end
 end
-
-struct OptimizationTrace{P,L}
-    points::P
-    log_densities::L
-    gradients::P
-end
-
-Base.length(trace::OptimizationTrace) = length(trace.points)
-
-function Base.show(io::IO, trace::OptimizationTrace)
-    print(io, "OptimizationTrace with $(length(trace) - 1) iterations")
-    return nothing
-end
