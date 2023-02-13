@@ -27,10 +27,13 @@ include("test_utils.jl")
             ℓ = build_logdensityproblem(logp, 5)
             init = randn(dim)
             Random.seed!(rng, seed)
-            result = @inferred pathfinder(ℓ; init, ndraws, rng, executor)
+            result = @inferred Pathfinder.PathfinderResult pathfinder(
+                ℓ; init, ndraws, rng, executor
+            )
             @test result isa PathfinderResult
             @test result.input === ℓ
-            @test result.optim_prob isa SciMLBase.OptimizationProblem
+            @test result.optim_prob isa Pathfinder.OptimJLProblem
+            @test result.optim_solution isa Optim.MultivariateOptimizationResults
             @test result.logp(init) ≈ logp(init)
             @test result.rng === rng
             @test result.optimizer ===
@@ -46,7 +49,6 @@ include("test_utils.jl")
             @test result.fit_distribution_transformed === result.fit_distribution
             @test result.draws_transformed === result.draws
             @test result.num_tries ≥ 1
-            @test result.optim_solution isa SciMLBase.OptimizationSolution
             @test result.optim_trace isa Pathfinder.OptimizationTrace
             @test result.fit_distributions isa Vector{typeof(fit_distribution)}
             @test length(result.fit_distributions) == length(result.optim_trace)
@@ -93,7 +95,9 @@ include("test_utils.jl")
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
 
             Random.seed!(rng, seed)
-            result = @inferred pathfinder(ℓ; rng, optimizer, ndraws_elbo, executor)
+            result = @inferred Pathfinder.PathfinderResult pathfinder(
+                ℓ; rng, optimizer, ndraws_elbo, executor
+            )
             @test result.input === ℓ
             @test result.fit_distribution.Σ ≈ Σ rtol = 1e-1
             @test result.optimizer == optimizer
