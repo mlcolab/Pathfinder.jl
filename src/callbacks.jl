@@ -53,6 +53,55 @@ end
 """
 $(TYPEDEF)
 
+A callback that signals termination if the objective value is non-finite and `fail=true`.
+"""
+struct CheckFiniteValueCallback <: AbstractOptimizationCallback
+    "Whether to raise an error if the objective function is non-finite"
+    fail::Bool
+end
+
+function (cb::CheckFiniteValueCallback)(x, fx, args...)
+    return cb.fail && (isnan(fx) || fx == -Inf)
+end
+
+"""
+$(TYPEDEF)
+
+A callback to fill an [`OptimizationTrace`](@ref)
+
+!!! note
+    Optimization doesn't have an interface for accessing the gradient trace, so this
+    callback recomputes the gradient.
+
+# Fields
+
+$(FIELDS)
+"""
+struct FillTraceCallback{G,T<:OptimizationTrace} <: AbstractOptimizationCallback
+    "A function to compute the gradient of the objective function"
+    grad::G
+    "An `OptimizationTrace` with empty vectors to be filled."
+    trace::T
+end
+
+function (cb::FillTraceCallback)(x, fx, args...)
+    # NOTE: Optimization doesn't have an interface for accessing the gradient trace,
+    # so we need to recompute it ourselves
+    # see https://github.com/SciML/Optimization.jl/issues/149
+    ∇fx = cb.grad(x)
+    rmul!(∇fx, -1)
+
+    trace = cb.trace
+    # some backends mutate x, so we must copy it
+    push!(trace.points, copy(x))
+    push!(trace.log_densities, -fx)
+    push!(trace.gradients, ∇fx)
+    return false
+end
+
+"""
+$(TYPEDEF)
+
 A callback to log progress with a `reporter`
 
 # Fields
@@ -73,10 +122,11 @@ Base.@kwdef mutable struct ProgressCallback{R} <: AbstractOptimizationCallback
 end
 
 function (cb::ProgressCallback)(args...)
+    reporter = cb.reporter
+    reporter === nothing || reporter(cb.progress_id, cb.maxiters, cb.try_id, cb.iter_id)
     cb.iter_id += 1
     return false
 end
-(::ProgressCallback{Nothing})(args...) = false
 
 """
 $(SIGNATURES)
@@ -87,42 +137,6 @@ function report_progress(progress_id::Base.UUID, maxiters::Int, try_id::Int, ite
     Base.@logmsg ProgressLogging.ProgressLevel "Optimizing (try $(try_id))" progress =
         iter_id / maxiters _id = progress_id
     return nothing
-end
-
-"""
-$(TYPEDEF)
-
-A callback that signals termination if the objective value is non-finite and `fail=true`.
-"""
-struct CheckFiniteValueCallback <: AbstractOptimizationCallback
-    "Whether to raise an error if the objective function is non-finite"
-    fail::Bool
-end
-
-function (cb::CheckFiniteValueCallback)(x, fx, ∇fx, args...)
-    return cb.fail && isnan(fx) || fx == -Inf || any(!isfinite, ∇fx)
-end
-
-struct FillTraceCallback{G,T<:OptimizationTrace} <: AbstractOptimizationCallback
-    "A function to compute the gradient of the objective function"
-    grad::G
-    "An `Optimization` with empty vectors to be filled."
-    trace::T
-end
-
-function (cb::FillTraceCallback)(x, fx, args...)
-    # NOTE: Optimization doesn't have an interface for accessing the gradient trace,
-    # so we need to recompute it ourselves
-    # see https://github.com/SciML/Optimization.jl/issues/149
-    ∇fx = cb.grad(x)
-    rmul!(∇fx, -1)
-
-    trace = cb.trace
-    # some backends mutate x, so we must copy it
-    push!(trace.points, copy(x))
-    push!(trace.log_densities, -fx)
-    push!(trace.gradients, ∇fx)
-    return false
 end
 
 # callbacks for Optim.jl
