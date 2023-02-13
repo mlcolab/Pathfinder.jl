@@ -1,6 +1,7 @@
 module Pathfinder
 
 using Distributions: Distributions
+using DocStringExtensions
 using Folds: Folds
 # ensure that ForwardDiff is conditionally loaded by Optimization
 using ForwardDiff: ForwardDiff
@@ -37,6 +38,7 @@ end
 include("transducers.jl")
 include("woodbury.jl")
 include("trace.jl")
+include("callbacks.jl")
 include("optimize.jl")
 include("inverse_hessian.jl")
 include("mvnormal.jl")
