@@ -253,8 +253,13 @@ function _pathfinder_try_until_succeed(
 )
     for itry in 1:ntries
         progress_name = "Optimizing (try $itry)"
-        result = _pathfinder(rng, prob, logp; progress_name, kwargs...)
-        result.success && return (; itry, optim_prob=prob, result...)
+        try
+            result = _pathfinder(rng, prob, logp; progress_name, kwargs...)
+            result.success && return (; itry, optim_prob=prob, result...)
+        catch e
+            e isa InterruptException && rethrow(e)
+            @warn "Pathfinder failed with exception: $e"
+        end
         init_sampler(rng, prob.u0)
     end
     @error "Pathfinder failed after $ntries tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
