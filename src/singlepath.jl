@@ -199,13 +199,8 @@ function pathfinder(
         num_bfgs_updates_rejected,
     ) = path_result
 
-    if !success
-        ndraws_elbo_actual = 0
-        @warn "Pathfinder failed after $itry tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
-    else
-        elbo_estimate_opt = elbo_estimates[fit_iteration]
-        ndraws_elbo_actual = ndraws_elbo
-    end
+    elbo_estimate_opt = elbo_estimates[fit_iteration]
+    ndraws_elbo_actual = ndraws_elbo
 
     if num_bfgs_updates_rejected > 0
         perc = round(num_bfgs_updates_rejected * (100//length(fit_distributions)); digits=1)
