@@ -148,18 +148,18 @@ function pathfinder(
     input=optim_fun,
     kwargs...,
 )
+    # make sure init is mutable
     if init !== nothing
-        _init = init
-        allow_mutating_init = false
+        _init = similar(init)
+        copyto!(_init, init)
     elseif init === nothing && dim > 0
         _init = Vector{Float64}(undef, dim)
         init_sampler(rng, _init)
-        allow_mutating_init = true
     else
         throw(ArgumentError("An initial point `init` or dimension `dim` must be provided."))
     end
     prob = build_optim_problem(optim_fun, _init)
-    return pathfinder(prob; rng, input, init_sampler, allow_mutating_init, kwargs...)
+    return pathfinder(prob; rng, input, init_sampler, kwargs...)
 end
 function pathfinder(
     prob::SciMLBase.OptimizationProblem;
