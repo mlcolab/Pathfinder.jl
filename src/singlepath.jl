@@ -92,7 +92,7 @@ constructed using at most the previous `history_length` steps.
     [Optimization.jl: OptimizationFunction](https://optimization.sciml.ai/stable/API/optimization_function/).
 - `prob::SciMLBase.OptimizationProblem`: an optimization problem containing a function with
     the same properties as `fun`, as well as an initial point, in which case `init` and
-    `dim` are ignored.
+    `dim` are ignored. The initial point may be overwritten.
 
 # Keywords
 - `dim::Int`: dimension of the target distribution, needed only if `fun` is provided and
