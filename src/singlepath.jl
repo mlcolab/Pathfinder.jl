@@ -254,23 +254,15 @@ function _pathfinder_try_until_succeed(
     ntries::Int=1_000,
     init_scale=2,
     init_sampler=UniformSampler(init_scale),
-    allow_mutating_init::Bool=false,
     kwargs...,
 )
-    itry = 1
-    progress_name = "Optimizing (try 1)"
-    result = _pathfinder(rng, prob, logp; progress_name, kwargs...)
-    _prob = prob
-    while !result.success && itry < ntries
-        if itry == 1 && !allow_mutating_init
-            _prob = deepcopy(prob)
-        end
-        itry += 1
-        init_sampler(rng, _prob.u0)
+    for itry in 1:ntries
         progress_name = "Optimizing (try $itry)"
-        result = _pathfinder(rng, _prob, logp; progress_name, kwargs...)
+        result = _pathfinder(rng, prob, logp; progress_name, kwargs...)
+        result.success && return (; itry, optim_prob=prob, result...)
+        init_sampler(rng, prob.u0)
     end
-    return (; itry, optim_prob=_prob, result...)
+    @error "Pathfinder failed after $ntries tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
 end
 
 function _pathfinder(
