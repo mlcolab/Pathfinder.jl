@@ -21,7 +21,8 @@ Container for results of single-path Pathfinder.
 - `draws_transformed`: `draws` transformed to be draws from `fit_distribution_transformed`.
 - `fit_iteration::Int`: Iteration at which ELBO estimate was maximized
 - `num_tries::Int`: Number of tries until Pathfinder succeeded
-- `optim_solution::SciMLBase.OptimizationSolution`: Solution object of optimization.
+- `optim_solution::Union{Optim.MultivariateOptimizationResults,SciMLBase.OptimizationSolution}`:
+    Solution object of optimization.
 - `optim_trace::Pathfinder.OptimizationTrace`: container for optimization trace of points,
     log-density, and gradient. The first point is the initial point.
 - `fit_distributions::AbstractVector{Distributions.MvNormal}`: Multivariate normal
@@ -92,7 +93,8 @@ constructed using at most the previous `history_length` steps.
     [Optimization.jl: OptimizationFunction](https://optimization.sciml.ai/stable/API/optimization_function/).
 - `prob::SciMLBase.OptimizationProblem`: an optimization problem containing a function with
     the same properties as `fun`, as well as an initial point, in which case `init` and
-    `dim` are ignored.
+    `dim` are ignored. If `ntries > 1`, then the initial point `prob.u0` must also be
+    mutable and may be overwritten.
 
 # Keywords
 - `dim::Int`: dimension of the target distribution, needed only if `fun` is provided and
@@ -132,14 +134,20 @@ constructed using at most the previous `history_length` steps.
 """
 function pathfinder end
 
-function pathfinder(ℓ; input=ℓ, kwargs...)
+function pathfinder(
+    ℓ;
+    input=ℓ,
+    history_length::Int=DEFAULT_HISTORY_LENGTH,
+    optimizer=default_optimizer(history_length),
+    kwargs...,
+)
     _check_log_density_problem(ℓ)
     dim = LogDensityProblems.dimension(ℓ)
-    optim_fun = build_optim_function(ℓ)
-    return pathfinder(optim_fun; input, dim, kwargs...)
+    optim_fun = build_optim_function(ℓ, optimizer)
+    return pathfinder(optim_fun; input, dim, history_length, optimizer, kwargs...)
 end
 function pathfinder(
-    optim_fun::SciMLBase.OptimizationFunction;
+    optim_fun::Union{SciMLBase.OptimizationFunction,OptimJLFunction};
     rng=Random.GLOBAL_RNG,
     init=nothing,
     dim::Int=-1,
@@ -149,20 +157,19 @@ function pathfinder(
     kwargs...,
 )
     if init !== nothing
-        _init = init
-        allow_mutating_init = false
+        _init = similar(init)
+        copyto!(_init, init)
     elseif init === nothing && dim > 0
         _init = Vector{Float64}(undef, dim)
         init_sampler(rng, _init)
-        allow_mutating_init = true
     else
         throw(ArgumentError("An initial point `init` or dimension `dim` must be provided."))
     end
     prob = build_optim_problem(optim_fun, _init)
-    return pathfinder(prob; rng, input, init_sampler, allow_mutating_init, kwargs...)
+    return pathfinder(prob; rng, input, init_sampler, kwargs...)
 end
 function pathfinder(
-    prob::SciMLBase.OptimizationProblem;
+    prob::Union{<:SciMLBase.OptimizationProblem,<:OptimJLProblem};
     rng::Random.AbstractRNG=Random.GLOBAL_RNG,
     history_length::Int=DEFAULT_HISTORY_LENGTH,
     optimizer=default_optimizer(history_length),
@@ -171,10 +178,9 @@ function pathfinder(
     input=prob,
     kwargs...,
 )
-    if prob.f.grad === nothing || prob.f.grad isa Bool
+    _defines_gradient(prob) ||
         throw(ArgumentError("optimization function must define a gradient function."))
-    end
-    logp(x) = -prob.f.f(x, nothing)
+    logp = get_logp(prob)
     path_result = ProgressLogging.progress(; name="Optimizing") do progress_id
         return _pathfinder_try_until_succeed(
             rng,
@@ -188,7 +194,7 @@ function pathfinder(
         )
     end
     @unpack (
-        itry,
+        try_id,
         success,
         optim_prob,
         optim_solution,
@@ -201,7 +207,7 @@ function pathfinder(
 
     if !success
         ndraws_elbo_actual = 0
-        @warn "Pathfinder failed after $itry tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
+        @warn "Pathfinder failed after $try_id tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
     else
         elbo_estimate_opt = elbo_estimates[fit_iteration]
         ndraws_elbo_actual = ndraws_elbo
@@ -238,7 +244,7 @@ function pathfinder(
         fit_distribution_transformed,
         draws_transformed,
         fit_iteration,
-        itry,
+        try_id,
         optim_solution,
         optim_trace,
         fit_distributions,
@@ -254,23 +260,16 @@ function _pathfinder_try_until_succeed(
     ntries::Int=1_000,
     init_scale=2,
     init_sampler=UniformSampler(init_scale),
-    allow_mutating_init::Bool=false,
     kwargs...,
 )
-    itry = 1
-    progress_name = "Optimizing (try 1)"
-    result = _pathfinder(rng, prob, logp; progress_name, kwargs...)
-    _prob = prob
-    while !result.success && itry < ntries
-        if itry == 1 && !allow_mutating_init
-            _prob = deepcopy(prob)
-        end
-        itry += 1
-        init_sampler(rng, _prob.u0)
-        progress_name = "Optimizing (try $itry)"
-        result = _pathfinder(rng, _prob, logp; progress_name, kwargs...)
+    try_id = 1
+    result = _pathfinder(rng, prob, logp; try_id, kwargs...)
+    while !result.success && try_id < ntries
+        try_id += 1
+        init_sampler(rng, prob.u0)
+        result = _pathfinder(rng, prob, logp; try_id, kwargs...)
     end
-    return (; itry, optim_prob=_prob, result...)
+    return (; try_id, optim_prob=prob, result...)
 end
 
 function _pathfinder(

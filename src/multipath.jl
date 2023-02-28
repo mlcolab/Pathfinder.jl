@@ -123,14 +123,23 @@ for approximating expectations with respect to ``p``.
 """
 function multipathfinder end
 
-function multipathfinder(ℓ, ndraws::Int; input=ℓ, kwargs...)
+function multipathfinder(
+    ℓ,
+    ndraws::Int;
+    input=ℓ,
+    history_length::Int=DEFAULT_HISTORY_LENGTH,
+    optimizer=default_optimizer(history_length),
+    kwargs...,
+)
     _check_log_density_problem(ℓ)
     dim = LogDensityProblems.dimension(ℓ)
-    optim_fun = build_optim_function(ℓ)
-    return multipathfinder(optim_fun, ndraws; input, dim, kwargs...)
+    optim_fun = build_optim_function(ℓ, optimizer)
+    return multipathfinder(
+        optim_fun, ndraws; input, dim, history_length, optimizer, kwargs...
+    )
 end
 function multipathfinder(
-    optim_fun::SciMLBase.OptimizationFunction,
+    optim_fun::Union{SciMLBase.OptimizationFunction,OptimJLFunction},
     ndraws::Int;
     init=nothing,
     input=optim_fun,
@@ -145,9 +154,8 @@ function multipathfinder(
     importance::Bool=true,
     kwargs...,
 )
-    if optim_fun.grad === nothing || optim_fun.grad isa Bool
+    _defines_gradient(optim_fun) ||
         throw(ArgumentError("optimization function must define a gradient function."))
-    end
     if init === nothing
         nruns > 0 || throw(
             ArgumentError("A positive `nruns` must be set or `init` must be provided.")
@@ -159,7 +167,7 @@ function multipathfinder(
     if ndraws > ndraws_per_run * nruns
         @warn "More draws requested than total number of draws across replicas. Draws will not be unique."
     end
-    logp(x) = -optim_fun.f(x, nothing)
+    logp = get_logp(optim_fun)
 
     # run pathfinder independently from each starting point
     trans = Transducers.Map() do (init_i)
