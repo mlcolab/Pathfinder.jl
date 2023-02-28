@@ -36,19 +36,23 @@ function (prob::RegressionProblem)(θ)
     return lp
 end
 
-function mean_and_mcse(f, θs)
-    zs = map(f, θs)
-    ms = mean(zs)
-    ses = map(mcse, eachrow(reduce(hcat, zs)))
+function as_draw_array(θs)
+    draw_param_mat = transpose(reduce(hcat, θs))
+    return reshape(draw_param_mat, size(draw_param_mat, 1), 1, size(draw_param_mat, 2))
+end
+
+function mean_and_mcse(θs)
+    ms = dropdims(mean(θs; dims=(1, 2)); dims=(1, 2))
+    ses = mcse(θs)
     return ms, ses
 end
 
-function compare_estimates(f, xs1, xs2, α=0.05)
+function compare_estimates(xs1, xs2, α=0.05)
     nparams = length(first(xs1))
     α /= nparams  # bonferroni correction
     p = α / 2
-    m1, s1 = mean_and_mcse(f, xs1)
-    m2, s2 = mean_and_mcse(f, xs2)
+    m1, s1 = mean_and_mcse(xs1)
+    m2, s2 = mean_and_mcse(xs2)
     zs = @. (m1 - m2) / sqrt(s1^2 + s2^2)
     @test all(norminvcdf(p) .< zs .< norminvccdf(p))
 end
@@ -96,9 +100,8 @@ end
         @test AdvancedHMC.∂H∂r(h, r) ≈ AdvancedHMC.∂H∂r(h_dense, r)
         kinetic = AdvancedHMC.GaussianKinetic()
         compare_estimates(
-            identity,
-            [rand(metric, kinetic) for _ in 1:10_000],
-            [rand(metric_dense, kinetic) for _ in 1:10_000],
+            as_draw_array([rand(metric, kinetic) for _ in 1:10_000]),
+            as_draw_array([rand(metric_dense, kinetic) for _ in 1:10_000]),
         )
     end
 
@@ -153,7 +156,7 @@ end
                 drop_warmup=true,
                 progress=false,
             )
-            compare_estimates(identity, samples2, samples1)
+            compare_estimates(as_draw_array(samples2), as_draw_array(samples1))
         end
 
         @testset "Initial point and metric" begin
@@ -173,7 +176,7 @@ end
                 drop_warmup=true,
                 progress=false,
             )
-            compare_estimates(identity, samples3, samples1)
+            compare_estimates(as_draw_array(samples3), as_draw_array(samples1))
         end
 
         @testset "Initial point and final metric" begin
@@ -193,7 +196,7 @@ end
                 drop_warmup=true,
                 progress=false,
             )
-            compare_estimates(identity, samples4, samples1)
+            compare_estimates(as_draw_array(samples4), as_draw_array(samples1))
         end
     end
 end

@@ -35,19 +35,18 @@ function (prob::RegressionProblem)(θ)
     return lp
 end
 
-function mean_and_mcse(f, θs)
-    zs = map(f, θs)
-    ms = mean(zs; dims=2)
-    ses = map(mcse, eachrow(zs))
+function mean_and_mcse(θs)
+    ms = dropdims(mean(θs; dims=(1, 2)); dims=(1, 2))
+    ses = mcse(θs)
     return ms, ses
 end
 
-function compare_estimates(f, xs1, xs2, α=0.05)
+function compare_estimates(xs1, xs2, α=0.05)
     nparams = first(size(xs1))
     α /= nparams  # bonferroni correction
     p = α / 2
-    m1, s1 = mean_and_mcse(f, xs1)
-    m2, s2 = mean_and_mcse(f, xs2)
+    m1, s1 = mean_and_mcse(xs1)
+    m2, s2 = mean_and_mcse(xs2)
     zs = @. (m1 - m2) / sqrt(s1^2 + s2^2)
     @test all(norminvcdf(p) .< zs .< norminvccdf(p))
 end
@@ -101,7 +100,8 @@ end
             )
             @test result_hmc2.κ.M⁻¹ isa Diagonal
             compare_estimates(
-                identity, result_hmc2.posterior_matrix, result_hmc1.posterior_matrix
+                DynamicHMC.stack_posterior_matrices([result_hmc2]),
+                DynamicHMC.stack_posterior_matrices([result_hmc1]),
             )
         end
 
@@ -119,7 +119,8 @@ end
             )
             @test result_hmc3.κ.M⁻¹ isa Symmetric
             compare_estimates(
-                identity, result_hmc3.posterior_matrix, result_hmc1.posterior_matrix
+                DynamicHMC.stack_posterior_matrices([result_hmc3]),
+                DynamicHMC.stack_posterior_matrices([result_hmc1]),
             )
         end
 
@@ -137,7 +138,8 @@ end
             )
             @test result_hmc4.κ.M⁻¹ === result_pf.fit_distribution.Σ
             compare_estimates(
-                identity, result_hmc4.posterior_matrix, result_hmc1.posterior_matrix
+                DynamicHMC.stack_posterior_matrices([result_hmc4]),
+                DynamicHMC.stack_posterior_matrices([result_hmc1]),
             )
         end
     end
