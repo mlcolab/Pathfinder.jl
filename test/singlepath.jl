@@ -132,12 +132,7 @@ include("test_utils.jl")
             @test result.optim_prob.u0 == result.optim_trace.points[1]
             i = 1
             init = randn(dim)
-            result2 = pathfinder(ℓ; init, callback, ntries=nfail)
-            @test !isapprox(result2.fit_distribution.μ, zeros(dim); atol=1e-6)
-            @test result2.fit_iteration == 0
-            @test isempty(result2.elbo_estimates)
-            @test result2.num_tries == nfail
-            @test result2.optim_prob.u0 == result2.optim_trace.points[1]
+            @test_throws ErrorException pathfinder(ℓ; init, callback, ntries=nfail)
         end
     end
     @testset "UniformSampler" begin

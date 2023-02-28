@@ -92,7 +92,7 @@ constructed using at most the previous `history_length` steps.
     [Optimization.jl: OptimizationFunction](https://optimization.sciml.ai/stable/API/optimization_function/).
 - `prob::SciMLBase.OptimizationProblem`: an optimization problem containing a function with
     the same properties as `fun`, as well as an initial point, in which case `init` and
-    `dim` are ignored.
+    `dim` are ignored. The initial point may be overwritten.
 
 # Keywords
 - `dim::Int`: dimension of the target distribution, needed only if `fun` is provided and
@@ -148,18 +148,18 @@ function pathfinder(
     input=optim_fun,
     kwargs...,
 )
+    # make sure init is mutable
     if init !== nothing
-        _init = init
-        allow_mutating_init = false
+        _init = similar(init)
+        copyto!(_init, init)
     elseif init === nothing && dim > 0
         _init = Vector{Float64}(undef, dim)
         init_sampler(rng, _init)
-        allow_mutating_init = true
     else
         throw(ArgumentError("An initial point `init` or dimension `dim` must be provided."))
     end
     prob = build_optim_problem(optim_fun, _init)
-    return pathfinder(prob; rng, input, init_sampler, allow_mutating_init, kwargs...)
+    return pathfinder(prob; rng, input, init_sampler, kwargs...)
 end
 function pathfinder(
     prob::SciMLBase.OptimizationProblem;
@@ -199,13 +199,8 @@ function pathfinder(
         num_bfgs_updates_rejected,
     ) = path_result
 
-    if !success
-        ndraws_elbo_actual = 0
-        @warn "Pathfinder failed after $itry tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
-    else
-        elbo_estimate_opt = elbo_estimates[fit_iteration]
-        ndraws_elbo_actual = ndraws_elbo
-    end
+    elbo_estimate_opt = elbo_estimates[fit_iteration]
+    ndraws_elbo_actual = ndraws_elbo
 
     if num_bfgs_updates_rejected > 0
         perc = round(num_bfgs_updates_rejected * (100//length(fit_distributions)); digits=1)
@@ -254,23 +249,20 @@ function _pathfinder_try_until_succeed(
     ntries::Int=1_000,
     init_scale=2,
     init_sampler=UniformSampler(init_scale),
-    allow_mutating_init::Bool=false,
     kwargs...,
 )
-    itry = 1
-    progress_name = "Optimizing (try 1)"
-    result = _pathfinder(rng, prob, logp; progress_name, kwargs...)
-    _prob = prob
-    while !result.success && itry < ntries
-        if itry == 1 && !allow_mutating_init
-            _prob = deepcopy(prob)
-        end
-        itry += 1
-        init_sampler(rng, _prob.u0)
+    for itry in 1:ntries
         progress_name = "Optimizing (try $itry)"
-        result = _pathfinder(rng, _prob, logp; progress_name, kwargs...)
+        try
+            result = _pathfinder(rng, prob, logp; progress_name, kwargs...)
+            result.success && return (; itry, optim_prob=prob, result...)
+        catch e
+            e isa InterruptException && rethrow(e)
+            @warn "Pathfinder failed with exception: $e"
+        end
+        init_sampler(rng, prob.u0)
     end
-    return (; itry, optim_prob=_prob, result...)
+    @error "Pathfinder failed after $ntries tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
 end
 
 function _pathfinder(
