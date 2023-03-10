@@ -1,16 +1,18 @@
 module PathfinderTuringExt
 
-using Accessors: Accessors
-using Random: Random
 if isdefined(Base, :get_extension)
+    using Accessors: Accessors
     using DynamicPPL: DynamicPPL
     using MCMCChains: MCMCChains
     using Pathfinder: Pathfinder
+    using Random: Random
     using Turing: Turing
 else  # using Requires
+    using ..Accessors: Accessors
     using ..DynamicPPL: DynamicPPL
     using ..MCMCChains: MCMCChains
     using ..Pathfinder: Pathfinder
+    using ..Random: Random
     using ..Turing: Turing
 end
 

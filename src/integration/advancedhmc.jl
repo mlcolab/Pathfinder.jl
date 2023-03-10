@@ -1,5 +1,5 @@
 using .AdvancedHMC: AdvancedHMC
-using Random
+using .Random
 
 """
     RankUpdateEuclideanMetric{T,M} <: AdvancedHMC.AbstractMetric
