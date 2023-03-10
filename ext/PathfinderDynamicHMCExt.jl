@@ -1,4 +1,4 @@
-module DynamicHMCExt
+module PathfinderDynamicHMCExt
 
 using PDMats: PDMats
 if isdefined(Base, :get_extension)

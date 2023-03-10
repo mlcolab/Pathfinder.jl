@@ -50,12 +50,12 @@ function __init__()
     end
     @static if !isdefined(Base, :get_extension)
         Requires.@require DynamicHMC = "bbc10e6e-7c05-544b-b16e-64fede858acb" begin
-            include("../ext/DynamicHMCExt.jl")
+            include("../ext/PathfinderDynamicHMCExt.jl")
         end
         Requires.@require Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0" begin
             Requires.@require DynamicPPL = "366bfd00-2699-11ea-058f-f148b4cae6d8" begin
                 Requires.@require MCMCChains = "c7f686f2-ff18-58e9-bc7b-31028e88f75d" begin
-                    include("../ext/TuringExt.jl")
+                    include("../ext/PathfinderTuringExt.jl")
                 end
             end
         end

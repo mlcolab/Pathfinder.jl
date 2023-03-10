@@ -1,4 +1,4 @@
-module TuringExt
+module PathfinderTuringExt
 
 using Accessors: Accessors
 using Random: Random
