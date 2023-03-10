@@ -1,12 +1,13 @@
-module DynamicHMCExt
+module PathfinderDynamicHMCExt
 
-using PDMats: PDMats
 if isdefined(Base, :get_extension)
-    using Pathfinder: Pathfinder
     using DynamicHMC: DynamicHMC
+    using Pathfinder: Pathfinder
+    using PDMats: PDMats
 else  # using Requires
-    using ..Pathfinder: Pathfinder
     using ..DynamicHMC: DynamicHMC
+    using ..Pathfinder: Pathfinder
+    using ..PDMats: PDMats
 end
 
 function DynamicHMC.GaussianKineticEnergy(M⁻¹::Pathfinder.WoodburyPDMat)
