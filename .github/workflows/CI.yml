@@ -36,9 +36,9 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v1
+      - uses: julia-actions/julia-buildpkg@v1
       - name: Fix Transducers to last-compatible version
         run: julia --project -e 'using Pkg; Pkg.pin(name="Transducers", version=v"0.4.75")'
-      - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
         env:
           JULIA_NUM_THREADS: ${{ matrix.num_threads }}
