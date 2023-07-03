@@ -27,7 +27,9 @@ include("test_utils.jl")
             ℓ = build_logdensityproblem(logp, 5)
             init = randn(dim)
             Random.seed!(rng, seed)
-            result = @inferred pathfinder(ℓ; init, ndraws, rng, executor)
+            # less restrictive type check to work around https://github.com/mlcolab/Pathfinder.jl/issues/142
+            # TODO: remove this workaround once the issue is fixed
+            result = @inferred PathfinderResult pathfinder(ℓ; init, ndraws, rng, executor)
             @test result isa PathfinderResult
             @test result.input === ℓ
             @test result.optim_prob isa SciMLBase.OptimizationProblem
@@ -93,7 +95,9 @@ include("test_utils.jl")
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
 
             Random.seed!(rng, seed)
-            result = @inferred pathfinder(ℓ; rng, optimizer, ndraws_elbo, executor)
+            # less restrictive type check to work around https://github.com/mlcolab/Pathfinder.jl/issues/142
+            # TODO: remove this workaround once the issue is fixed
+            result = @inferred PathfinderResult pathfinder(ℓ; rng, optimizer, ndraws_elbo, executor)
             @test result.input === ℓ
             @test result.fit_distribution.Σ ≈ Σ rtol = 1e-1
             @test result.optimizer == optimizer
