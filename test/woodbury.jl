@@ -33,10 +33,6 @@ test_factorization(W::WoodburyPDMat) = test_factorization(W.A, W.B, W.D, W.F)
             end
             R = @inferred WoodburyPDRightFactor(U, Q, V)
             @test R isa AbstractMatrix{T}
-            @test size(R) == (n, n)
-            @test size(R, 1) == n
-            @test size(R, 2) == n
-            @test size(R, 3) == 1
             @test transpose(transpose(R)) === R
             @test adjoint(adjoint(R)) === R
             @test @inferred(Matrix(R)) ≈ Rmat
@@ -86,6 +82,10 @@ test_factorization(W::WoodburyPDMat) = test_factorization(W.A, W.B, W.D, W.F)
             Fmat = Rmat' * Rmat
             F = @inferred WoodburyPDFactorization(U, Q, V)
             @test F isa LinearAlgebra.Factorization{T}
+            @test size(F) == (n, n)
+            @test size(F, 1) == n
+            @test size(F, 2) == n
+            @test size(F, 3) == 1
             @test transpose(F) === F
             @test adjoint(F) === F
             @test propertynames(F) == (:L, :R)
