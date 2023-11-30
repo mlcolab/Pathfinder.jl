@@ -270,6 +270,18 @@ function WoodburyPDMat(A, B, D)
     )
 end
 
+Base.convert(::Type{WoodburyPDMat{T}}, a::WoodburyPDMat{T}) where {T<:Real} = a
+function Base.convert(::Type{WoodburyPDMat{T}}, a::WoodburyPDMat) where {T<:Real}
+    A = convert(AbstractMatrix{T}, a.A)
+    B = convert(AbstractMatrix{T}, a.B)
+    D = convert(AbstractMatrix{T}, a.D)
+    F = pdfactorize(A, B, D)
+    return WoodburyPDMat{T,typeof(A),typeof(B),typeof(D),typeof(F)}(A, B, D, F)
+end
+function Base.convert(::Type{PDMats.AbstractPDMat{T}}, a::WoodburyPDMat) where {T<:Real}
+    return convert(WoodburyPDMat{T}, a)
+end
+
 pdfactorize(A::WoodburyPDMat) = A.F
 
 LinearAlgebra.factorize(A::WoodburyPDMat) = pdfactorize(A)
