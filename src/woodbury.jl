@@ -366,8 +366,13 @@ end
 
 PDMats.dim(W::WoodburyPDMat) = size(W.A, 1)
 
-function PDMats.invquad(W::WoodburyPDMat, x::AbstractVector{T}) where {T}
-    return sum(abs2, pdfactorize(W).L \ x)
+function PDMats.invquad(W::WoodburyPDMat, x::AbstractVecOrMat{T}) where {T}
+    WL_inv_x = pdfactorize(W).L \ x
+    if x isa AbstractVector
+        return sum(abs2, WL_inv_x)
+    else
+        return vec(sum(abs2, WL_inv_x; dims=1))
+    end
 end
 
 function PDMats.invquad!(r::AbstractArray, W::WoodburyPDMat, x::AbstractMatrix{T}) where {T}
@@ -382,10 +387,16 @@ function PDMats.quad!(r::AbstractArray, W::WoodburyPDMat, x::AbstractMatrix{T}) 
     return r
 end
 
-function PDMats.quad(W::WoodburyPDMat, x::AbstractVector{T}) where {T}
-    v = pdfactorize(W).R * x
-    return sum(abs2, v)
+function PDMats.quad(W::WoodburyPDMat, x::AbstractVecOrMat{T}) where {T}
+    WR_inv_x = pdfactorize(W).R * x
+    if x isa AbstractVector
+        return sum(abs2, WR_inv_x)
+    else
+        return vec(sum(abs2, WR_inv_x; dims=1))
+    end
 end
+
+PDMats.unwhiten(W::WoodburyPDMat, x::AbstractVecOrMat) = pdfactorize(W).L * x
 
 function PDMats.unwhiten!(
     r::AbstractVecOrMat{T}, W::WoodburyPDMat, x::AbstractVecOrMat{T}
@@ -393,6 +404,8 @@ function PDMats.unwhiten!(
     copyto!(r, x)
     return lmul!(pdfactorize(W).L, r)
 end
+
+PDMats.whiten(W::WoodburyPDMat, x::AbstractVecOrMat) = pdfactorize(W).R \ x
 
 function invunwhiten!(
     r::AbstractVecOrMat{T}, W::WoodburyPDMat, x::AbstractVecOrMat{T}
