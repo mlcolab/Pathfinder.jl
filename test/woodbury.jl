@@ -33,6 +33,10 @@ test_factorization(W::WoodburyPDMat) = test_factorization(W.A, W.B, W.D, W.F)
             end
             R = @inferred WoodburyPDRightFactor(U, Q, V)
             @test R isa AbstractMatrix{T}
+            @test size(R) == (n, n)
+            @test size(R, 1) == n
+            @test size(R, 2) == n
+            @test size(R, 3) == 1
             @test transpose(transpose(R)) === R
             @test adjoint(adjoint(R)) === R
             @test @inferred(Matrix(R)) ≈ Rmat
@@ -190,6 +194,11 @@ end
 
             @test convert(WoodburyPDMat{T}, W) === W
             @test convert(WoodburyPDMat{BigFloat}, W) == Wbig
+
+            @test AbstractMatrix{T}(W) isa WoodburyPDMat{T}
+            @test AbstractMatrix{T}(W) == W
+            @test AbstractMatrix{BigFloat}(W) isa WoodburyPDMat{BigFloat}
+            @test AbstractMatrix{BigFloat}(W) == Wbig
 
             test_factorization(W)
         end
