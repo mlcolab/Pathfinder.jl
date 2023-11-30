@@ -291,14 +291,50 @@ end
             @test PDMats.dim(W) == n
         end
 
-        @testset "unwhiten" begin
+        @testset "whiten/whiten!" begin
             L, _ = factorize(W)
 
             x = randn(T, n)
-            @test @inferred(unwhiten(W, x)) ≈ L * x
+            z = @inferred whiten(W, x)
+            @test size(x) == size(x)
+            @test dot(z, z) ≈ dot(x, invWmat, x)
+            z2 = similar(z)
+            @test whiten!(z2, W, x) === z2
+            @test z2 ≈ z
 
-            X = randn(T, n, 100)
-            @test @inferred(unwhiten(W, X)) ≈ L * X
+            X = randn(T, n, 10)
+            Z = @inferred whiten(W, X)
+            @test size(Z) == size(X)
+            for (x, z) in zip(eachcol(X), eachcol(Z))
+                @test dot(z, z) ≈ dot(x, invWmat, x)
+            end
+            Z2 = similar(Z)
+            @test whiten!(Z2, W, X) === Z2
+            @test Z2 ≈ Z
+        end
+
+        @testset "unwhiten/unwhiten!" begin
+            L, _ = factorize(W)
+
+            z = randn(T, n)
+            x = @inferred unwhiten(W, z)
+            @test size(x) == size(z)
+            @test dot(x, invWmat, x) ≈ dot(z, z)
+            @test whiten(W, x) ≈ z
+            x2 = similar(x)
+            @test unwhiten!(x2, W, z) === x2
+            @test x2 ≈ x
+
+            Z = randn(T, n, 10)
+            X = @inferred unwhiten(W, Z)
+            @test whiten(W, X) ≈ Z
+            @test size(X) == size(Z)
+            for (x, z) in zip(eachcol(X), eachcol(Z))
+                @test dot(x, invWmat, x) ≈ dot(z, z)
+            end
+            X2 = similar(X)
+            @test unwhiten!(X2, W, Z) === X2
+            @test X2 ≈ X
         end
 
         @testset "invunwhiten!" begin
