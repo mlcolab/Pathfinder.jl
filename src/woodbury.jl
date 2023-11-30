@@ -407,6 +407,14 @@ end
 
 PDMats.whiten(W::WoodburyPDMat, x::AbstractVecOrMat) = pdfactorize(W).L \ x
 
+function PDMats.whiten!(
+    r::AbstractVecOrMat{T}, W::WoodburyPDMat, x::AbstractVecOrMat{T}
+) where {T}
+    copyto!(r, x)
+    return ldiv!(pdfactorize(W).L, r)
+end
+
+# similar to unwhiten!(r, inv(W), x) but without the inversion
 function invunwhiten!(
     r::AbstractVecOrMat{T}, W::WoodburyPDMat, x::AbstractVecOrMat{T}
 ) where {T}
