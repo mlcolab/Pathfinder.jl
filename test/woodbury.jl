@@ -365,11 +365,11 @@ end
             @test quad(W, Pathfinder.invunwhiten!(similar(u), W, u)) ≈ dot(u, u)
 
             X = randn(T, n, 10)
-            Xt_W_X = @inferred quad(W, X)
-            @test Xt_W_X ≈ quad(PDMats.PDMat(Symmetric(Wmat)), X)
-            Xt_W_X2 = similar(Xt_W_X)
-            @test quad!(Xt_W_X2, W, X) === Xt_W_X2
-            @test Xt_W_X2 ≈ Xt_W_X
+            quad_W_X = @inferred quad(W, X)
+            @test quad_W_X ≈ quad(PDMats.PDMat(Symmetric(Wmat)), X)
+            quad_W_X2 = similar(quad_W_X)
+            @test quad!(quad_W_X2, W, X) === quad_W_X2
+            @test quad_W_X2 ≈ quad_W_X
 
             U = randn(T, n, 10)
             @test quad(W, Pathfinder.invunwhiten!(similar(U), W, U)) ≈
@@ -384,11 +384,11 @@ end
             @test invquad(W, unwhiten(W, u)) ≈ dot(u, u)
 
             X = randn(T, n, 10)
-            Xt_invW_X = @inferred invquad(W, X)
-            @test Xt_invW_X ≈ invquad(PDMats.PDMat(Symmetric(Wmat)), X)
-            Xt_invW_X2 = similar(Xt_invW_X)
-            @test invquad!(Xt_invW_X2, W, X) === Xt_invW_X2
-            @test Xt_invW_X2 ≈ Xt_invW_X
+            quad_invW_X = @inferred invquad(W, X)
+            @test quad_invW_X ≈ invquad(PDMats.PDMat(Symmetric(Wmat)), X)
+            quad_invW_X2 = similar(quad_invW_X)
+            @test invquad!(quad_invW_X2, W, X) === quad_invW_X2
+            @test quad_invW_X2 ≈ quad_invW_X
 
             U = randn(T, n, 10)
             @test invquad(W, unwhiten(W, U)) ≈ vec(sum(abs2, U; dims=1))
