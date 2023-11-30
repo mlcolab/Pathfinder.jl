@@ -175,12 +175,22 @@ end
             @test W ≈ Wmat
             @test WoodburyPDMat(A, B, big.(D)) isa WoodburyPDMat{BigFloat}
             @test Matrix(WoodburyPDMat(A, B, big.(D))) ≈ Wmat
+
             Wbig = convert(AbstractMatrix{BigFloat}, W)
             @test Wbig isa WoodburyPDMat{BigFloat}
             @test Wbig ≈ Wmat
             @test convert(AbstractMatrix{T}, W) === W
             @test W.F isa WoodburyPDFactorization
             @test Matrix(W.F) ≈ Wmat
+
+            @test convert(PDMats.AbstractPDMat{T}, W) === W
+            Wbig2 = convert(PDMats.AbstractPDMat{BigFloat}, W)
+            @test Wbig2 isa WoodburyPDMat{BigFloat}
+            @test Wbig2 == Wbig
+
+            @test convert(WoodburyPDMat{T}, W) === W
+            @test convert(WoodburyPDMat{BigFloat}, W) == Wbig
+
             test_factorization(W)
         end
 
