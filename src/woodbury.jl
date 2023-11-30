@@ -405,7 +405,7 @@ function PDMats.unwhiten!(
     return lmul!(pdfactorize(W).L, r)
 end
 
-PDMats.whiten(W::WoodburyPDMat, x::AbstractVecOrMat) = pdfactorize(W).R \ x
+PDMats.whiten(W::WoodburyPDMat, x::AbstractVecOrMat) = pdfactorize(W).L \ x
 
 function invunwhiten!(
     r::AbstractVecOrMat{T}, W::WoodburyPDMat, x::AbstractVecOrMat{T}
