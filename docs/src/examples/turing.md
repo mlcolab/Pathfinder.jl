@@ -99,7 +99,8 @@ samples, stats = sample(
 )
 ```
 
-Now we pack the samples into an `MCMCChains.Chains`:
+Now we pack the samples into an `MCMCChains.Chains`.
+For this we use the utility [`Pathfinder.flattened_varnames_list`](@ref).
 
 ```@example 1
 samples_transformed = reduce(vcat, fun.transform.(samples)')

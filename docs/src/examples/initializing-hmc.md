@@ -172,7 +172,7 @@ metric = DiagEuclideanMetric(dim)
 hamiltonian = Hamiltonian(metric, ∇P)
 ϵ = find_good_stepsize(hamiltonian, init_params)
 integrator = Leapfrog(ϵ)
-proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+proposal = AdvancedHMC.NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
 adaptor = StepSizeAdaptor(0.8, integrator)
 samples_ahmc1, stats_ahmc1 = sample(
     hamiltonian,
@@ -196,7 +196,7 @@ metric = DenseEuclideanMetric(Matrix(inv_metric))
 hamiltonian = Hamiltonian(metric, ∇P)
 ϵ = find_good_stepsize(hamiltonian, init_params)
 integrator = Leapfrog(ϵ)
-proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+proposal = AdvancedHMC.NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
 adaptor = StepSizeAdaptor(0.8, integrator)
 samples_ahmc2, stats_ahmc2 = sample(
     hamiltonian,
@@ -220,7 +220,7 @@ metric = Pathfinder.RankUpdateEuclideanMetric(inv_metric)
 hamiltonian = Hamiltonian(metric, ∇P)
 ϵ = find_good_stepsize(hamiltonian, init_params)
 integrator = Leapfrog(ϵ)
-proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+proposal = AdvancedHMC.NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
 adaptor = StepSizeAdaptor(0.8, integrator)
 samples_ahmc3, stats_ahmc3 = sample(
     hamiltonian,
