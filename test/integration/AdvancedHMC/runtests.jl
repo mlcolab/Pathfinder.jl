@@ -13,7 +13,7 @@ using AdvancedHMC,
     TransformVariables
 using TransformedLogDensities: TransformedLogDensity
 
-Random.seed!(0)
+Random.seed!(2)
 
 struct RegressionProblem{X,Y}
     x::X
