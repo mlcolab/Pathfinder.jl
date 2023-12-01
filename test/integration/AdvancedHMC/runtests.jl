@@ -122,13 +122,13 @@ end
         hamiltonian = Hamiltonian(metric, ∇P)
         ϵ = find_good_stepsize(hamiltonian, θ₀)
         integrator = Leapfrog(ϵ)
-        proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+        kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
         adaptor = StanHMCAdaptor(
             MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator)
         )
         samples1, stats1 = sample(
             hamiltonian,
-            proposal,
+            kernel,
             θ₀,
             ndraws,
             adaptor,
@@ -144,11 +144,11 @@ end
             hamiltonian = Hamiltonian(metric, ∇P)
             ϵ = find_good_stepsize(hamiltonian, θ₀)
             integrator = Leapfrog(ϵ)
-            proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+            kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
             adaptor = StepSizeAdaptor(0.8, integrator)
             samples2, stats2 = sample(
                 hamiltonian,
-                proposal,
+                kernel,
                 result_pf.draws[:, 1],
                 ndraws,
                 adaptor,
@@ -164,11 +164,11 @@ end
             hamiltonian = Hamiltonian(metric, ∇P)
             ϵ = find_good_stepsize(hamiltonian, θ₀)
             integrator = Leapfrog(ϵ)
-            proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+            kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
             adaptor = StepSizeAdaptor(0.8, integrator)
             samples3, stats3 = sample(
                 hamiltonian,
-                proposal,
+                kernel,
                 result_pf.draws[:, 1],
                 ndraws,
                 adaptor,
@@ -184,11 +184,11 @@ end
             hamiltonian = Hamiltonian(metric, ∇P)
             ϵ = find_good_stepsize(hamiltonian, θ₀)
             integrator = Leapfrog(ϵ)
-            proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+            kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
             adaptor = StepSizeAdaptor(0.8, integrator)
             samples4, stats4 = sample(
                 hamiltonian,
-                proposal,
+                kernel,
                 result_pf.draws[:, 1],
                 ndraws,
                 adaptor,
