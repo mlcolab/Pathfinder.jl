@@ -130,7 +130,7 @@ end
             hamiltonian,
             kernel,
             θ₀,
-            ndraws,
+            ndraws + nadapts,
             adaptor,
             nadapts;
             drop_warmup=true,
@@ -150,7 +150,7 @@ end
                 hamiltonian,
                 kernel,
                 result_pf.draws[:, 1],
-                ndraws,
+                ndraws + nadapts,
                 adaptor,
                 nadapts;
                 drop_warmup=true,
@@ -170,7 +170,7 @@ end
                 hamiltonian,
                 kernel,
                 result_pf.draws[:, 1],
-                ndraws,
+                ndraws + nadapts,
                 adaptor,
                 nadapts;
                 drop_warmup=true,
@@ -190,7 +190,7 @@ end
                 hamiltonian,
                 kernel,
                 result_pf.draws[:, 1],
-                ndraws,
+                ndraws + nadapts,
                 adaptor,
                 nadapts;
                 drop_warmup=true,
