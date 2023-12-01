@@ -106,7 +106,7 @@ end
     end
 
     @testset "sample" begin
-        ndraws = 1_000
+        ndraws = 10_000
         nadapts = 500
         nparams = 5
         x = 0:0.01:1

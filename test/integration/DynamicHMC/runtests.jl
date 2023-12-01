@@ -76,7 +76,7 @@ end
     end
 
     @testset "DynamicHMC.mcmc_with_warmup" begin
-        ndraws = 1_000
+        ndraws = 10_000
         x = 0:0.01:1
         y = sin.(x) .+ randn.() .* 0.2 .+ x
         X = [x x .^ 2 x .^ 3]
