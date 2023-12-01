@@ -175,7 +175,13 @@ function multipathfinder(
             kwargs...,
         )
     end
-    iter_sp = Transducers.withprogress(_init; interval=1e-3) |> trans
+    iter_sp = if executor isa Folds.ThreadedEx
+        # temporary workaround due to
+        # https://github.com/JuliaFolds2/Transducers.jl/issues/10
+        _init
+    else
+        Transducers.withprogress(_init; interval=1e-3)
+    end |> trans
     pathfinder_results = Folds.collect(iter_sp, executor)
     fit_distributions =
         pathfinder_results |> Transducers.Map(x -> x.fit_distribution) |> collect
