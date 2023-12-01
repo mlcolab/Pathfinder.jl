@@ -82,6 +82,10 @@ test_factorization(W::WoodburyPDMat) = test_factorization(W.A, W.B, W.D, W.F)
             Fmat = Rmat' * Rmat
             F = @inferred WoodburyPDFactorization(U, Q, V)
             @test F isa LinearAlgebra.Factorization{T}
+            @test size(F) == (n, n)
+            @test size(F, 1) == n
+            @test size(F, 2) == n
+            @test size(F, 3) == 1
             @test transpose(F) === F
             @test adjoint(F) === F
             @test propertynames(F) == (:L, :R)
@@ -175,12 +179,27 @@ end
             @test W ≈ Wmat
             @test WoodburyPDMat(A, B, big.(D)) isa WoodburyPDMat{BigFloat}
             @test Matrix(WoodburyPDMat(A, B, big.(D))) ≈ Wmat
+
             Wbig = convert(AbstractMatrix{BigFloat}, W)
             @test Wbig isa WoodburyPDMat{BigFloat}
             @test Wbig ≈ Wmat
             @test convert(AbstractMatrix{T}, W) === W
             @test W.F isa WoodburyPDFactorization
             @test Matrix(W.F) ≈ Wmat
+
+            @test convert(PDMats.AbstractPDMat{T}, W) === W
+            Wbig2 = convert(PDMats.AbstractPDMat{BigFloat}, W)
+            @test Wbig2 isa WoodburyPDMat{BigFloat}
+            @test Wbig2 == Wbig
+
+            @test convert(WoodburyPDMat{T}, W) === W
+            @test convert(WoodburyPDMat{BigFloat}, W) == Wbig
+
+            @test AbstractMatrix{T}(W) isa WoodburyPDMat{T}
+            @test AbstractMatrix{T}(W) == W
+            @test AbstractMatrix{BigFloat}(W) isa WoodburyPDMat{BigFloat}
+            @test AbstractMatrix{BigFloat}(W) == Wbig
+
             test_factorization(W)
         end
 
@@ -291,14 +310,50 @@ end
             @test PDMats.dim(W) == n
         end
 
-        @testset "unwhiten" begin
+        @testset "whiten/whiten!" begin
             L, _ = factorize(W)
 
             x = randn(T, n)
-            @test @inferred(unwhiten(W, x)) ≈ L * x
+            z = @inferred whiten(W, x)
+            @test size(x) == size(x)
+            @test dot(z, z) ≈ dot(x, invWmat, x)
+            z2 = similar(z)
+            @test whiten!(z2, W, x) === z2
+            @test z2 ≈ z
 
-            X = randn(T, n, 100)
-            @test @inferred(unwhiten(W, X)) ≈ L * X
+            X = randn(T, n, 10)
+            Z = @inferred whiten(W, X)
+            @test size(Z) == size(X)
+            for (x, z) in zip(eachcol(X), eachcol(Z))
+                @test dot(z, z) ≈ dot(x, invWmat, x)
+            end
+            Z2 = similar(Z)
+            @test whiten!(Z2, W, X) === Z2
+            @test Z2 ≈ Z
+        end
+
+        @testset "unwhiten/unwhiten!" begin
+            L, _ = factorize(W)
+
+            z = randn(T, n)
+            x = @inferred unwhiten(W, z)
+            @test size(x) == size(z)
+            @test dot(x, invWmat, x) ≈ dot(z, z)
+            @test whiten(W, x) ≈ z
+            x2 = similar(x)
+            @test unwhiten!(x2, W, z) === x2
+            @test x2 ≈ x
+
+            Z = randn(T, n, 10)
+            X = @inferred unwhiten(W, Z)
+            @test whiten(W, X) ≈ Z
+            @test size(X) == size(Z)
+            for (x, z) in zip(eachcol(X), eachcol(Z))
+                @test dot(x, invWmat, x) ≈ dot(z, z)
+            end
+            X2 = similar(X)
+            @test unwhiten!(X2, W, Z) === X2
+            @test X2 ≈ X
         end
 
         @testset "invunwhiten!" begin
@@ -311,32 +366,40 @@ end
             @test @inferred(Pathfinder.invunwhiten!(similar(X), W, X)) ≈ R \ X
         end
 
-        @testset "PDMats.quad" begin
+        @testset "quad/quad!" begin
             x = randn(T, n)
             @test @inferred(quad(W, x)) ≈ dot(x, Wmat, x)
 
             u = randn(T, n)
             @test quad(W, Pathfinder.invunwhiten!(similar(u), W, u)) ≈ dot(u, u)
 
-            X = randn(T, n, 100)
-            @test @inferred(quad(W, X)) ≈ quad(PDMats.PDMat(Symmetric(Wmat)), X)
+            X = randn(T, n, 10)
+            quad_W_X = @inferred quad(W, X)
+            @test quad_W_X ≈ quad(PDMats.PDMat(Symmetric(Wmat)), X)
+            quad_W_X2 = similar(quad_W_X)
+            @test quad!(quad_W_X2, W, X) === quad_W_X2
+            @test quad_W_X2 ≈ quad_W_X
 
-            U = randn(T, n, 100)
+            U = randn(T, n, 10)
             @test quad(W, Pathfinder.invunwhiten!(similar(U), W, U)) ≈
                 vec(sum(abs2, U; dims=1))
         end
 
-        @testset "PDMats.invquad" begin
+        @testset "invquad/invquad!" begin
             x = randn(T, n)
             @test @inferred(invquad(W, x)) ≈ dot(x, inv(Wmat), x)
 
             u = randn(T, n)
             @test invquad(W, unwhiten(W, u)) ≈ dot(u, u)
 
-            X = randn(T, n, 100)
-            @test @inferred(invquad(W, X)) ≈ invquad(PDMats.PDMat(Symmetric(Wmat)), X)
+            X = randn(T, n, 10)
+            quad_invW_X = @inferred invquad(W, X)
+            @test quad_invW_X ≈ invquad(PDMats.PDMat(Symmetric(Wmat)), X)
+            quad_invW_X2 = similar(quad_invW_X)
+            @test invquad!(quad_invW_X2, W, X) === quad_invW_X2
+            @test quad_invW_X2 ≈ quad_invW_X
 
-            U = randn(T, n, 100)
+            U = randn(T, n, 10)
             @test invquad(W, unwhiten(W, U)) ≈ vec(sum(abs2, U; dims=1))
         end
     end

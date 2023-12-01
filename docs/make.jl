@@ -6,7 +6,7 @@ DocMeta.setdocmeta!(Pathfinder, :DocTestSetup, :(using Pathfinder); recursive=tr
 makedocs(;
     modules=[Pathfinder],
     authors="Seth Axen <seth.axen@gmail.com> and contributors",
-    repo="https://github.com/mlcolab/Pathfinder.jl/blob/{commit}{path}#{line}",
+    repo=Remotes.GitHub("mlcolab", "Pathfinder.jl"),
     sitename="Pathfinder.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",

@@ -85,11 +85,11 @@ metric = Pathfinder.RankUpdateEuclideanMetric(inv_metric)
 hamiltonian = Hamiltonian(metric, ℓπ, ∂ℓπ∂θ)
 ϵ = find_good_stepsize(hamiltonian, init_params[1])
 integrator = Leapfrog(ϵ)
-proposal = AdvancedHMC.NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
 adaptor = StepSizeAdaptor(0.8, integrator)
 samples, stats = sample(
     hamiltonian,
-    proposal,
+    kernel,
     init_params[1],
     ndraws + nadapts,
     adaptor,
@@ -99,7 +99,8 @@ samples, stats = sample(
 )
 ```
 
-Now we pack the samples into an `MCMCChains.Chains`:
+Now we pack the samples into an `MCMCChains.Chains`.
+For this we use the utility [`Pathfinder.flattened_varnames_list`](@ref).
 
 ```@example 1
 samples_transformed = reduce(vcat, fun.transform.(samples)')

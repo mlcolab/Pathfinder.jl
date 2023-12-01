@@ -47,7 +47,7 @@ function compare_estimates(xs1, xs2, α=0.05)
     p = α / 2
     m1, s1 = mean_and_mcse(xs1)
     m2, s2 = mean_and_mcse(xs2)
-    zs = @. (m1 - m2) / sqrt(s1^2 + s2^2)
+    zs = @. (m1 - m2) / hypot(s1, s2)
     @test all(norminvcdf(p) .< zs .< norminvccdf(p))
 end
 
@@ -76,7 +76,7 @@ end
     end
 
     @testset "DynamicHMC.mcmc_with_warmup" begin
-        ndraws = 1_000
+        ndraws = 10_000
         x = 0:0.01:1
         y = sin.(x) .+ randn.() .* 0.2 .+ x
         X = [x x .^ 2 x .^ 3]

@@ -13,7 +13,7 @@ using AdvancedHMC,
     TransformVariables
 using TransformedLogDensities: TransformedLogDensity
 
-Random.seed!(0)
+Random.seed!(2)
 
 struct RegressionProblem{X,Y}
     x::X
@@ -53,7 +53,7 @@ function compare_estimates(xs1, xs2, α=0.05)
     p = α / 2
     m1, s1 = mean_and_mcse(xs1)
     m2, s2 = mean_and_mcse(xs2)
-    zs = @. (m1 - m2) / sqrt(s1^2 + s2^2)
+    zs = @. (m1 - m2) / hypot(s1, s2)
     @test all(norminvcdf(p) .< zs .< norminvccdf(p))
 end
 
@@ -106,7 +106,7 @@ end
     end
 
     @testset "sample" begin
-        ndraws = 1_000
+        ndraws = 10_000
         nadapts = 500
         nparams = 5
         x = 0:0.01:1
@@ -122,15 +122,15 @@ end
         hamiltonian = Hamiltonian(metric, ∇P)
         ϵ = find_good_stepsize(hamiltonian, θ₀)
         integrator = Leapfrog(ϵ)
-        proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+        kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
         adaptor = StanHMCAdaptor(
             MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator)
         )
         samples1, stats1 = sample(
             hamiltonian,
-            proposal,
+            kernel,
             θ₀,
-            ndraws,
+            ndraws + nadapts,
             adaptor,
             nadapts;
             drop_warmup=true,
@@ -144,13 +144,13 @@ end
             hamiltonian = Hamiltonian(metric, ∇P)
             ϵ = find_good_stepsize(hamiltonian, θ₀)
             integrator = Leapfrog(ϵ)
-            proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+            kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
             adaptor = StepSizeAdaptor(0.8, integrator)
             samples2, stats2 = sample(
                 hamiltonian,
-                proposal,
+                kernel,
                 result_pf.draws[:, 1],
-                ndraws,
+                ndraws + nadapts,
                 adaptor,
                 nadapts;
                 drop_warmup=true,
@@ -164,13 +164,13 @@ end
             hamiltonian = Hamiltonian(metric, ∇P)
             ϵ = find_good_stepsize(hamiltonian, θ₀)
             integrator = Leapfrog(ϵ)
-            proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+            kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
             adaptor = StepSizeAdaptor(0.8, integrator)
             samples3, stats3 = sample(
                 hamiltonian,
-                proposal,
+                kernel,
                 result_pf.draws[:, 1],
-                ndraws,
+                ndraws + nadapts,
                 adaptor,
                 nadapts;
                 drop_warmup=true,
@@ -184,13 +184,13 @@ end
             hamiltonian = Hamiltonian(metric, ∇P)
             ϵ = find_good_stepsize(hamiltonian, θ₀)
             integrator = Leapfrog(ϵ)
-            proposal = NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+            kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
             adaptor = StepSizeAdaptor(0.8, integrator)
             samples4, stats4 = sample(
                 hamiltonian,
-                proposal,
+                kernel,
                 result_pf.draws[:, 1],
-                ndraws,
+                ndraws + nadapts,
                 adaptor,
                 nadapts;
                 drop_warmup=true,
