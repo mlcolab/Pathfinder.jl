@@ -97,7 +97,9 @@ include("test_utils.jl")
             Random.seed!(rng, seed)
             # less restrictive type check to work around https://github.com/mlcolab/Pathfinder.jl/issues/142
             # TODO: remove this workaround once the issue is fixed
-            result = @inferred PathfinderResult pathfinder(ℓ; rng, optimizer, ndraws_elbo, executor)
+            result = @inferred PathfinderResult pathfinder(
+                ℓ; rng, optimizer, ndraws_elbo, executor
+            )
             @test result.input === ℓ
             @test result.fit_distribution.Σ ≈ Σ rtol = 1e-1
             @test result.optimizer == optimizer
@@ -113,12 +115,12 @@ include("test_utils.jl")
             i = 0
             callback = (args...,) -> (i += 1; false)
             pathfinder(ℓ; callback)
-            @test i ≠ 6
+            @test i ≠ 4
 
             Random.seed!(42)
             i = 0
-            pathfinder(ℓ; callback, maxiters=5)
-            @test i == 6
+            pathfinder(ℓ; callback, maxiters=3)
+            @test i == 4
         end
     end
     @testset "retries" begin
