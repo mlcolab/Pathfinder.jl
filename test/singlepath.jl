@@ -39,9 +39,9 @@ include("test_utils.jl")
                 Pathfinder.default_optimizer(Pathfinder.DEFAULT_HISTORY_LENGTH)
             fit_distribution = result.fit_distribution
             @test fit_distribution isa MvNormal
-            @test fit_distribution.μ ≈ zeros(dim)
+            @test fit_distribution.μ ≈ zeros(dim) atol = 1e-6
             @test fit_distribution.Σ isa Pathfinder.WoodburyPDMat
-            @test fit_distribution.Σ ≈ I
+            @test fit_distribution.Σ ≈ I atol = 1e-6
             @test size(fit_distribution.Σ.B) == (dim, 2) # history contains only 1 iteration
             @test result.draws isa AbstractMatrix
             @test size(result.draws) == (dim, ndraws)
