@@ -175,16 +175,15 @@ function multipathfinder(
             kwargs...,
         )
     end
+    iter_optimizers = fill(optimizer, nruns)
     iter_sp =
         if executor isa Folds.ThreadedEx
             # temporary workaround due to
             # https://github.com/JuliaFolds2/Transducers.jl/issues/10
             # also support optimizers that store state
-            zip(_init, Iterators.map(deepcopy, Iterators.repeated(optimizer)))
+            zip(_init, Iterators.map(deepcopy, iter_optimizers))
         else
-            Transducers.withprogress(
-                zip(_init, Iterators.repeated(optimizer)); interval=1e-3
-            )
+            Transducers.withprogress(zip(_init, iter_optimizers); interval=1e-3)
         end |> trans
     pathfinder_results = Folds.collect(iter_sp, executor)
     fit_distributions =
