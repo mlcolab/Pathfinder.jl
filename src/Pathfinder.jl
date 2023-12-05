@@ -24,8 +24,6 @@ using UnPack: @unpack
 export PathfinderResult, MultiPathfinderResult
 export pathfinder, multipathfinder
 
-# Note: we override the default history length to be shorter and the default line search
-# to be More-Thuente, which keeps the approximate inverse Hessian positive-definite
 const DEFAULT_HISTORY_LENGTH = 6
 const DEFAULT_LINE_SEARCH = LineSearches.HagerZhang()
 const DEFAULT_LINE_SEARCH_INIT = LineSearches.InitialHagerZhang()
