@@ -117,8 +117,9 @@ constructed using at most the previous `history_length` steps.
     inverse Hessian.
 - `optimizer`: Optimizer to be used for constructing trajectory. Can be any optimizer
     compatible with Optimization.jl, so long as it supports callbacks. Defaults to
-    `Optim.LBFGS(; m=history_length, linesearch=LineSearches.MoreThuente())`. See
-    the [Optimization.jl documentation](https://optimization.sciml.ai/stable) for details.
+    `Optim.LBFGS(; m=history_length, linesearch=LineSearches.HagerZhang(), alphaguess=LineSearches.InitialHagerZhang())`.
+    See the [Optimization.jl documentation](https://optimization.sciml.ai/stable) for
+    details.
 - `ntries::Int=1_000`: Number of times to try the optimization, restarting if it fails. Before
     every restart, a new initial point is drawn using `init_sampler`.
 - `fail_on_nonfinite::Bool=true`: If `true`, optimization fails if the log-density is a

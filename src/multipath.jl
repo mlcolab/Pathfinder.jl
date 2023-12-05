@@ -162,12 +162,12 @@ function multipathfinder(
     logp(x) = -optim_fun.f(x, nothing)
 
     # run pathfinder independently from each starting point
-    trans = Transducers.Map() do (init_i)
+    trans = Transducers.Map() do (init_i, optimizer_i)
         return pathfinder(
             optim_fun;
             rng,
             history_length,
-            optimizer,
+            optimizer=optimizer_i,
             ndraws=ndraws_per_run,
             init=init_i,
             executor=executor_per_run,
@@ -175,13 +175,16 @@ function multipathfinder(
             kwargs...,
         )
     end
-    iter_sp = if executor isa Folds.ThreadedEx
-        # temporary workaround due to
-        # https://github.com/JuliaFolds2/Transducers.jl/issues/10
-        _init
-    else
-        Transducers.withprogress(_init; interval=1e-3)
-    end |> trans
+    iter_optimizers = fill(optimizer, nruns)
+    iter_sp =
+        if executor isa Folds.ThreadedEx
+            # temporary workaround due to
+            # https://github.com/JuliaFolds2/Transducers.jl/issues/10
+            # also support optimizers that store state
+            zip(_init, Iterators.map(deepcopy, iter_optimizers))
+        else
+            Transducers.withprogress(zip(_init, iter_optimizers); interval=1e-3)
+        end |> trans
     pathfinder_results = Folds.collect(iter_sp, executor)
     fit_distributions =
         pathfinder_results |> Transducers.Map(x -> x.fit_distribution) |> collect
