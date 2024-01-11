@@ -57,7 +57,7 @@ end
                 g[end] = gval
                 return g
             end
-            callback = (x, fx, args...) -> cbfail
+            callback = (state, args...) -> cbfail
             cb = Pathfinder._make_optimization_callback(
                 xs,
                 fxs,
@@ -72,7 +72,11 @@ end
             should_fail =
                 cbfail ||
                 (fail_on_nonfinite && (isnan(fval) || fval == Inf || !isfinite(gval)))
-            @test cb(x, -fval) == should_fail
+            x0 = randn(5)
+            state = Optimization.OptimizationState(;
+                iter=0, u=x0, objective=-fval, grad=-∇f(x0)
+            )
+            @test cb(state, -fval) == should_fail
         end
     end
 end
