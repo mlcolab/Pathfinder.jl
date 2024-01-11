@@ -50,23 +50,23 @@ end
 function _make_optimization_callback(
     xs, fxs, ∇fxs, ∇f; progress_name, progress_id, maxiters, callback, fail_on_nonfinite
 )
-    return function (x, nfx, args...)
-        ret = callback !== nothing && callback(x, nfx, args...)
-        iteration = length(xs)
+    return function (state, args...)
+        ret = callback !== nothing && callback(state, args...)
+        iteration = state.iter
         Base.@logmsg ProgressLogging.ProgressLevel progress_name progress =
             iteration / maxiters _id = progress_id
 
+        x = copy(state.u)
+        fx = -state.objective
+        ∇fx = state.grad === nothing ? ∇f(x) : -state.grad
+
         # some backends mutate x, so we must copy it
-        push!(xs, copy(x))
-        push!(fxs, -nfx)
-        # NOTE: Optimization doesn't have an interface for accessing the gradient trace,
-        # so we need to recompute it ourselves
-        # see https://github.com/SciML/Optimization.jl/issues/149
-        ∇fx = ∇f(x)
+        push!(xs, x)
+        push!(fxs, fx)
         push!(∇fxs, ∇fx)
 
         if fail_on_nonfinite && !ret
-            ret = (isnan(nfx) || nfx == -Inf || any(!isfinite, ∇fx))::Bool
+            ret = (isnan(fx) || fx == Inf || any(!isfinite, ∇fx))::Bool
         end
 
         return ret
