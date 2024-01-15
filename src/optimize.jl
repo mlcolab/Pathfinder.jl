@@ -40,19 +40,75 @@ function optimize_with_trace(
     xs = typeof(u0)[]
     fxs = typeof(fun.f(u0, nothing))[]
     ∇fxs = typeof(u0)[]
-    _callback = _make_optimization_callback(
-        xs, fxs, ∇fxs, ∇f; progress_name, progress_id, maxiters, callback, fail_on_nonfinite
+    _callback = OptimizationCallback(
+        xs, fxs, ∇fxs, ∇f, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
     )
     sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
     return sol, OptimizationTrace(xs, fxs, ∇fxs)
 end
 
-function _make_optimization_callback(
-    xs, fxs, ∇fxs, ∇f; progress_name, progress_id, maxiters, callback, fail_on_nonfinite
-)
-    return function (x, nfx, args...)
+struct OptimizationCallback{X,FX,∇FX,∇F,ID,CB}
+    xs::X
+    fxs::FX
+    ∇fxs::∇FX
+    ∇f::∇F
+    progress_name::String
+    progress_id::ID
+    maxiters::Int
+    callback::CB
+    fail_on_nonfinite::Bool
+end
+
+@static if isdefined(Optimization, :OptimizationState)
+    # Optimization v3.21.0 and later
+    function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args...)
+        @unpack (
+            xs,
+            fxs,
+            ∇fxs,
+            ∇f,
+            progress_name,
+            progress_id,
+            maxiters,
+            callback,
+            fail_on_nonfinite,
+        ) = cb
+        ret = callback !== nothing && callback(state, args...)
+        iteration = state.iter
+        Base.@logmsg ProgressLogging.ProgressLevel progress_name progress =
+            iteration / maxiters _id = progress_id
+
+        x = copy(state.u)
+        fx = -state.objective
+        ∇fx = state.grad === nothing ? ∇f(x) : -state.grad
+
+        # some backends mutate x, so we must copy it
+        push!(xs, x)
+        push!(fxs, fx)
+        push!(∇fxs, ∇fx)
+
+        if fail_on_nonfinite && !ret
+            ret = (isnan(fx) || fx == Inf || any(!isfinite, ∇fx))::Bool
+        end
+
+        return ret
+    end
+else
+    # Optimization v3.20.X and earlier
+    function (cb::OptimizationCallback)(x, nfx, args...)
+        @unpack (
+            xs,
+            fxs,
+            ∇fxs,
+            ∇f,
+            progress_name,
+            progress_id,
+            maxiters,
+            callback,
+            fail_on_nonfinite,
+        ) = cb
         ret = callback !== nothing && callback(x, nfx, args...)
-        iteration = length(xs)
+        iteration = length(cb.xs)
         Base.@logmsg ProgressLogging.ProgressLevel progress_name progress =
             iteration / maxiters _id = progress_id
 

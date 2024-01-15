@@ -37,7 +37,7 @@ end
     @test prob.p === nothing
 end
 
-@testset "_make_optimization_callback" begin
+@testset "OptimizationCallback" begin
     @testset "callback return value" begin
         progress_name = "Optimizing"
         progress_id = nothing
@@ -57,22 +57,34 @@ end
                 g[end] = gval
                 return g
             end
-            callback = (x, fx, args...) -> cbfail
-            cb = Pathfinder._make_optimization_callback(
+            should_fail =
+                cbfail ||
+                (fail_on_nonfinite && (isnan(fval) || fval == Inf || !isfinite(gval)))
+            if isdefined(Optimization, :OptimizationState)
+                # Optimization v3.21.0 and later
+                callback = (state, args...) -> cbfail
+                state = Optimization.OptimizationState(;
+                    iter=0, u=x, objective=-fval, grad=-∇f(x)
+                )
+                cb_args = (state, -fval)
+            else
+                # Optimization v3.20.X and earlier
+                callback = (x, fx, args...) -> cbfail
+                cb_args = (x, -fval)
+            end
+            cb = Pathfinder.OptimizationCallback(
                 xs,
                 fxs,
                 ∇fxs,
-                ∇f;
+                ∇f,
                 progress_name,
                 progress_id,
                 maxiters,
                 callback,
                 fail_on_nonfinite,
             )
-            should_fail =
-                cbfail ||
-                (fail_on_nonfinite && (isnan(fval) || fval == Inf || !isfinite(gval)))
-            @test cb(x, -fval) == should_fail
+            @test cb isa Pathfinder.OptimizationCallback
+            @test cb(cb_args...) == should_fail
         end
     end
 end
