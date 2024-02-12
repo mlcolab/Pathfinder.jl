@@ -6,7 +6,7 @@ on:
   pull_request:
 jobs:
   test:
-    name: ${{ matrix.package }} - Julia ${{ matrix.version }} 
+    name: ${{ matrix.downgrade && '/ Downgrade / ' || '' }}${{ matrix.package }} - Julia ${{ matrix.version }} 
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -16,12 +16,20 @@ jobs:
           - DynamicHMC
           - AdvancedHMC
           - Turing
+        downgrade:
+          - true
+          - false
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.version }}
           arch: x64
+      - uses: cjdoris/julia-downgrade-compat-action@v1
+        with:
+          skip: LinearAlgebra,Random,Statistics
+        if: ${{ matrix.downgrade }}
+        name: Downgrade dependencies to oldest supported versions
       - uses: julia-actions/julia-buildpkg@v1
       - run: |
           julia --code-coverage=user -e '
