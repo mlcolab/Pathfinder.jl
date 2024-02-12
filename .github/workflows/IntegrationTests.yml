@@ -6,7 +6,7 @@ on:
   pull_request:
 jobs:
   test:
-    name: ${{ matrix.downgrade && '/ Downgrade / ' || '' }}${{ matrix.package }} - Julia ${{ matrix.version }} 
+    name: ${{ matrix.downgrade && 'Downgrade / ' || '' }}${{ matrix.package }} - Julia ${{ matrix.version }} 
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
