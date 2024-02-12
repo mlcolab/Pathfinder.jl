@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 jobs:
   test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ matrix.num_threads }} threads - ${{ github.event_name }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ matrix.num_threads }} threads - ${{ matrix.downgrade && 'downgrade- ' || '' }}${{ github.event_name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -29,6 +29,14 @@ jobs:
         num_threads:
           - 1
           - 2
+        downgrade:
+          - false
+        include:
+          - version: '1'
+            os: ubuntu-latest
+            arch: x64
+            num_threads: 2
+            downgrade: true
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
@@ -36,6 +44,11 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v1
+      - uses: cjdoris/julia-downgrade-compat-action@v1
+        with:
+          skip: LinearAlgebra,Random,Statistics
+        if: ${{ matrix.downgrade }}
+        name: Downgrade dependencies to oldest supported versions
       - uses: julia-actions/julia-buildpkg@v1
       - name: Fix Transducers to last-compatible version
         run: julia --project -e 'using Pkg; Pkg.pin(name="Transducers", version=v"0.4.75")'
