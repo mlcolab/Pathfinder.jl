@@ -16,11 +16,6 @@ jobs:
           - DynamicHMC
           - AdvancedHMC
           - Turing
-        include:
-          - package: DynamicHMC
-            version: 'nightly'
-          - package: Turing
-            version: 'nightly'
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
