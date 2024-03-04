@@ -25,7 +25,7 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: x64
-      - uses: julia-actions/julia-downgrade-compat-action@v1.1
+      - uses: julia-actions/julia-downgrade-compat@v1.1
         with:
           skip: LinearAlgebra,Pathfinder,Random,Statistics
           projects: ., test/integration/${{ matrix.package }}
