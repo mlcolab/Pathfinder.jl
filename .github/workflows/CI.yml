@@ -44,7 +44,7 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v1
-      - uses: cjdoris/julia-downgrade-compat-action@v1
+      - uses: julia-actions/julia-downgrade-compat-action@v1.1
         with:
           skip: LinearAlgebra,Random,Statistics
         if: ${{ matrix.downgrade }}
