@@ -44,7 +44,7 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v1
-      - uses: cjdoris/julia-downgrade-compat-action@v1
+      - uses: julia-actions/julia-downgrade-compat@v1
         with:
           skip: LinearAlgebra,Random,Statistics
         if: ${{ matrix.downgrade }}
@@ -59,17 +59,30 @@ jobs:
           files: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
   docs:
-    name: Documentation
+    name: ${{ matrix.downgrade && 'Downgrade / ' || '' }}Documentation - Julia ${{ matrix.version }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - version: '1'
+            downgrade: false
+          - version: '1.7'
+            downgrade: true
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
-          version: '1'
+          version: ${{ matrix.version }}
+      - uses: julia-actions/julia-downgrade-compat@v1.1
+        with:
+          skip: LinearAlgebra,Pathfinder,Random,Statistics
+          projects: ., docs
+        if: matrix.downgrade
+        name: Downgrade dependencies to oldest supported versions
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-docdeploy@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
+          DOCUMENTER_KEY: ${{ matrix.version == '1' && secrets.DOCUMENTER_KEY || '' }}
           GKSwstype: "100" # https://discourse.julialang.org/t/generation-of-documentation-fails-qt-qpa-xcb-could-not-connect-to-display/60988
-  

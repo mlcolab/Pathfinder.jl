@@ -25,9 +25,10 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: x64
-      - uses: cjdoris/julia-downgrade-compat-action@v1
+      - uses: julia-actions/julia-downgrade-compat@v1.1
         with:
-          skip: LinearAlgebra,Random,Statistics
+          skip: LinearAlgebra,Pathfinder,Random,Statistics
+          projects: ., test/integration/${{ matrix.package }}
         if: ${{ matrix.downgrade }}
         name: Downgrade dependencies to oldest supported versions
       - uses: julia-actions/julia-buildpkg@v1
