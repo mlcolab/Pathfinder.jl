@@ -123,11 +123,18 @@ for approximating expectations with respect to ``p``.
 """
 function multipathfinder end
 
-function multipathfinder(ℓ, ndraws::Int; input=ℓ, kwargs...)
-    _check_log_density_problem(ℓ)
-    dim = LogDensityProblems.dimension(ℓ)
-    optim_fun = build_optim_function(ℓ)
-    return multipathfinder(optim_fun, ndraws; input, dim, kwargs...)
+function multipathfinder(
+    fun, ndraws::Int; input=fun, adtype::ADTypes.AbstractADType=default_ad(), kwargs...
+)
+    if _is_log_density_problem(fun)
+        dim = LogDensityProblems.dimension(fun)
+        optim_fun = build_optim_function(fun, adtype, LogDensityProblems.capabilities(fun))
+        new_kwargs = merge((; dim), kwargs)
+    else
+        optim_fun = build_optim_function(fun, adtype)
+        new_kwargs = merge((;), kwargs)
+    end
+    return multipathfinder(optim_fun, ndraws; input, dim, new_kwargs...)
 end
 function multipathfinder(
     optim_fun::SciMLBase.OptimizationFunction,
