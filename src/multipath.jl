@@ -152,9 +152,6 @@ function multipathfinder(
     importance::Bool=true,
     kwargs...,
 )
-    if optim_fun.grad === nothing || optim_fun.grad isa Bool
-        throw(ArgumentError("optimization function must define a gradient function."))
-    end
     if init === nothing
         nruns > 0 || throw(
             ArgumentError("A positive `nruns` must be set or `init` must be provided.")
