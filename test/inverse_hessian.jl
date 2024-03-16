@@ -3,8 +3,6 @@ using Optim
 using Pathfinder
 using Test
 
-include("test_utils.jl")
-
 function lbfgs_inverse_hessian_explicit(H₀, S, Y)
     B = [H₀ * Y S]
     R = triu(S'Y)

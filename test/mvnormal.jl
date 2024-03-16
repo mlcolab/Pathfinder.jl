@@ -4,8 +4,6 @@ using Pathfinder
 using Random
 using Test
 
-include("test_utils.jl")
-
 @testset "MvNormal functions" begin
     @testset "fit_mvnormals" begin
         n = 10

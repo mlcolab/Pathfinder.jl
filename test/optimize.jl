@@ -6,8 +6,6 @@ using ProgressLogging
 using SciMLBase
 using Test
 
-include("test_utils.jl")
-
 @testset "build_optim_function" begin
     n = 20
     ℓ = build_logdensityproblem(logp_banana, n)

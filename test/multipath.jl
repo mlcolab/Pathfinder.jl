@@ -8,8 +8,6 @@ using SciMLBase
 using Test
 using Transducers
 
-include("test_utils.jl")
-
 @testset "multi path pathfinder" begin
     @testset "MvNormal" begin
         dim = 10

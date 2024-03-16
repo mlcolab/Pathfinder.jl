@@ -9,8 +9,6 @@ using SciMLBase
 using Test
 using Transducers
 
-include("test_utils.jl")
-
 @testset "single path pathfinder" begin
     @testset "IsoNormal" begin
         # here pathfinder finds the exact solution after 1 iteration
