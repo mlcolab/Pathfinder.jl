@@ -62,9 +62,9 @@ end
 
 function _fill_missing_gradient_values!(∇fxs, xs, optim_fun)
     function ∇f(x)
-        SciMLBase.isinplace(optim_fun) || return optim_fun.grad(x, nothing)
+        SciMLBase.isinplace(optim_fun) || return optim_fun.grad(x)
         res = similar(x)
-        optim_fun.grad(res, x, nothing)
+        optim_fun.grad(res, x)
         rmul!(res, -1)
         return res
     end
