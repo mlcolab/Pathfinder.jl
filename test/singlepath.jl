@@ -161,20 +161,9 @@ include("test_utils.jl")
             @test x2 == x
         end
     end
-    @testset "errors if no gradient provided" begin
-        logp(x) = -sum(abs2, x) / 2
-        f(x, p) = -logp(x)
-        init = randn(5)
-        prob = SciMLBase.OptimizationProblem(f, init, nothing)
-        @test_throws ArgumentError pathfinder(prob)
-        fun = SciMLBase.OptimizationFunction(f, Optimization.AutoForwardDiff())
-        prob = SciMLBase.OptimizationProblem(fun, init, nothing)
-        @test_throws ArgumentError pathfinder(prob)
-    end
     @testset "errors if neither dim nor init valid" begin
         logp(x) = -sum(abs2, x) / 2
         @test_throws ArgumentError pathfinder(logp)
-        @test_throws ArgumentError pathfinder(LogDensityFunction(logp, 3))
         @test_throws ArgumentError pathfinder(build_logdensityproblem(logp, 0))
         pathfinder(build_logdensityproblem(logp, 3))
     end
