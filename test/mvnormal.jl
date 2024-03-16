@@ -7,10 +7,12 @@ using Test
 @testset "MvNormal functions" begin
     @testset "fit_mvnormals" begin
         n = 10
-        ℓ = build_logdensityproblem(logp_banana, n)
+        ℓ = build_logdensityproblem(logp_banana, n, 2)
         θ₀ = 10 * randn(n)
-        fun = Pathfinder.build_optim_function(ℓ)
-        prob = Pathfinder.build_optim_problem(fun, θ₀)
+        fun = Pathfinder.build_optim_function(
+            ℓ, SciMLBase.NoAD(), LogDensityProblems.capabilities(ℓ)
+        )
+        prob = SciMLBase.OptimizationProblem(fun, θ₀)
         optimizer = Optim.LBFGS()
         history_length = optimizer.m
         _, optim_trace = Pathfinder.optimize_with_trace(prob, optimizer)

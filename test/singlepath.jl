@@ -22,7 +22,7 @@ using Transducers
         seed = 42
         @testset for dim in [1, 5, 10, 100], rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
-            ℓ = build_logdensityproblem(logp, 5)
+            ℓ = build_logdensityproblem(logp, 5, 2)
             init = randn(dim)
             Random.seed!(rng, seed)
             # less restrictive type check to work around https://github.com/mlcolab/Pathfinder.jl/issues/142
@@ -79,7 +79,7 @@ using Transducers
         P = inv(Symmetric(Σ))
         logp(x) = -dot(x, P, x) / 2
         dim = 5
-        ℓ = build_logdensityproblem(logp, dim)
+        ℓ = build_logdensityproblem(logp, dim, 2)
         ndraws_elbo = 100
         rngs = if VERSION ≥ v"1.7"
             [MersenneTwister(), Random.default_rng()]
@@ -126,7 +126,7 @@ using Transducers
             dim = 5
             nfail = 20
             logp(x) = i ≤ nfail ? NaN : -sum(abs2, x) / 2
-            ℓ = build_logdensityproblem(logp, dim)
+            ℓ = build_logdensityproblem(logp, dim, 2)
             callback = (args...,) -> (i += 1; true)
             i = 1
             result = pathfinder(ℓ; callback)
@@ -162,7 +162,7 @@ using Transducers
     @testset "errors if neither dim nor init valid" begin
         logp(x) = -sum(abs2, x) / 2
         @test_throws ArgumentError pathfinder(logp)
-        @test_throws ArgumentError pathfinder(build_logdensityproblem(logp, 0))
-        pathfinder(build_logdensityproblem(logp, 3))
+        @test_throws ArgumentError pathfinder(build_logdensityproblem(logp, 0, 2))
+        pathfinder(build_logdensityproblem(logp, 3, 2))
     end
 end

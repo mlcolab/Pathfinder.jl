@@ -48,7 +48,7 @@ end
         nocedal_wright_scaling(α, s, y) = fill!(similar(α), dot(y, s) / sum(abs2, y))
         θ₀ = 10 * randn(n)
 
-        ℓ = build_logdensityproblem(logp, n)
+        ℓ = build_logdensityproblem(logp, n, 2)
         fun = Pathfinder.build_optim_function(ℓ)
         prob = Pathfinder.build_optim_problem(fun, θ₀)
         optimizer = Optim.LBFGS(;

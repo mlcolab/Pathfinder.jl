@@ -19,7 +19,7 @@ using Transducers
         μ = randn(dim)
         d = MvNormal(μ, Σ)
         logp(x) = logpdf(d, x)
-        ℓ = build_logdensityproblem(logp, dim)
+        ℓ = build_logdensityproblem(logp, dim, 2)
         rngs = if VERSION ≥ v"1.7"
             [MersenneTwister(), Random.default_rng()]
         else
@@ -89,16 +89,9 @@ using Transducers
         @test ncomponents(result.fit_distribution) == nruns
         @test size(result.draws) == (dim, ndraws)
     end
-    @testset "errors if no gradient provided" begin
-        logp(x) = -sum(abs2, x) / 2
-        f(x, p) = -logp(x)
-        init = [randn(5) for _ in 1:10]
-        fun = SciMLBase.OptimizationFunction(f, Optimization.AutoForwardDiff())
-        @test_throws ArgumentError multipathfinder(fun, 10; init)
-    end
     @testset "errors if neither init nor nruns valid" begin
         logp(x) = -sum(abs2, x) / 2
-        ℓ = build_logdensityproblem(logp, 5)
+        ℓ = build_logdensityproblem(logp, 5, 2)
         @test_throws ArgumentError multipathfinder(ℓ, 10; nruns=0)
         multipathfinder(ℓ, 10; nruns=2)
     end
