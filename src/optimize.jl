@@ -1,21 +1,38 @@
-function build_optim_function(ℓ)
-    f(x, p) = -LogDensityProblems.logdensity(ℓ, x)
-    function grad(res, x, p)
-        _, ∇fx = LogDensityProblems.logdensity_and_gradient(ℓ, x)
+function build_optim_function(
+    log_density_problem,
+    adtype::ADTypes.AbstractADType,
+    ::LogDensityProblems.LogDensityOrder,
+)
+    function grad(res, x, _...)
+        _, ∇fx = LogDensityProblems.logdensity_and_gradient(log_density_problem, x)
         @. res = -∇fx
         return res
     end
-    function hess(res, x, p)
-        _, _, H = LogDensityProblems.logdensity_gradient_and_hessian(ℓ, x)
+    function hess(res, x, _...)
+        _, _, H = LogDensityProblems.logdensity_gradient_and_hessian(log_density_problem, x)
         @. res = -H
         return res
     end
-    return SciMLBase.OptimizationFunction{true}(f; grad, hess)
+    return build_optim_function(
+        Base.Fix1(LogDensityProblems.logdensity, log_density_problem), adtype; grad, hess
+    )
+end
+function build_optim_function(
+    log_density_problem,
+    adtype::ADTypes.AbstractADType,
+    ::LogDensityProblems.LogDensityOrder{0};
+    kwargs...,
+)
+    return build_optim_function(
+        Base.Fix1(LogDensityProblems.logdensity, log_density_problem), adtype; kwargs...
+    )
+end
+function build_optim_function(log_density_fun, adtype::ADTypes.AbstractADType; kwargs...)
+    f(x, _...) = -log_density_fun(x)
+    return SciMLBase.OptimizationFunction(f, adtype; kwargs...)
 end
 
-function build_optim_problem(optim_fun, x₀)
-    return SciMLBase.OptimizationProblem(optim_fun, x₀, nothing)
-end
+build_optim_problem(optim_fun, x₀) = SciMLBase.OptimizationProblem(optim_fun, x₀, nothing)
 
 function optimize_with_trace(
     prob,
