@@ -46,29 +46,38 @@ function optimize_with_trace(
 )
     u0 = prob.u0
     fun = prob.f
-    function ∇f(x)
-        SciMLBase.isinplace(fun) || return fun.grad(x, nothing)
-        res = similar(x)
-        fun.grad(res, x, nothing)
-        rmul!(res, -1)
-        return res
-    end
     # caches for the trace of x and f(x)
     xs = typeof(u0)[]
     fxs = typeof(fun.f(u0, nothing))[]
-    ∇fxs = typeof(u0)[]
+    ∇fxs = Union{Nothing,typeof(u0)}[]
     _callback = OptimizationCallback(
-        xs, fxs, ∇fxs, ∇f, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
+        xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
     )
     sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
-    return sol, OptimizationTrace(xs, fxs, ∇fxs)
+
+    _∇fxs = _fill_missing_gradient_values!(∇fxs, xs, sol.cache.f)
+
+    return sol, OptimizationTrace(xs, fxs, _∇fxs)
 end
 
-struct OptimizationCallback{X,FX,∇FX,∇F,ID,CB}
+function _fill_missing_gradient_values!(∇fxs, xs, optim_fun)
+    function ∇f(x)
+        SciMLBase.isinplace(optim_fun) || return optim_fun.grad(x, nothing)
+        res = similar(x)
+        optim_fun.grad(res, x, nothing)
+        rmul!(res, -1)
+        return res
+    end
+    map!(∇fxs, ∇fxs, xs) do ∇fx, x
+        return ∇fx === nothing ? ∇f(x) : ∇fx
+    end
+    return convert(typeof(xs), ∇fxs)
+end
+
+struct OptimizationCallback{X,FX,∇FX,ID,CB}
     xs::X
     fxs::FX
     ∇fxs::∇FX
-    ∇f::∇F
     progress_name::String
     progress_id::ID
     maxiters::Int
@@ -80,15 +89,7 @@ end
     # Optimization v3.21.0 and later
     function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args...)
         @unpack (
-            xs,
-            fxs,
-            ∇fxs,
-            ∇f,
-            progress_name,
-            progress_id,
-            maxiters,
-            callback,
-            fail_on_nonfinite,
+            xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
         ) = cb
         ret = callback !== nothing && callback(state, args...)
         iteration = state.iter
@@ -97,7 +98,7 @@ end
 
         x = copy(state.u)
         fx = -state.objective
-        ∇fx = state.grad === nothing ? ∇f(x) : -state.grad
+        ∇fx = state.grad === nothing ? nothing : -state.grad
 
         # some backends mutate x, so we must copy it
         push!(xs, x)
@@ -105,7 +106,7 @@ end
         push!(∇fxs, ∇fx)
 
         if fail_on_nonfinite && !ret
-            ret = (isnan(fx) || fx == Inf || any(!isfinite, ∇fx))::Bool
+            ret = (isnan(fx) || fx == Inf || (∇fx !== nothing && any(!isfinite, ∇fx)))::Bool
         end
 
         return ret
