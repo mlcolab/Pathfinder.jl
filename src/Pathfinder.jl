@@ -37,7 +37,7 @@ function default_optimizer(history_length)
 end
 
 # We depend on Optim, and Optim depends on ForwardDiff, so we can offer it as a default.
-default_ad() = ADTypes.AutoForwardDiff(; chunksize=0)
+default_ad() = ADTypes.AutoForwardDiff()
 
 include("transducers.jl")
 include("woodbury.jl")
