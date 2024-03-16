@@ -133,11 +133,16 @@ constructed using at most the previous `history_length` steps.
 """
 function pathfinder end
 
-function pathfinder(ℓ; input=ℓ, kwargs...)
-    _check_log_density_problem(ℓ)
-    dim = LogDensityProblems.dimension(ℓ)
-    optim_fun = build_optim_function(ℓ)
-    return pathfinder(optim_fun; input, dim, kwargs...)
+function pathfinder(fun; input=fun, adtype::ADTypes.AbstractADType=default_ad(), kwargs...)
+    if _is_log_density_problem(fun)
+        dim = LogDensityProblems.dimension(fun)
+        optim_fun = build_optim_function(fun, adtype, LogDensityProblems.capabilities(fun))
+        new_kwargs = merge((; dim), kwargs)
+    else
+        optim_fun = build_optim_function(fun, adtype)
+        new_kwargs = merge((;), kwargs)
+    end
+    return pathfinder(optim_fun; input, new_kwargs...)
 end
 function pathfinder(
     optim_fun::SciMLBase.OptimizationFunction;
@@ -172,9 +177,6 @@ function pathfinder(
     input=prob,
     kwargs...,
 )
-    if prob.f.grad === nothing || prob.f.grad isa Bool
-        throw(ArgumentError("optimization function must define a gradient function."))
-    end
     logp(x) = -prob.f.f(x, nothing)
     path_result = ProgressLogging.progress(; name="Optimizing") do progress_id
         return _pathfinder_try_until_succeed(
@@ -335,20 +337,4 @@ function (s::UniformSampler)(rng::Random.AbstractRNG, point)
     return point
 end
 
-function _check_log_density_problem(ℓ)
-    capabilities = LogDensityProblems.capabilities(ℓ)
-    if capabilities === nothing
-        throw(
-            ArgumentError(
-                "Provided object must implement the LogDensityProblems interface. See https://www.tamaspapp.eu/LogDensityProblems.jl.",
-            ),
-        )
-    elseif capabilities === LogDensityProblems.LogDensityOrder{0}()
-        throw(
-            ArgumentError(
-                "The log density problem must at least support gradient computation. To use automatic differentiation, see https://github.com/tpapp/LogDensityProblemsAD.jl.",
-            ),
-        )
-    end
-    return nothing
-end
+_is_log_density_problem(ℓ) = (LogDensityProblems.capabilities(ℓ) !== nothing)
