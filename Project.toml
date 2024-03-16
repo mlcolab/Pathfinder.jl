@@ -4,6 +4,7 @@ authors = ["Seth Axen <seth.axen@gmail.com> and contributors"]
 version = "0.8.3"
 
 [deps]
+ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Folds = "41a02a25-b8f0-4f67-bc48-60067656b558"
 IrrationalConstants = "92d709cd-6900-40b7-9082-c6be49f344b6"
@@ -36,6 +37,7 @@ PathfinderTuringExt = ["Accessors", "DynamicPPL", "MCMCChains", "Turing"]
 
 [compat]
 Accessors = "0.1.1"
+ADTypes = "0.1, 0.2"
 Distributions = "0.25.57"
 DynamicHMC = "3.4.0"
 DynamicPPL = "0.21.5, 0.22, 0.23, 0.24"

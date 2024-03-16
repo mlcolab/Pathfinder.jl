@@ -1,9 +1,8 @@
 module Pathfinder
 
+using ADTypes: ADTypes
 using Distributions: Distributions
 using Folds: Folds
-# ensure that ForwardDiff is conditionally loaded by Optimization
-using ForwardDiff: ForwardDiff
 using IrrationalConstants: log2π
 using LinearAlgebra
 using LogDensityProblems: LogDensityProblems
@@ -36,6 +35,9 @@ function default_optimizer(history_length)
         alphaguess=DEFAULT_LINE_SEARCH_INIT,
     )
 end
+
+# We depend on Optim, and Optim depends on ForwardDiff, so we can offer it as a default.
+default_ad() = ADTypes.AutoForwardDiff(; chunksize=0)
 
 include("transducers.jl")
 include("woodbury.jl")
