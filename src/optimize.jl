@@ -1,28 +1,29 @@
 function build_optim_function(
     log_density_problem,
     adtype::ADTypes.AbstractADType,
-    ::LogDensityProblems.LogDensityOrder,
-)
-    function grad(res, x, _...)
-        _, ∇fx = LogDensityProblems.logdensity_and_gradient(log_density_problem, x)
-        @. res = -∇fx
-        return res
+    ::LogDensityProblems.LogDensityOrder{order},
+) where {order}
+    if order == 0
+        kwargs = (;)
+    else
+        function grad(res, x, _...)
+            _, ∇fx = LogDensityProblems.logdensity_and_gradient(log_density_problem, x)
+            @. res = -∇fx
+            return res
+        end
+        if order == 1
+            kwargs = (; grad)
+        else
+            function hess(res, x, _...)
+                _, _, H = LogDensityProblems.logdensity_gradient_and_hessian(
+                    log_density_problem, x
+                )
+                @. res = -H
+                return res
+            end
+            kwargs = (; grad, hess)
+        end
     end
-    function hess(res, x, _...)
-        _, _, H = LogDensityProblems.logdensity_gradient_and_hessian(log_density_problem, x)
-        @. res = -H
-        return res
-    end
-    return build_optim_function(
-        Base.Fix1(LogDensityProblems.logdensity, log_density_problem), adtype; grad, hess
-    )
-end
-function build_optim_function(
-    log_density_problem,
-    adtype::ADTypes.AbstractADType,
-    ::LogDensityProblems.LogDensityOrder{0};
-    kwargs...,
-)
     return build_optim_function(
         Base.Fix1(LogDensityProblems.logdensity, log_density_problem), adtype; kwargs...
     )
