@@ -32,8 +32,6 @@ function build_optim_function(log_density_fun, adtype::ADTypes.AbstractADType; k
     return SciMLBase.OptimizationFunction(f, adtype; kwargs...)
 end
 
-build_optim_problem(optim_fun, x₀) = SciMLBase.OptimizationProblem(optim_fun, x₀, nothing)
-
 function optimize_with_trace(
     prob,
     optimizer;

@@ -164,7 +164,7 @@ function pathfinder(
     else
         throw(ArgumentError("An initial point `init` or dimension `dim` must be provided."))
     end
-    prob = build_optim_problem(optim_fun, _init)
+    prob = SciMLBase.OptimizationProblem(optim_fun, _init)
     return pathfinder(prob; rng, input, init_sampler, allow_mutating_init, kwargs...)
 end
 function pathfinder(
