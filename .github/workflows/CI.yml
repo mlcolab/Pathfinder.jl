@@ -76,7 +76,7 @@ jobs:
           version: ${{ matrix.version }}
       - uses: julia-actions/julia-downgrade-compat@v1.1
         with:
-          skip: LinearAlgebra,Pathfinder,Random,Statistics
+          skip: LinearAlgebra,Pathfinder,Random,Statistics,Folds,Transducers
           projects: ., docs
         if: matrix.downgrade
         name: Downgrade dependencies to oldest supported versions
