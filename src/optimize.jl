@@ -112,15 +112,7 @@ else
     # Optimization v3.20.X and earlier
     function (cb::OptimizationCallback)(x, nfx, args...)
         @unpack (
-            xs,
-            fxs,
-            ∇fxs,
-            ∇f,
-            progress_name,
-            progress_id,
-            maxiters,
-            callback,
-            fail_on_nonfinite,
+            xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
         ) = cb
         ret = callback !== nothing && callback(x, nfx, args...)
         iteration = length(cb.xs)
@@ -130,14 +122,10 @@ else
         # some backends mutate x, so we must copy it
         push!(xs, copy(x))
         push!(fxs, -nfx)
-        # NOTE: Optimization doesn't have an interface for accessing the gradient trace,
-        # so we need to recompute it ourselves
-        # see https://github.com/SciML/Optimization.jl/issues/149
-        ∇fx = ∇f(x)
-        push!(∇fxs, ∇fx)
+        push!(∇fxs, nothing)
 
         if fail_on_nonfinite && !ret
-            ret = (isnan(nfx) || nfx == -Inf || any(!isfinite, ∇fx))::Bool
+            ret = (isnan(nfx) || nfx == -Inf)::Bool
         end
 
         return ret
