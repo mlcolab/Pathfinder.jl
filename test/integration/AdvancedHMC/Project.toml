@@ -16,7 +16,7 @@ TransformVariables = "84d833dd-6860-57f9-a1a7-6da5db126cff"
 TransformedLogDensities = "f9bc47f6-f3f8-4f3b-ab21-f8bc73906f26"
 
 [compat]
-AdvancedHMC = "0.4, 0.5, 0.6"
+AdvancedHMC = "0.4, 0.5.2, 0.6"
 Distributions = "0.25.57"
 ForwardDiff = "0.10.13"
 LogDensityProblems = "2.1.0"
