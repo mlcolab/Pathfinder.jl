@@ -1,6 +1,8 @@
 using LinearAlgebra
+using LogDensityProblems
 using Optim
 using Pathfinder
+using SciMLBase
 using Test
 
 function lbfgs_inverse_hessian_explicit(H₀, S, Y)
@@ -49,8 +51,10 @@ end
         θ₀ = 10 * randn(n)
 
         ℓ = build_logdensityproblem(logp, n, 2)
-        fun = Pathfinder.build_optim_function(ℓ)
-        prob = Pathfinder.build_optim_problem(fun, θ₀)
+        fun = Pathfinder.build_optim_function(
+            ℓ, SciMLBase.NoAD(), LogDensityProblems.capabilities(ℓ)
+        )
+        prob = SciMLBase.OptimizationProblem(fun, θ₀)
         optimizer = Optim.LBFGS(;
             m=history_length, linesearch=Optim.LineSearches.MoreThuente()
         )
