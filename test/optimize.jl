@@ -66,8 +66,13 @@ end
                 return g
             end
             should_fail =
-                cbfail ||
-                (fail_on_nonfinite && (isnan(fval) || fval == Inf || !isfinite(gval)))
+                cbfail || (
+                    fail_on_nonfinite && (
+                        isnan(fval) ||
+                        fval == Inf ||
+                        (isdefined(Optimization, :OptimizationState) && !isfinite(gval))
+                    )
+                )
             if isdefined(Optimization, :OptimizationState)
                 # Optimization v3.21.0 and later
                 callback = (state, args...) -> cbfail
