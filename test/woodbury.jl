@@ -8,8 +8,6 @@ using Pathfinder:
 using PDMats
 using Test
 
-include("test_utils.jl")
-
 function test_factorization(A, B, D, F)
     A′, B′, D′ = pdunfactorize(F)
     @test A′ ≈ A

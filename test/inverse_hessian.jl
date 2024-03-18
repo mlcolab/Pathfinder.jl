@@ -1,9 +1,9 @@
 using LinearAlgebra
+using LogDensityProblems
 using Optim
 using Pathfinder
+using SciMLBase
 using Test
-
-include("test_utils.jl")
 
 function lbfgs_inverse_hessian_explicit(H₀, S, Y)
     B = [H₀ * Y S]
@@ -50,9 +50,11 @@ end
         nocedal_wright_scaling(α, s, y) = fill!(similar(α), dot(y, s) / sum(abs2, y))
         θ₀ = 10 * randn(n)
 
-        ℓ = build_logdensityproblem(logp, n)
-        fun = Pathfinder.build_optim_function(ℓ)
-        prob = Pathfinder.build_optim_problem(fun, θ₀)
+        ℓ = build_logdensityproblem(logp, n, 2)
+        fun = Pathfinder.build_optim_function(
+            ℓ, SciMLBase.NoAD(), LogDensityProblems.capabilities(ℓ)
+        )
+        prob = SciMLBase.OptimizationProblem(fun, θ₀)
         optimizer = Optim.LBFGS(;
             m=history_length, linesearch=Optim.LineSearches.MoreThuente()
         )
