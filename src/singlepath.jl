@@ -1,3 +1,19 @@
+const _ARGUMENT_DOCSTRING = """
+- `fun`: An object representing the log-density of the target distribution. Supported
+    types include:
+    - a callable with the signature
+        `f(params::AbstractVector{<:Real}) -> log_density::Real`.
+    - an object implementing the
+        [LogDensityProblems](https://www.tamaspapp.eu/LogDensityProblems.jl) interface.
+    - `SciMLBase.OptimizationFunction`: wraps the *negative* log density. It must have the
+        necessary features (e.g. a gradient or Hessian function) for the chosen `optimizer`.
+        For details, see
+        [Optimization.jl: OptimizationFunction](https://optimization.sciml.ai/stable/API/optimization_function/).
+    - `SciMLBase.OptimizationProblem`: an optimization problem containing a function with
+        the same properties as the above `OptimizationFunction`, as well as an initial
+        point. If provided, `init` and `dim` are ignored.
+    - `DynamicPPL.Model`: a Turing model. If provided, `init` and `dim` are ignored.
+"""
 
 """
     PathfinderResult
@@ -68,9 +84,7 @@ function Base.show(io::IO, ::MIME"text/plain", result::PathfinderResult)
 end
 
 """
-    pathfinder(ℓ; kwargs...)
-    pathfinder(fun::SciMLBase::OptimizationFunction; kwargs...)
-    pathfinder(prob::SciMLBase::OptimizationProblem; kwargs...)
+    pathfinder(fun; kwargs...)
 
 Find the best multivariate normal approximation encountered while maximizing a log density.
 
@@ -83,23 +97,14 @@ The covariance of the multivariate normal distribution is an inverse Hessian app
 constructed using at most the previous `history_length` steps.
 
 # Arguments
-- `ℓ`: an object, representing the log-density of the target distribution and its gradient,
-    that implements the [LogDensityProblems](https://www.tamaspapp.eu/LogDensityProblems.jl)
-    interface.
-- `fun::SciMLBase.OptimizationFunction`: an optimization function that represents the
-    negative log density with its gradient. It must have the necessary features (e.g. a
-    Hessian function, if applicable) for the chosen optimization algorithm. For details, see
-    [Optimization.jl: OptimizationFunction](https://optimization.sciml.ai/stable/API/optimization_function/).
-- `prob::SciMLBase.OptimizationProblem`: an optimization problem containing a function with
-    the same properties as `fun`, as well as an initial point, in which case `init` and
-    `dim` are ignored.
+$(_ARGUMENT_DOCSTRING)
 
 # Keywords
-- `dim::Int`: dimension of the target distribution, needed only if `fun` is provided and
-    `init` is not.
+- `dim::Int`: dimension of the target distribution. Ignored if `init` provided.
 - `init::AbstractVector{<:Real}`: initial point of length `dim` from which to begin
-    optimization. If not provided, an initial point of type `Vector{Float64}` and length
-    `dim` is created and filled using `init_sampler`.
+    optimization. If not provided and `fun` does not contain an initial point, an initial
+    point of type `Vector{Float64}` and length `dim` is created and filled using
+    `init_sampler`.
 - `init_scale::Real`: scale factor ``s`` such that the default `init_sampler` samples
     entries uniformly in the range ``[-s, s]``
 - `init_sampler`: function with the signature `(rng, x) -> x` that modifies a vector of
@@ -120,6 +125,10 @@ constructed using at most the previous `history_length` steps.
     `Optim.LBFGS(; m=history_length, linesearch=LineSearches.HagerZhang(), alphaguess=LineSearches.InitialHagerZhang())`.
     See the [Optimization.jl documentation](https://optimization.sciml.ai/stable) for
     details.
+- `adtype::ADTypes.AbstractADType=AutoForwardDiff()`: Specifies which automatic
+    differentiation backend should be used to compute the gradient, if `fun` does not
+    already specify the gradient. See
+    [SciML's Automatic Differentiation Recommendations](https://docs.sciml.ai/Optimization/stable/API/optimization_function/#Automatic-Differentiation-Construction-Choice-Recommendations).
 - `ntries::Int=1_000`: Number of times to try the optimization, restarting if it fails. Before
     every restart, a new initial point is drawn using `init_sampler`.
 - `fail_on_nonfinite::Bool=true`: If `true`, optimization fails if the log-density is a
