@@ -1,5 +1,7 @@
 function build_optim_function(
-    log_density_problem, adtype, ::LogDensityProblems.LogDensityOrder{order}
+    log_density_problem,
+    adtype::ADTypes.AbstractADType,
+    ::LogDensityProblems.LogDensityOrder{order},
 ) where {order}
     if order == 0
         kwargs = (;)
@@ -26,7 +28,7 @@ function build_optim_function(
         Base.Fix1(LogDensityProblems.logdensity, log_density_problem), adtype; kwargs...
     )
 end
-function build_optim_function(log_density_fun, adtype; kwargs...)
+function build_optim_function(log_density_fun, adtype::ADTypes.AbstractADType; kwargs...)
     f(x, _...) = -log_density_fun(x)
     return SciMLBase.OptimizationFunction(f, adtype; kwargs...)
 end

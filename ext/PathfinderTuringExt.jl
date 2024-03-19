@@ -107,7 +107,7 @@ function Pathfinder.pathfinder(
     init_scale=2,
     init_sampler=Pathfinder.UniformSampler(init_scale),
     init=nothing,
-    adtype=Pathfinder.default_ad(),
+    adtype::ADTypes.AbstractADType=Pathfinder.default_ad(),
     kwargs...,
 )
     var_names = flattened_varnames_list(model)
