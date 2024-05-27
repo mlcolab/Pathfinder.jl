@@ -1,7 +1,7 @@
 name = "Pathfinder"
 uuid = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
 authors = ["Seth Axen <seth.axen@gmail.com> and contributors"]
-version = "0.8.4"
+version = "0.8.7"
 
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -39,7 +39,7 @@ PathfinderTuringExt = ["Accessors", "DynamicPPL", "MCMCChains", "Turing"]
 Accessors = "0.1.1"
 Distributions = "0.25.57"
 DynamicHMC = "3.4.0"
-DynamicPPL = "0.21.5, 0.22, 0.23, 0.24"
+DynamicPPL = "0.21.5, 0.22, 0.23, 0.24, 0.25, 0.27"
 Folds = "0.2.2"
 ForwardDiff = "0.10.13"
 IrrationalConstants = "0.1.1, 0.2"
@@ -58,7 +58,7 @@ SciMLBase = "1.61.2, 2"
 Statistics = "1.6"
 StatsBase = "0.33.1, 0.34"
 Transducers = "0.4.66"
-Turing = "0.24.2, 0.25, 0.26, 0.27, 0.28, 0.29, 0.30"
+Turing = "0.24.2, 0.25, 0.26, 0.27, 0.28, 0.29, 0.30, 0.31, 0.32"
 UnPack = "1"
 julia = "1.6"
 
