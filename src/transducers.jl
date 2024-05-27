@@ -10,6 +10,9 @@ function _findmax(x)
     end
 end
 
-# WARNING: Type piracy!
-# https://github.com/JuliaFolds/Transducers.jl/issues/521
-Base.size(x::Transducers.ProgressLoggingFoldable) = size(x.foldable)
+if !hasmethod(size, Tuple{Transducers.ProgressLoggingFoldable})
+    # WARNING: Type piracy!
+    # https://github.com/JuliaFolds/Transducers.jl/issues/521
+    # this method is necessary for Transducers version earlier than v0.4.82
+    Base.size(x::Transducers.ProgressLoggingFoldable) = size(x.foldable)
+end
