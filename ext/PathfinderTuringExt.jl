@@ -4,6 +4,7 @@ if isdefined(Base, :get_extension)
     using Accessors: Accessors
     using DynamicPPL: DynamicPPL
     using MCMCChains: MCMCChains
+    using Optimization: Optimization
     using Pathfinder: Pathfinder
     using Random: Random
     using Turing: Turing
@@ -12,6 +13,7 @@ else  # using Requires
     using ..Accessors: Accessors
     using ..DynamicPPL: DynamicPPL
     using ..MCMCChains: MCMCChains
+    using ..Optimization: Optimization
     using ..Pathfinder: Pathfinder
     using ..Random: Random
     using ..Turing: Turing
@@ -101,6 +103,58 @@ function varnames_to_ranges(metadata::DynamicPPL.Metadata)
     return Dict(zip(metadata.vns, ranges))
 end
 
+"""
+    transform_to_constrained(
+        p::AbstractArray, vi::DynamicPPL.VarInfo, model::DynamicPPL.Model
+    )
+
+Transform a vector of parameters `p` from unconstrained to constrained space.
+"""
+function transform_to_constrained(
+    p::AbstractArray, vi::DynamicPPL.VarInfo, model::DynamicPPL.Model
+)
+    p = copy(p)
+    @assert DynamicPPL.istrans(vi)
+    vi = DynamicPPL.unflatten(vi, p)
+    p .= DynamicPPL.invlink!!(vi, model)[:]
+    # Restore the linking, since we mutated vi.
+    DynamicPPL.link!!(vi, model)
+    return p
+end
+
+"""
+    set_up_model_optimisation(model::DynamicPPL.Model, init)
+
+Create the necessary pieces for running optimisation on `model`.
+
+Returns
+* An `Optimization.OptimizationFunction` that evaluates the log density of the model and its
+gradient in the unconstrained space.
+* The initial value `init` transformed to unconstrained space.
+* A function `transform_result` that transforms the results back to constrained space. It
+takes a single vector argument.
+"""
+function set_up_model_optimisation(model::DynamicPPL.Model, init)
+    # The inner context deterimines whether we are solving MAP or MLE.
+    inner_context = DynamicPPL.DefaultContext()
+    ctx = Turing.Optimisation.OptimizationContext(inner_context)
+    log_density = Turing.Optimisation.OptimLogDensity(model, ctx)
+    # Initialise the varinfo with the initial value and then transform to unconstrained
+    # space.
+    Accessors.@set log_density.varinfo = DynamicPPL.unflatten(log_density.varinfo, init)
+    transformed_varinfo = DynamicPPL.link(log_density.varinfo, log_density.model)
+    log_density = Accessors.@set log_density.varinfo = transformed_varinfo
+    init = log_density.varinfo[:]
+    # Create a function that applies the appropriate inverse transformation to results, to
+    # bring them back to constrained space.
+    transform_result(p) = transform_to_constrained(p, log_density.varinfo, model)
+    f = Optimization.OptimizationFunction(
+        (x, _) -> log_density(x),;
+        grad = (G,x,p) -> log_density(nothing, G, x),
+    )
+    return f, init, transform_result
+end
+
 function Pathfinder.pathfinder(
     model::DynamicPPL.Model;
     rng=Random.GLOBAL_RNG,
@@ -110,10 +164,13 @@ function Pathfinder.pathfinder(
     kwargs...,
 )
     var_names = flattened_varnames_list(model)
-    prob = Turing.optim_problem(model, Turing.MAP(); constrained=false, init_theta=init)
-    init_sampler(rng, prob.prob.u0)
-    result = Pathfinder.pathfinder(prob.prob; rng, input=model, kwargs...)
-    draws = reduce(vcat, transpose.(prob.transform.(eachcol(result.draws))))
+    # If no initial value is provided, sample from prior.
+    init = init === nothing ? rand(Vector, model) : init
+    f, init, transform_result = set_up_model_optimisation(model, init)
+    prob = Optimization.OptimizationProblem(f, init)
+    init_sampler(rng, init)
+    result = Pathfinder.pathfinder(prob; rng, input=model, kwargs...)
+    draws = reduce(vcat, transpose.(transform_result.(eachcol(result.draws))))
     chns = MCMCChains.Chains(draws, var_names; info=(; pathfinder_result=result))
     result_new = Accessors.@set result.draws_transformed = chns
     return result_new
@@ -129,14 +186,15 @@ function Pathfinder.multipathfinder(
     kwargs...,
 )
     var_names = flattened_varnames_list(model)
-    fun = Turing.optim_function(model, Turing.MAP(); constrained=false)
-    init1 = fun.init()
+    # Sample from prior.
+    init1 = rand(Vector, model)
+    fun, init1, transform_result = set_up_model_optimisation(model, init1)
     init = [init_sampler(rng, init1)]
     for _ in 2:nruns
         push!(init, init_sampler(rng, deepcopy(init1)))
     end
-    result = Pathfinder.multipathfinder(fun.func, ndraws; rng, input=model, init, kwargs...)
-    draws = reduce(vcat, transpose.(fun.transform.(eachcol(result.draws))))
+    result = Pathfinder.multipathfinder(fun, ndraws; rng, input=model, init, kwargs...)
+    draws = reduce(vcat, transpose.(transform_result.(eachcol(result.draws))))
     chns = MCMCChains.Chains(draws, var_names; info=(; pathfinder_result=result))
     result_new = Accessors.@set result.draws_transformed = chns
     return result_new
