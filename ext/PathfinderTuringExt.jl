@@ -2,6 +2,7 @@ module PathfinderTuringExt
 
 if isdefined(Base, :get_extension)
     using Accessors: Accessors
+    using ADTypes: ADTypes
     using DynamicPPL: DynamicPPL
     using MCMCChains: MCMCChains
     using Pathfinder: Pathfinder
@@ -10,6 +11,7 @@ if isdefined(Base, :get_extension)
     import Pathfinder: flattened_varnames_list
 else  # using Requires
     using ..Accessors: Accessors
+    using ..ADTypes: ADTypes
     using ..DynamicPPL: DynamicPPL
     using ..MCMCChains: MCMCChains
     using ..Pathfinder: Pathfinder
