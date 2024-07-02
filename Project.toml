@@ -1,7 +1,7 @@
 name = "Pathfinder"
 uuid = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
 authors = ["Seth Axen <seth.axen@gmail.com> and contributors"]
-version = "0.8.7"
+version = "0.8.8"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
@@ -57,7 +57,7 @@ Random = "1.6"
 Requires = "1.1"
 SciMLBase = "1.95.0, 2"
 Statistics = "1.6"
-StatsBase = "0.33.2, 0.34"
+StatsBase = "0.33.7, 0.34"
 Transducers = "0.4.66"
 Turing = "0.30.5, 0.31, 0.32"
 UnPack = "1"
