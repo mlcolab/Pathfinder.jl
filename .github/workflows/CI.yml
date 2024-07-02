@@ -76,7 +76,7 @@ jobs:
           version: ${{ matrix.version }}
       - uses: julia-actions/julia-downgrade-compat@v1.1
         with:
-          skip: LinearAlgebra,Pathfinder,Random,Statistics
+          skip: LinearAlgebra,Pathfinder,Random,Statistics,Folds,Transducers
           projects: ., docs
         if: matrix.downgrade
         name: Downgrade dependencies to oldest supported versions
@@ -86,3 +86,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ matrix.version == '1' && secrets.DOCUMENTER_KEY || '' }}
           GKSwstype: "100" # https://discourse.julialang.org/t/generation-of-documentation-fails-qt-qpa-xcb-could-not-connect-to-display/60988
+          # don't deploy if it's a downgrade build
+          DEPLOY_DOCS: ${{ !matrix.downgrade }}

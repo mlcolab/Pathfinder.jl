@@ -1,3 +1,4 @@
+using ADTypes
 using Distributions
 using ForwardDiff
 using LinearAlgebra
@@ -5,11 +6,10 @@ using Optim
 using Optimization
 using Pathfinder
 using Random
+using ReverseDiff
 using SciMLBase
 using Test
 using Transducers
-
-include("test_utils.jl")
 
 @testset "single path pathfinder" begin
     @testset "IsoNormal" begin
@@ -24,7 +24,7 @@ include("test_utils.jl")
         seed = 42
         @testset for dim in [1, 5, 10, 100], rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
-            ℓ = build_logdensityproblem(logp, 5)
+            ℓ = build_logdensityproblem(logp, 5, 2)
             init = randn(dim)
             Random.seed!(rng, seed)
             # less restrictive type check to work around https://github.com/mlcolab/Pathfinder.jl/issues/142
@@ -81,7 +81,7 @@ include("test_utils.jl")
         P = inv(Symmetric(Σ))
         logp(x) = -dot(x, P, x) / 2
         dim = 5
-        ℓ = build_logdensityproblem(logp, dim)
+        ℓ = build_logdensityproblem(logp, dim, 2)
         ndraws_elbo = 100
         rngs = if VERSION ≥ v"1.7"
             [MersenneTwister(), Random.default_rng()]
@@ -128,7 +128,7 @@ include("test_utils.jl")
             dim = 5
             nfail = 20
             logp(x) = i ≤ nfail ? NaN : -sum(abs2, x) / 2
-            ℓ = build_logdensityproblem(logp, dim)
+            ℓ = build_logdensityproblem(logp, dim, 2)
             callback = (args...,) -> (i += 1; true)
             i = 1
             result = pathfinder(ℓ; callback)
@@ -161,21 +161,22 @@ include("test_utils.jl")
             @test x2 == x
         end
     end
-    @testset "errors if no gradient provided" begin
+
+    @testset "does not error if no gradient provided" begin
         logp(x) = -sum(abs2, x) / 2
-        f(x, p) = -logp(x)
         init = randn(5)
-        prob = SciMLBase.OptimizationProblem(f, init, nothing)
-        @test_throws ArgumentError pathfinder(prob)
-        fun = SciMLBase.OptimizationFunction(f, Optimization.AutoForwardDiff())
-        prob = SciMLBase.OptimizationProblem(fun, init, nothing)
-        @test_throws ArgumentError pathfinder(prob)
+        @testset for adtype in [AutoForwardDiff(), AutoReverseDiff()]
+            result = pathfinder(logp; init, adtype)
+            @test result.optim_prob.f.adtype === adtype
+            @test result.fit_distribution.μ ≈ zeros(5) atol = 1e-6
+            @test result.fit_distribution.Σ ≈ diagm(ones(5)) atol = 1e-6
+        end
     end
+
     @testset "errors if neither dim nor init valid" begin
         logp(x) = -sum(abs2, x) / 2
         @test_throws ArgumentError pathfinder(logp)
-        @test_throws ArgumentError pathfinder(LogDensityFunction(logp, 3))
-        @test_throws ArgumentError pathfinder(build_logdensityproblem(logp, 0))
-        pathfinder(build_logdensityproblem(logp, 3))
+        @test_throws ArgumentError pathfinder(build_logdensityproblem(logp, 0, 2))
+        pathfinder(build_logdensityproblem(logp, 3, 2))
     end
 end

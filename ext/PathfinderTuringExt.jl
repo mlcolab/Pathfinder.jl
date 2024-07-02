@@ -2,6 +2,7 @@ module PathfinderTuringExt
 
 if isdefined(Base, :get_extension)
     using Accessors: Accessors
+    using ADTypes: ADTypes
     using DynamicPPL: DynamicPPL
     using MCMCChains: MCMCChains
     using Optimization: Optimization
@@ -11,6 +12,7 @@ if isdefined(Base, :get_extension)
     import Pathfinder: flattened_varnames_list
 else  # using Requires
     using ..Accessors: Accessors
+    using ..ADTypes: ADTypes
     using ..DynamicPPL: DynamicPPL
     using ..MCMCChains: MCMCChains
     using ..Optimization: Optimization
@@ -161,6 +163,7 @@ function Pathfinder.pathfinder(
     init_scale=2,
     init_sampler=Pathfinder.UniformSampler(init_scale),
     init=nothing,
+    adtype::ADTypes.AbstractADType=Pathfinder.default_ad(),
     kwargs...,
 )
     var_names = flattened_varnames_list(model)
@@ -183,6 +186,7 @@ function Pathfinder.multipathfinder(
     init_scale=2,
     init_sampler=Pathfinder.UniformSampler(init_scale),
     nruns::Int,
+    adtype=Pathfinder.default_ad(),
     kwargs...,
 )
     var_names = flattened_varnames_list(model)
