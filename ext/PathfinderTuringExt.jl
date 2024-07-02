@@ -2,6 +2,7 @@ module PathfinderTuringExt
 
 if isdefined(Base, :get_extension)
     using Accessors: Accessors
+    using ADTypes: ADTypes
     using DynamicPPL: DynamicPPL
     using MCMCChains: MCMCChains
     using Pathfinder: Pathfinder
@@ -10,6 +11,7 @@ if isdefined(Base, :get_extension)
     import Pathfinder: flattened_varnames_list
 else  # using Requires
     using ..Accessors: Accessors
+    using ..ADTypes: ADTypes
     using ..DynamicPPL: DynamicPPL
     using ..MCMCChains: MCMCChains
     using ..Pathfinder: Pathfinder
@@ -107,10 +109,13 @@ function Pathfinder.pathfinder(
     init_scale=2,
     init_sampler=Pathfinder.UniformSampler(init_scale),
     init=nothing,
+    adtype::ADTypes.AbstractADType=Pathfinder.default_ad(),
     kwargs...,
 )
     var_names = flattened_varnames_list(model)
-    prob = Turing.optim_problem(model, Turing.MAP(); constrained=false, init_theta=init)
+    prob = Turing.optim_problem(
+        model, Turing.MAP(); constrained=false, init_theta=init, adtype
+    )
     init_sampler(rng, prob.prob.u0)
     result = Pathfinder.pathfinder(prob.prob; rng, input=model, kwargs...)
     draws = reduce(vcat, transpose.(prob.transform.(eachcol(result.draws))))
@@ -126,10 +131,11 @@ function Pathfinder.multipathfinder(
     init_scale=2,
     init_sampler=Pathfinder.UniformSampler(init_scale),
     nruns::Int,
+    adtype=Pathfinder.default_ad(),
     kwargs...,
 )
     var_names = flattened_varnames_list(model)
-    fun = Turing.optim_function(model, Turing.MAP(); constrained=false)
+    fun = Turing.optim_function(model, Turing.MAP(); constrained=false, adtype)
     init1 = fun.init()
     init = [init_sampler(rng, init1)]
     for _ in 2:nruns

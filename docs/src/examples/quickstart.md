@@ -6,26 +6,21 @@ This page introduces basic Pathfinder usage with examples.
 
 For a simple example, we'll run Pathfinder on a multivariate normal distribution with
 a dense covariance matrix.
-Pathfinder expects an object that implements the [LogDensityProblems](https://www.tamaspapp.eu/LogDensityProblems.jl) interface and has a gradient implemented.
-We can use automatic differentiation to compute the gradient using [LogDensityProblemsAD](https://github.com/tpapp/LogDensityProblemsAD.jl).
+Pathfinder can take a log-density function.
+By default, the gradient of the log-density function is computed using ForwardDiff.
 
 ```@example 1
-using ForwardDiff, LinearAlgebra, LogDensityProblems, LogDensityProblemsAD,
-      Pathfinder, Printf, StatsPlots, Random
+using ADTypes, ForwardDiff, LinearAlgebra, LogDensityProblems,
+      Pathfinder, Printf, ReverseDiff, StatsPlots, Random
 Random.seed!(42)
 
-ForwardDiff, LogDensityProblems, LogDensityProblemsAD
 struct MvNormalProblem{T,S}
     μ::T  # mean
     P::S  # precision matrix
 end
-function LogDensityProblems.capabilities(::Type{<:MvNormalProblem})
-    return LogDensityProblems.LogDensityOrder{0}()
-end
-LogDensityProblems.dimension(ℓ::MvNormalProblem) = length(ℓ.μ)
-function LogDensityProblems.logdensity(ℓ::MvNormalProblem, x)
-    z = x - μ
-    return -dot(z, P, z) / 2
+function (prob::MvNormalProblem)(x)
+    z = x - prob.μ
+    return -dot(z, prob.P, z) / 2
 end
 
 Σ = [
@@ -37,7 +32,7 @@ end
 ]
 μ = [-0.55, 0.49, -0.76, 0.25, 0.94]
 P = inv(Symmetric(Σ))
-prob_mvnormal = ADgradient(:ForwardDiff, MvNormalProblem(μ, P))
+prob_mvnormal = MvNormalProblem(μ, P)
 
 nothing # hide
 ```
@@ -45,7 +40,7 @@ nothing # hide
 Now we run [`pathfinder`](@ref).
 
 ```@example 1
-result = pathfinder(prob_mvnormal; init_scale=4)
+result = pathfinder(prob_mvnormal; dim=5, init_scale=4)
 ```
 
 `result` is a [`PathfinderResult`](@ref).
@@ -126,6 +121,9 @@ Now we will run Pathfinder on the following banana-shaped distribution with dens
 \pi(x_1, x_2) = e^{-x_1^2 / 2} e^{-5 (x_2 - x_1^2)^2 / 2}.
 ```
 
+Pathfinder can also take any object that implements the [LogDensityProblems](https://www.tamaspapp.eu/LogDensityProblems.jl) interface.
+This can also be used to manually define the gradient of the log-density function.
+
 First we define the log density problem:
 
 ```@example 1
@@ -133,14 +131,20 @@ Random.seed!(23)
 
 struct BananaProblem end
 function LogDensityProblems.capabilities(::Type{<:BananaProblem})
-    return LogDensityProblems.LogDensityOrder{0}()
+    return LogDensityProblems.LogDensityOrder{1}()
 end
-LogDensityProblems.dimension(ℓ::BananaProblem) = 2
-function LogDensityProblems.logdensity(ℓ::BananaProblem, x)
+LogDensityProblems.dimension(::BananaProblem) = 2
+function LogDensityProblems.logdensity(::BananaProblem, x)
     return -(x[1]^2 + 5(x[2] - x[1]^2)^2) / 2
 end
+function LogDensityProblems.logdensity_and_gradient(::BananaProblem, x)
+    a = (x[2] - x[1]^2)
+    lp = -(x[1]^2 + 5a^2) / 2
+    grad_lp = [(10a - 1) * x[1], -5a]
+    return lp, grad_lp
+end
 
-prob_banana = ADgradient(:ForwardDiff, BananaProblem())
+prob_banana = BananaProblem()
 
 nothing # hide
 ```
@@ -218,6 +222,8 @@ Multi-path Pathfinder can't sample the funnel well, but it can quickly give us d
 In this example, we draw from a 100-dimensional funnel and visualize 2 dimensions.
 
 ```@example 1
+using ReverseDiff, ADTypes
+
 Random.seed!(68)
 
 function logp_funnel(x)
@@ -227,23 +233,16 @@ function logp_funnel(x)
     return ((τ / 3)^2 + (n - 1) * τ + sum(b -> abs2(b * exp(-τ / 2)), β)) / -2
 end
 
-struct FunnelProblem
-    dim::Int
-end
-function LogDensityProblems.capabilities(::Type{<:FunnelProblem})
-    return LogDensityProblems.LogDensityOrder{0}()
-end
-LogDensityProblems.dimension(ℓ::FunnelProblem) = ℓ.dim
-LogDensityProblems.logdensity(::FunnelProblem, x) = logp_funnel(x)
-
-prob_funnel = ADgradient(:ForwardDiff, FunnelProblem(100))
 nothing # hide
 ```
 
 First, let's fit this posterior with single-path Pathfinder.
+For high-dimensional problems, it's better to use reverse-mode automatic differentiation.
+Here, we'll use `ADTypes.AutoReverseDiff()` to specify that [ReverseDiff.jl](https://github.com/JuliaDiff/ReverseDiff.jl) should be used.
+
 
 ```@example 1
-result_single = pathfinder(prob_funnel; init_scale=10)
+result_single = pathfinder(logp_funnel; dim=100, init_scale=10, adtype=AutoReverseDiff())
 ```
 
 Let's visualize this sequence of multivariate normals for the first two dimensions.
@@ -268,7 +267,7 @@ Now we run [`multipathfinder`](@ref).
 
 ```@example 1
 ndraws = 1_000
-result = multipathfinder(prob_funnel, ndraws; nruns=20, init_scale=10)
+result = multipathfinder(logp_funnel, ndraws; dim=100, nruns=20, init_scale=10, adtype=AutoReverseDiff())
 ```
 
 Again, the poor Pareto shape diagnostic indicates we should run MCMC to get draws suitable for computing posterior estimates.

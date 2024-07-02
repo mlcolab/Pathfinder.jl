@@ -40,6 +40,7 @@ See [Initializing HMC with Pathfinder](@ref) for details.
 Pathfinder uses several packages for extended functionality:
 
 - [Optimization.jl](https://optimization.sciml.ai/stable/): This allows the L-BFGS optimizer to be replaced with any of the many Optimization-compatible optimizers and supports use of callbacks. Note that any changes made to Pathfinder using these features would be experimental.
+- [ADTypes.jl](https://sciml.github.io/ADTypes.jl/stable/): Supports specifying the automatic differentiation engine to be used for computing gradient and Hessian, if needed.
 - [Transducers.jl](https://juliafolds.github.io/Transducers.jl/stable/): parallelization support
 - [Distributions.jl](https://juliastats.org/Distributions.jl/stable/)/[PDMats.jl](https://github.com/JuliaStats/PDMats.jl): fits can be used anywhere a `Distribution` can be used
 - [LogDensityProblems.jl](https://www.tamaspapp.eu/LogDensityProblems.jl/stable/): defining the log-density function, gradient, and Hessian
