@@ -67,8 +67,7 @@ function Base.show(io::IO, ::MIME"text/plain", result::MultiPathfinderResult)
 end
 
 """
-    multipathfinder(ℓ, ndraws; kwargs...)
-    multipathfinder(fun::SciMLBase.OptimizationFunction, ndraws; kwargs...)
+    multipathfinder(fun, ndraws; kwargs...)
 
 Run [`pathfinder`](@ref) multiple times to fit a multivariate normal mixture model.
 
@@ -90,13 +89,7 @@ resulting draws better approximate draws from the target distribution ``p`` inst
 for approximating expectations with respect to ``p``.
 
 # Arguments
-- `ℓ`: an object, representing the log-density of the target distribution and its gradient,
-    that implements the [LogDensityProblems](https://www.tamaspapp.eu/LogDensityProblems.jl)
-    interface.
-- `fun::SciMLBase.OptimizationFunction`: an optimization function that represents
-    a negative log density with its gradient. It must have the necessary features (e.g. a
-    Hessian function) for the chosen optimization algorithm. For details, see
-    [Optimization.jl: OptimizationFunction](https://optimization.sciml.ai/stable/API/optimization_function/).
+$(_ARGUMENT_DOCSTRING)
 - `ndraws::Int`: number of approximate draws to return
 
 # Keywords
@@ -123,11 +116,18 @@ for approximating expectations with respect to ``p``.
 """
 function multipathfinder end
 
-function multipathfinder(ℓ, ndraws::Int; input=ℓ, kwargs...)
-    _check_log_density_problem(ℓ)
-    dim = LogDensityProblems.dimension(ℓ)
-    optim_fun = build_optim_function(ℓ)
-    return multipathfinder(optim_fun, ndraws; input, dim, kwargs...)
+function multipathfinder(
+    fun, ndraws::Int; input=fun, adtype::ADTypes.AbstractADType=default_ad(), kwargs...
+)
+    if _is_log_density_problem(fun)
+        dim = LogDensityProblems.dimension(fun)
+        optim_fun = build_optim_function(fun, adtype, LogDensityProblems.capabilities(fun))
+        new_kwargs = merge((; dim), kwargs)
+    else
+        optim_fun = build_optim_function(fun, adtype)
+        new_kwargs = merge((;), kwargs)
+    end
+    return multipathfinder(optim_fun, ndraws; input, new_kwargs...)
 end
 function multipathfinder(
     optim_fun::SciMLBase.OptimizationFunction,
@@ -145,9 +145,6 @@ function multipathfinder(
     importance::Bool=true,
     kwargs...,
 )
-    if optim_fun.grad === nothing || optim_fun.grad isa Bool
-        throw(ArgumentError("optimization function must define a gradient function."))
-    end
     if init === nothing
         nruns > 0 || throw(
             ArgumentError("A positive `nruns` must be set or `init` must be provided.")

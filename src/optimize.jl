@@ -1,20 +1,36 @@
-function build_optim_function(ℓ)
-    f(x, p) = -LogDensityProblems.logdensity(ℓ, x)
-    function grad(res, x, p)
-        _, ∇fx = LogDensityProblems.logdensity_and_gradient(ℓ, x)
-        @. res = -∇fx
-        return res
+function build_optim_function(
+    log_density_problem,
+    adtype::ADTypes.AbstractADType,
+    ::LogDensityProblems.LogDensityOrder{order},
+) where {order}
+    if order == 0
+        kwargs = (;)
+    else
+        function grad(res, x, _...)
+            _, ∇fx = LogDensityProblems.logdensity_and_gradient(log_density_problem, x)
+            @. res = -∇fx
+            return res
+        end
+        if order == 1
+            kwargs = (; grad)
+        else
+            function hess(res, x, _...)
+                _, _, H = LogDensityProblems.logdensity_gradient_and_hessian(
+                    log_density_problem, x
+                )
+                @. res = -H
+                return res
+            end
+            kwargs = (; grad, hess)
+        end
     end
-    function hess(res, x, p)
-        _, _, H = LogDensityProblems.logdensity_gradient_and_hessian(ℓ, x)
-        @. res = -H
-        return res
-    end
-    return SciMLBase.OptimizationFunction{true}(f; grad, hess)
+    return build_optim_function(
+        Base.Fix1(LogDensityProblems.logdensity, log_density_problem), adtype; kwargs...
+    )
 end
-
-function build_optim_problem(optim_fun, x₀)
-    return SciMLBase.OptimizationProblem(optim_fun, x₀, nothing)
+function build_optim_function(log_density_fun, adtype::ADTypes.AbstractADType; kwargs...)
+    f(x, _...) = -log_density_fun(x)
+    return SciMLBase.OptimizationFunction(f, adtype; kwargs...)
 end
 
 function optimize_with_trace(
@@ -29,29 +45,38 @@ function optimize_with_trace(
 )
     u0 = prob.u0
     fun = prob.f
-    function ∇f(x)
-        SciMLBase.isinplace(fun) || return fun.grad(x, nothing)
-        res = similar(x)
-        fun.grad(res, x, nothing)
-        rmul!(res, -1)
-        return res
-    end
     # caches for the trace of x and f(x)
     xs = typeof(u0)[]
     fxs = typeof(fun.f(u0, nothing))[]
-    ∇fxs = typeof(u0)[]
+    ∇fxs = Union{Nothing,typeof(u0)}[]
     _callback = OptimizationCallback(
-        xs, fxs, ∇fxs, ∇f, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
+        xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
     )
     sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
-    return sol, OptimizationTrace(xs, fxs, ∇fxs)
+
+    _∇fxs = _fill_missing_gradient_values!(∇fxs, xs, sol.cache.f)
+
+    return sol, OptimizationTrace(xs, fxs, _∇fxs)
 end
 
-struct OptimizationCallback{X,FX,∇FX,∇F,ID,CB}
+function _fill_missing_gradient_values!(∇fxs, xs, optim_fun)
+    function ∇f(x)
+        SciMLBase.isinplace(optim_fun) || return optim_fun.grad(x)
+        res = similar(x)
+        optim_fun.grad(res, x)
+        rmul!(res, -1)
+        return res
+    end
+    map!(∇fxs, ∇fxs, xs) do ∇fx, x
+        return ∇fx === nothing ? ∇f(x) : ∇fx
+    end
+    return convert(typeof(xs), ∇fxs)
+end
+
+struct OptimizationCallback{X,FX,∇FX,ID,CB}
     xs::X
     fxs::FX
     ∇fxs::∇FX
-    ∇f::∇F
     progress_name::String
     progress_id::ID
     maxiters::Int
@@ -63,15 +88,7 @@ end
     # Optimization v3.21.0 and later
     function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args...)
         @unpack (
-            xs,
-            fxs,
-            ∇fxs,
-            ∇f,
-            progress_name,
-            progress_id,
-            maxiters,
-            callback,
-            fail_on_nonfinite,
+            xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
         ) = cb
         ret = callback !== nothing && callback(state, args...)
         iteration = state.iter
@@ -80,7 +97,7 @@ end
 
         x = copy(state.u)
         fx = -state.objective
-        ∇fx = state.grad === nothing ? ∇f(x) : -state.grad
+        ∇fx = state.grad === nothing ? nothing : -state.grad
 
         # some backends mutate x, so we must copy it
         push!(xs, x)
@@ -88,7 +105,7 @@ end
         push!(∇fxs, ∇fx)
 
         if fail_on_nonfinite && !ret
-            ret = (isnan(fx) || fx == Inf || any(!isfinite, ∇fx))::Bool
+            ret = (isnan(fx) || fx == Inf || (∇fx !== nothing && any(!isfinite, ∇fx)))::Bool
         end
 
         return ret
@@ -97,15 +114,7 @@ else
     # Optimization v3.20.X and earlier
     function (cb::OptimizationCallback)(x, nfx, args...)
         @unpack (
-            xs,
-            fxs,
-            ∇fxs,
-            ∇f,
-            progress_name,
-            progress_id,
-            maxiters,
-            callback,
-            fail_on_nonfinite,
+            xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
         ) = cb
         ret = callback !== nothing && callback(x, nfx, args...)
         iteration = length(cb.xs)
@@ -115,14 +124,10 @@ else
         # some backends mutate x, so we must copy it
         push!(xs, copy(x))
         push!(fxs, -nfx)
-        # NOTE: Optimization doesn't have an interface for accessing the gradient trace,
-        # so we need to recompute it ourselves
-        # see https://github.com/SciML/Optimization.jl/issues/149
-        ∇fx = ∇f(x)
-        push!(∇fxs, ∇fx)
+        push!(∇fxs, nothing)
 
         if fail_on_nonfinite && !ret
-            ret = (isnan(nfx) || nfx == -Inf || any(!isfinite, ∇fx))::Bool
+            ret = (isnan(nfx) || nfx == -Inf)::Bool
         end
 
         return ret
