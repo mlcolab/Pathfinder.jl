@@ -127,7 +127,7 @@ function multipathfinder(
         optim_fun = build_optim_function(fun, adtype)
         new_kwargs = merge((;), kwargs)
     end
-    return multipathfinder(optim_fun, ndraws; input, dim, new_kwargs...)
+    return multipathfinder(optim_fun, ndraws; input, new_kwargs...)
 end
 function multipathfinder(
     optim_fun::SciMLBase.OptimizationFunction,
