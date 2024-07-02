@@ -1,9 +1,11 @@
+using ADTypes
 using Distributions
 using ForwardDiff
 using LinearAlgebra
 using Optimization
 using Pathfinder
 using PSIS
+using ReverseDiff
 using SciMLBase
 using Test
 using Transducers
@@ -89,6 +91,20 @@ using Transducers
         @test ncomponents(result.fit_distribution) == nruns
         @test size(result.draws) == (dim, ndraws)
     end
+
+    @testset "does not error if no gradient provided" begin
+        logp(x) = -sum(abs2, x) / 2
+        init = [randn(5) for _ in 1:10]
+        @testset for adtype in [AutoForwardDiff(), AutoReverseDiff()]
+            result = multipathfinder(logp, 10; init, adtype)
+            @test result.optim_fun.adtype === adtype
+            for component in result.fit_distribution.components
+                @test component.μ ≈ zeros(5) atol = 1e-6
+                @test component.Σ ≈ I(5) atol = 1e-6
+            end
+        end
+    end
+
     @testset "errors if neither init nor nruns valid" begin
         logp(x) = -sum(abs2, x) / 2
         ℓ = build_logdensityproblem(logp, 5, 2)

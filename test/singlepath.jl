@@ -1,3 +1,4 @@
+using ADTypes
 using Distributions
 using ForwardDiff
 using LinearAlgebra
@@ -5,6 +6,7 @@ using Optim
 using Optimization
 using Pathfinder
 using Random
+using ReverseDiff
 using SciMLBase
 using Test
 using Transducers
@@ -159,6 +161,18 @@ using Transducers
             @test x2 == x
         end
     end
+
+    @testset "does not error if no gradient provided" begin
+        logp(x) = -sum(abs2, x) / 2
+        init = randn(5)
+        @testset for adtype in [AutoForwardDiff(), AutoReverseDiff()]
+            result = pathfinder(logp; init, adtype)
+            @test result.optim_prob.f.adtype === adtype
+            @test result.fit_distribution.μ ≈ zeros(5) atol = 1e-6
+            @test result.fit_distribution.Σ ≈ diagm(ones(5)) atol = 1e-6
+        end
+    end
+
     @testset "errors if neither dim nor init valid" begin
         logp(x) = -sum(abs2, x) / 2
         @test_throws ArgumentError pathfinder(logp)
