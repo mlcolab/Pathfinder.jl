@@ -4,6 +4,7 @@ using Optim
 using OptimizationNLopt
 using Pathfinder
 using ProgressLogging
+using ReverseDiff
 using SciMLBase
 using Test
 
@@ -22,24 +23,23 @@ using Test
 
     @testset "log density problem" begin
         @testset for max_order in 0:2,
-            adtype in [SciMLBase.NoAD(), ADTypes.AutoForwardDiff()]
+            adtype in [ADTypes.AutoForwardDiff(), ADTypes.AutoReverseDiff()]
 
             ℓ = build_logdensityproblem(logp_banana, n, max_order)
+            ℓ_reference = build_logdensityproblem(logp_banana, n, 2)
             capabilities = LogDensityProblems.capabilities(ℓ)
-            fun = @inferred Pathfinder.build_optim_function(ℓ, adtype, capabilities)
+            fun = Pathfinder.build_optim_function(ℓ, adtype, capabilities)
             @test fun isa SciMLBase.OptimizationFunction
             @test SciMLBase.isinplace(fun)
             @test fun.adtype === adtype
             @test fun.f(x, nothing) ≈ -ℓ.logp(x)
-            if max_order > 0
-                ∇fx = similar(x)
-                fun.grad(∇fx, x, nothing)
-                @test ∇fx ≈ -ℓ.∇logp(x)
-            end
+            ∇fx = similar(x)
+            fun.grad(∇fx, x, nothing)
+            @test ∇fx ≈ -ℓ_reference.∇logp(x)
             if max_order > 1
                 H = similar(x, n, n)
                 fun.hess(H, x, nothing)
-                @test H ≈ -ℓ.∇²logp(x)
+                @test H ≈ -ℓ_reference.∇²logp(x)
             end
         end
     end

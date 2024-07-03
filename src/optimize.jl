@@ -1,31 +1,45 @@
-function build_optim_function(
-    log_density_problem,
-    adtype::ADTypes.AbstractADType,
-    ::LogDensityProblems.LogDensityOrder{order},
+function _log_density_problem_order(log_density_problem)
+    return _log_density_problem_order(LogDensityProblems.capabilities(log_density_problem))
+end
+function _log_density_problem_order(
+    ::LogDensityProblems.LogDensityOrder{order}
 ) where {order}
-    if order == 0
-        kwargs = (;)
-    else
-        function grad(res, x, _...)
-            _, ∇fx = LogDensityProblems.logdensity_and_gradient(log_density_problem, x)
-            @. res = -∇fx
+    return order
+end
+
+function _as_log_density_problem_with_derivatives(log_density_problem, adtype)
+    order = _log_density_problem_order(log_density_problem)
+    iszero(order) || return log_density_problem
+    return LogDensityProblemsAD.ADgradient(adtype, log_density_problem)
+end
+
+function build_optim_function(
+    _log_density_problem,
+    adtype::ADTypes.AbstractADType,
+    ::LogDensityProblems.LogDensityOrder;
+)
+    log_density_problem = _as_log_density_problem_with_derivatives(
+        _log_density_problem, adtype
+    )
+    order = _log_density_problem_order(log_density_problem)
+    function grad(res, x, _...)
+        _, ∇fx = LogDensityProblems.logdensity_and_gradient(log_density_problem, x)
+        @. res = -∇fx
+        return res
+    end
+    if order > 1
+        function hess(res, x, _...)
+            _, _, H = LogDensityProblems.logdensity_gradient_and_hessian(
+                log_density_problem, x
+            )
+            @. res = -H
             return res
         end
-        if order == 1
-            kwargs = (; grad)
-        else
-            function hess(res, x, _...)
-                _, _, H = LogDensityProblems.logdensity_gradient_and_hessian(
-                    log_density_problem, x
-                )
-                @. res = -H
-                return res
-            end
-            kwargs = (; grad, hess)
-        end
+    else
+        hess = nothing
     end
     return build_optim_function(
-        Base.Fix1(LogDensityProblems.logdensity, log_density_problem), adtype; kwargs...
+        Base.Fix1(LogDensityProblems.logdensity, log_density_problem), adtype; grad, hess
     )
 end
 function build_optim_function(log_density_fun, adtype::ADTypes.AbstractADType; kwargs...)
