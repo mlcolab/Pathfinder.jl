@@ -27,11 +27,7 @@ using Test
 
             ℓ = build_logdensityproblem(logp_banana, n, max_order)
             capabilities = LogDensityProblems.capabilities(ℓ)
-            fun = if adtype isa ADTypes.AutoReverseDiff
-                @inferred Pathfinder.build_optim_function(ℓ, adtype, capabilities)
-            else
-                Pathfinder.build_optim_function(ℓ, adtype, capabilities)
-            end
+            fun = Pathfinder.build_optim_function(ℓ, adtype, capabilities)
             @test fun isa SciMLBase.OptimizationFunction
             @test SciMLBase.isinplace(fun)
             @test fun.adtype === adtype
