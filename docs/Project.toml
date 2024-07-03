@@ -17,7 +17,7 @@ TransformedLogDensities = "f9bc47f6-f3f8-4f3b-ab21-f8bc73906f26"
 Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
 [compat]
-ADTypes = "0.2"
+ADTypes = "0.2, 1"
 AdvancedHMC = "0.6"
 Documenter = "1"
 DynamicHMC = "3.4.0"
