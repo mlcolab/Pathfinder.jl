@@ -55,6 +55,8 @@ AdvancedHMC.renew(::RankUpdateEuclideanMetric, M⁻¹) = RankUpdateEuclideanMetr
 
 Base.size(metric::RankUpdateEuclideanMetric, dim...) = size(metric.M⁻¹.A.diag, dim...)
 
+Base.eltype(metric::RankUpdateEuclideanMetric) = eltype(metric.M⁻¹)
+
 function Base.show(io::IO, metric::RankUpdateEuclideanMetric)
     print(io, "RankUpdateEuclideanMetric(diag=$(diag(metric.M⁻¹)))")
     return nothing

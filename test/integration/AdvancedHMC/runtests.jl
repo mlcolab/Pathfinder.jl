@@ -82,6 +82,7 @@ end
         @test metric2.M⁻¹ ≈ I
         @test size(metric2) == (3,)
         @test size(metric2, 2) == 1
+        @test eltype(metric2) === Float64
         metric2 = Pathfinder.RankUpdateEuclideanMetric((4,))
         @test metric2.M⁻¹ ≈ I
         @test size(metric2) == (4,)
