@@ -27,9 +27,7 @@ function build_optim_function(
         @. res = -∇fx
         return res
     end
-    if order == 1
-        hess = nothing
-    else
+    if order > 1
         function hess(res, x, _...)
             _, _, H = LogDensityProblems.logdensity_gradient_and_hessian(
                 log_density_problem, x
@@ -37,6 +35,8 @@ function build_optim_function(
             @. res = -H
             return res
         end
+    else
+        hess = nothing
     end
     return build_optim_function(
         Base.Fix1(LogDensityProblems.logdensity, log_density_problem), adtype; grad, hess

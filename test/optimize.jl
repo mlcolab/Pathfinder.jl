@@ -26,6 +26,7 @@ using Test
             adtype in [ADTypes.AutoForwardDiff(), ADTypes.AutoReverseDiff()]
 
             ℓ = build_logdensityproblem(logp_banana, n, max_order)
+            ℓ_reference = build_logdensityproblem(logp_banana, n, 2)
             capabilities = LogDensityProblems.capabilities(ℓ)
             fun = Pathfinder.build_optim_function(ℓ, adtype, capabilities)
             @test fun isa SciMLBase.OptimizationFunction
@@ -34,11 +35,11 @@ using Test
             @test fun.f(x, nothing) ≈ -ℓ.logp(x)
             ∇fx = similar(x)
             fun.grad(∇fx, x, nothing)
-            @test ∇fx ≈ -ℓ.∇logp(x)
-            if max_order != 1
+            @test ∇fx ≈ -ℓ_reference.∇logp(x)
+            if max_order > 1
                 H = similar(x, n, n)
                 fun.hess(H, x, nothing)
-                @test H ≈ -ℓ.∇²logp(x)
+                @test H ≈ -ℓ_reference.∇²logp(x)
             end
         end
     end
