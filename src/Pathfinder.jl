@@ -6,6 +6,7 @@ using Folds: Folds
 using IrrationalConstants: log2π
 using LinearAlgebra
 using LogDensityProblems: LogDensityProblems
+using LogDensityProblemsAD: LogDensityProblemsAD
 using Optim: Optim, LineSearches
 using Optimization: Optimization
 using OptimizationOptimJL: OptimizationOptimJL
