@@ -2,21 +2,15 @@ module PathfinderTuringExt
 
 if isdefined(Base, :get_extension)
     using Accessors: Accessors
-    using ADTypes: ADTypes
     using DynamicPPL: DynamicPPL
     using MCMCChains: MCMCChains
-    using Optimization: Optimization
     using Pathfinder: Pathfinder
-    using Random: Random
     using Turing: Turing
 else  # using Requires
     using ..Accessors: Accessors
-    using ..ADTypes: ADTypes
     using ..DynamicPPL: DynamicPPL
     using ..MCMCChains: MCMCChains
-    using ..Optimization: Optimization
     using ..Pathfinder: Pathfinder
-    using ..Random: Random
     using ..Turing: Turing
 end
 
@@ -77,81 +71,21 @@ function transform_to_constrained(
     return p
 end
 
-"""
-    set_up_model_optimisation(model::DynamicPPL.Model, init)
-
-Create the necessary pieces for running optimisation on `model`.
-
-Returns
-* An `Optimization.OptimizationFunction` that evaluates the log density of the model and its
-gradient in the unconstrained space.
-* The initial value `init` transformed to unconstrained space.
-* A function `transform_result` that transforms the results back to constrained space. It
-takes a single vector argument.
-"""
-function set_up_model_optimisation(model::DynamicPPL.Model, init)
-    # The inner context deterimines whether we are solving MAP or MLE.
-    inner_context = DynamicPPL.DefaultContext()
-    ctx = Turing.Optimisation.OptimizationContext(inner_context)
-    log_density = Turing.Optimisation.OptimLogDensity(model, ctx)
-    # Initialise the varinfo with the initial value and then transform to unconstrained
-    # space.
-    Accessors.@set log_density.varinfo = DynamicPPL.unflatten(log_density.varinfo, init)
-    transformed_varinfo = DynamicPPL.link(log_density.varinfo, log_density.model)
-    log_density = Accessors.@set log_density.varinfo = transformed_varinfo
-    init = log_density.varinfo[:]
-    # Create a function that applies the appropriate inverse transformation to results, to
-    # bring them back to constrained space.
-    transform_result(p) = transform_to_constrained(p, log_density.varinfo, model)
-    f = Optimization.OptimizationFunction(
-        (x, _) -> log_density(x),;
-        grad = (G,x,p) -> log_density(nothing, G, x),
-    )
-    return f, init, transform_result
-end
-
-function Pathfinder.pathfinder(
-    model::DynamicPPL.Model;
-    rng=Random.GLOBAL_RNG,
-    init_scale=2,
-    init_sampler=Pathfinder.UniformSampler(init_scale),
-    init=nothing,
-    adtype::ADTypes.AbstractADType=Pathfinder.default_ad(),
-    kwargs...,
-)
-    # If no initial value is provided, sample from prior.
-    init = init === nothing ? rand(Vector, model) : init
-    f, init, transform_result = set_up_model_optimisation(model, init)
-    prob = Optimization.OptimizationProblem(f, init)
-    init_sampler(rng, init)
-    result = Pathfinder.pathfinder(prob; rng, input=model, kwargs...)
-    chns_info = (; pathfinder_result=result)
-    chns = Accessors.@set draws_to_chains(model, result.draws).info = chns_info
-    result_new = Accessors.@set result.draws_transformed = chns
+function Pathfinder.pathfinder(model::DynamicPPL.Model; kwargs...)
+    log_density_problem = create_log_density_problem(model)
+    result = Pathfinder.pathfinder(log_density_problem; input=model, kwargs...)
+    chains_info = (; pathfinder_result=result)
+    chains = Accessors.@set draws_to_chains(model, result.draws).info = chains_info
+    result_new = Accessors.@set result.draws_transformed = chains
     return result_new
 end
 
-function Pathfinder.multipathfinder(
-    model::DynamicPPL.Model,
-    ndraws::Int;
-    rng=Random.GLOBAL_RNG,
-    init_scale=2,
-    init_sampler=Pathfinder.UniformSampler(init_scale),
-    nruns::Int,
-    adtype=Pathfinder.default_ad(),
-    kwargs...,
-)
-    # Sample from prior.
-    init1 = rand(Vector, model)
-    fun, init1, transform_result = set_up_model_optimisation(model, init1)
-    init = [init_sampler(rng, init1)]
-    for _ in 2:nruns
-        push!(init, init_sampler(rng, deepcopy(init1)))
-    end
-    result = Pathfinder.multipathfinder(fun, ndraws; rng, input=model, init, kwargs...)
-    chns_info = (; pathfinder_result=result)
-    chns = Accessors.@set draws_to_chains(model, result.draws).info = chns_info
-    result_new = Accessors.@set result.draws_transformed = chns
+function Pathfinder.multipathfinder(model::DynamicPPL.Model, ndraws::Int; kwargs...)
+    log_density_problem = create_log_density_problem(model)
+    result = Pathfinder.multipathfinder(log_density_problem, ndraws; input=model, kwargs...)
+    chains_info = (; pathfinder_result=result)
+    chains = Accessors.@set draws_to_chains(model, result.draws).info = chains_info
+    result_new = Accessors.@set result.draws_transformed = chains
     return result_new
 end
 
