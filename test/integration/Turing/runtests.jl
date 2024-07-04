@@ -97,6 +97,10 @@ end
             init_params = Vector(result.draws_transformed.value[1, :, 1])
             chns = sample(model, NUTS(), 10_000; init_params, progress=false)
             @test mean(chns).nt.mean ≈ mean(result.draws_transformed).nt.mean rtol = 0.1
+
+            for r in result.pathfinder_results
+                @test r.draws_transformed isa MCMCChains.Chains
+            end
         end
     end
 end

@@ -74,6 +74,8 @@ end
 function Pathfinder.pathfinder(model::DynamicPPL.Model; kwargs...)
     log_density_problem = create_log_density_problem(model)
     result = Pathfinder.pathfinder(log_density_problem; input=model, kwargs...)
+
+    # add transformed draws as Chains
     chains_info = (; pathfinder_result=result)
     chains = Accessors.@set draws_to_chains(model, result.draws).info = chains_info
     result_new = Accessors.@set result.draws_transformed = chains
@@ -83,9 +85,22 @@ end
 function Pathfinder.multipathfinder(model::DynamicPPL.Model, ndraws::Int; kwargs...)
     log_density_problem = create_log_density_problem(model)
     result = Pathfinder.multipathfinder(log_density_problem, ndraws; input=model, kwargs...)
+
+    # add transformed draws as Chains
     chains_info = (; pathfinder_result=result)
     chains = Accessors.@set draws_to_chains(model, result.draws).info = chains_info
-    result_new = Accessors.@set result.draws_transformed = chains
+
+    # add transformed draws as Chains for each individual path
+    single_path_results_new = map(result.pathfinder_results) do r
+        single_chains_info = (; pathfinder_result=r)
+        single_chains = Accessors.@set draws_to_chains(model, r.draws).info =
+            single_chains_info
+        r_new = Accessors.@set r.draws_transformed = single_chains
+        return r_new
+    end
+
+    result_new = Accessors.@set (Accessors.@set result.draws_transformed =
+        chains).pathfinder_results = single_path_results_new
     return result_new
 end
 
