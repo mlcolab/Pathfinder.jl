@@ -1,4 +1,4 @@
-using LogDensityProblems, Pathfinder, Random, Test, Turing
+using LogDensityProblems, LinearAlgebra, Pathfinder, Random, Test, Turing
 using Turing.Bijectors
 
 if isdefined(Base, :get_extension)
@@ -101,6 +101,43 @@ end
             for r in result.pathfinder_results
                 @test r.draws_transformed isa MCMCChains.Chains
             end
+        end
+    end
+
+    @testset "transformed IID normal solved exactly" begin
+        @testset for bijector in [elementwise(log), Bijectors.SimplexBijector()],
+            udist in [Normal(1, 2), Normal(3, 4)],
+            n in [1, 5]
+
+            binv = Bijectors.inverse(bijector)
+            dist = filldist(udist, n)
+            model = transformed_model(dist, binv)
+            result = pathfinder(model)
+            @test mean(result.fit_distribution) ≈ fill(mean(udist), n)
+            @test cov(result.fit_distribution) ≈ Diagonal(fill(var(udist), n))
+
+            result = multipathfinder(model, 100; nruns=4, ndraws_per_run=100)
+            @test result isa MultiPathfinderResult
+            for r in result.pathfinder_results
+                @test mean(r.fit_distribution) ≈ fill(mean(udist), n)
+                @test cov(r.fit_distribution) ≈ Diagonal(fill(var(udist), n))
+            end
+        end
+    end
+
+    @testset "models with dynamic constraints successfully fitted" begin
+        result = pathfinder(dynamic_const_model(); ndraws=10_000)
+        chns = result.draws_transformed
+        @test all(0 .< chns[:, :lb, 1] .< 0.1)
+        @test all(0.11 .< chns[:, :ub, 1] .< 0.2)
+        @test all(chns[:, :lb, 1] .< chns[:, :x, 1] .< chns[:, :ub, 1])
+
+        result = multipathfinder(dynamic_const_model(), 10_000; nruns=4)
+        for r in result.pathfinder_results
+            chns = r.draws_transformed
+            @test all(0 .< chns[:, :lb, 1] .< 0.1)
+            @test all(0.11 .< chns[:, :ub, 1] .< 0.2)
+            @test all(chns[:, :lb, 1] .< chns[:, :x, 1] .< chns[:, :ub, 1])
         end
     end
 end
