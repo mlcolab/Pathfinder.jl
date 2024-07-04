@@ -204,15 +204,14 @@ function Pathfinder.pathfinder(
     adtype::ADTypes.AbstractADType=Pathfinder.default_ad(),
     kwargs...,
 )
-    var_names = flattened_varnames_list(model)
     # If no initial value is provided, sample from prior.
     init = init === nothing ? rand(Vector, model) : init
     f, init, transform_result = set_up_model_optimisation(model, init)
     prob = Optimization.OptimizationProblem(f, init)
     init_sampler(rng, init)
     result = Pathfinder.pathfinder(prob; rng, input=model, kwargs...)
-    draws = reduce(vcat, transpose.(transform_result.(eachcol(result.draws))))
-    chns = MCMCChains.Chains(draws, var_names; info=(; pathfinder_result=result))
+    chns_info = (; pathfinder_result=result)
+    chns = Accessors.@set draws_to_chains(model, result.draws).info = chns_info
     result_new = Accessors.@set result.draws_transformed = chns
     return result_new
 end
@@ -227,7 +226,6 @@ function Pathfinder.multipathfinder(
     adtype=Pathfinder.default_ad(),
     kwargs...,
 )
-    var_names = flattened_varnames_list(model)
     # Sample from prior.
     init1 = rand(Vector, model)
     fun, init1, transform_result = set_up_model_optimisation(model, init1)
@@ -236,8 +234,8 @@ function Pathfinder.multipathfinder(
         push!(init, init_sampler(rng, deepcopy(init1)))
     end
     result = Pathfinder.multipathfinder(fun, ndraws; rng, input=model, init, kwargs...)
-    draws = reduce(vcat, transpose.(transform_result.(eachcol(result.draws))))
-    chns = MCMCChains.Chains(draws, var_names; info=(; pathfinder_result=result))
+    chns_info = (; pathfinder_result=result)
+    chns = Accessors.@set draws_to_chains(model, result.draws).info = chns_info
     result_new = Accessors.@set result.draws_transformed = chns
     return result_new
 end
