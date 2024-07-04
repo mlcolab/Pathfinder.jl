@@ -9,6 +9,7 @@ end
 
 Random.seed!(0)
 
+#! format: off
 @model function regression_model(x, y)
     σ ~ truncated(Normal(); lower=0)
     α ~ Normal()
@@ -22,10 +23,15 @@ end
 @model function dynamic_const_model()
     lb ~ Uniform(0, 0.1)
     ub ~ Uniform(0.11, 0.2)
-    return x ~ Bijectors.transformed(
+    x ~ Bijectors.transformed(
         Normal(0, 1), Bijectors.inverse(Bijectors.Logit(lb, ub))
     )
 end
+
+@model function transformed_model(dist, bijector)
+    y ~ Bijectors.transformed(dist, bijector)
+end
+#! format: on
 
 @testset "Turing integration" begin
     @testset "create_log_density_problem" begin
@@ -36,10 +42,8 @@ end
             binv = Bijectors.inverse(bijector)
             dist = filldist(udist, n)
             dist_trans = Bijectors.transformed(dist, binv)
-            @model function model()
-                return y ~ dist_trans
-            end
-            prob = PathfinderTuringExt.create_log_density_problem(model())
+            model = transformed_model(dist, binv)
+            prob = PathfinderTuringExt.create_log_density_problem(model)
             @test LogDensityProblems.capabilities(prob) isa
                 LogDensityProblems.LogDensityOrder{0}
             x = rand(n, 10)
@@ -61,34 +65,38 @@ end
         @test all(chns[:, :lb, 1] .< chns[:, :x, 1] .< chns[:, :ub, 1])
     end
 
-    x = 0:0.01:1
-    y = sin.(x) .+ randn.() .* 0.2 .+ x
-    X = [x x .^ 2 x .^ 3]
-    model = regression_model(X, y)
-    expected_param_names = Symbol.(["α", "β[1]", "β[2]", "β[3]", "σ"])
+    @testset "integration tests" begin
+        @testset "regression model" begin
+            x = 0:0.01:1
+            y = sin.(x) .+ randn.() .* 0.2 .+ x
+            X = [x x .^ 2 x .^ 3]
+            model = regression_model(X, y)
+            expected_param_names = Symbol.(["α", "β[1]", "β[2]", "β[3]", "σ"])
 
-    result = pathfinder(model; ndraws=10_000)
-    @test result isa PathfinderResult
-    @test result.input === model
-    @test size(result.draws) == (5, 10_000)
-    @test result.draws_transformed isa MCMCChains.Chains
-    @test result.draws_transformed.info.pathfinder_result isa PathfinderResult
-    @test sort(names(result.draws_transformed)) == expected_param_names
-    @test all(>(0), result.draws_transformed[:σ])
-    init_params = Vector(result.draws_transformed.value[1, :, 1])
-    chns = sample(model, NUTS(), 10_000; init_params, progress=false)
-    @test mean(chns).nt.mean ≈ mean(result.draws_transformed).nt.mean rtol = 0.1
+            result = pathfinder(model; ndraws=10_000)
+            @test result isa PathfinderResult
+            @test result.input === model
+            @test size(result.draws) == (5, 10_000)
+            @test result.draws_transformed isa MCMCChains.Chains
+            @test result.draws_transformed.info.pathfinder_result isa PathfinderResult
+            @test sort(names(result.draws_transformed)) == expected_param_names
+            @test all(>(0), result.draws_transformed[:σ])
+            init_params = Vector(result.draws_transformed.value[1, :, 1])
+            chns = sample(model, NUTS(), 10_000; init_params, progress=false)
+            @test mean(chns).nt.mean ≈ mean(result.draws_transformed).nt.mean rtol = 0.1
 
-    result = multipathfinder(model, 10_000; nruns=4)
-    @test result isa MultiPathfinderResult
-    @test result.input === model
-    @test size(result.draws) == (5, 10_000)
-    @test length(result.pathfinder_results) == 4
-    @test result.draws_transformed isa MCMCChains.Chains
-    @test result.draws_transformed.info.pathfinder_result isa MultiPathfinderResult
-    @test sort(names(result.draws_transformed)) == expected_param_names
-    @test all(>(0), result.draws_transformed[:σ])
-    init_params = Vector(result.draws_transformed.value[1, :, 1])
-    chns = sample(model, NUTS(), 10_000; init_params, progress=false)
-    @test mean(chns).nt.mean ≈ mean(result.draws_transformed).nt.mean rtol = 0.1
+            result = multipathfinder(model, 10_000; nruns=4)
+            @test result isa MultiPathfinderResult
+            @test result.input === model
+            @test size(result.draws) == (5, 10_000)
+            @test length(result.pathfinder_results) == 4
+            @test result.draws_transformed isa MCMCChains.Chains
+            @test result.draws_transformed.info.pathfinder_result isa MultiPathfinderResult
+            @test sort(names(result.draws_transformed)) == expected_param_names
+            @test all(>(0), result.draws_transformed[:σ])
+            init_params = Vector(result.draws_transformed.value[1, :, 1])
+            chns = sample(model, NUTS(), 10_000; init_params, progress=false)
+            @test mean(chns).nt.mean ≈ mean(result.draws_transformed).nt.mean rtol = 0.1
+        end
+    end
 end
