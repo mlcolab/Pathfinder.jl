@@ -22,6 +22,23 @@ else  # using Requires
     import ..Pathfinder: flattened_varnames_list
 end
 
+"""
+    create_log_density_problem(model::DynamicPPL.Model)
+
+Create a log density problem from a `model`.
+
+The return value is an object implementing the LogDensityProblems API whose log-density is
+that of the `model` transformed to unconstrained space with the appropriate log-density
+adjustment due to change of variables.
+"""
+function create_log_density_problem(model::DynamicPPL.Model)
+    # create an unconstrained VarInfo
+    varinfo = DynamicPPL.link(DynamicPPL.VarInfo(model), model)
+    # DefaultContext ensures that the log-density adjustment is computed
+    prob = DynamicPPL.LogDensityFunction(varinfo, model, DynamicPPL.DefaultContext())
+    return prob
+end
+
 # utilities for working with Turing model parameter names using only the DynamicPPL API
 
 function Pathfinder.flattened_varnames_list(model::DynamicPPL.Model)

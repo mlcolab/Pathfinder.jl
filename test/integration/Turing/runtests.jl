@@ -1,4 +1,11 @@
-using Pathfinder, Random, Test, Turing
+using LogDensityProblems, Pathfinder, Random, Test, Turing
+using Turing.Bijectors
+
+if isdefined(Base, :get_extension)
+    PathfinderTuringExt = Base.get_extension(Pathfinder, :PathfinderTuringExt)
+else
+    PathfinderTuringExt = Pathfinder.PathfinderTuringExt
+end
 
 Random.seed!(0)
 
@@ -12,6 +19,27 @@ Random.seed!(0)
 end
 
 @testset "Turing integration" begin
+    @testset "create_log_density_problem" begin
+        @testset for bijector in [elementwise(log), Bijectors.SimplexBijector()],
+            udist in [Normal(1, 2), Normal(3, 4)],
+            n in [1, 5]
+
+            binv = Bijectors.inverse(bijector)
+            dist = filldist(udist, n)
+            dist_trans = Bijectors.transformed(dist, binv)
+            @model function model()
+                return y ~ dist_trans
+            end
+            prob = PathfinderTuringExt.create_log_density_problem(model())
+            @test LogDensityProblems.capabilities(prob) isa
+                LogDensityProblems.LogDensityOrder{0}
+            x = rand(n, 10)
+            # after applying the Jacobian correction, the log-density of the model should
+            # be the same as the log-density of the distribution in unconstrained space
+            @test LogDensityProblems.logdensity.(Ref(prob), eachcol(x)) ≈ logpdf(dist, x)
+        end
+    end
+
     x = 0:0.01:1
     y = sin.(x) .+ randn.() .* 0.2 .+ x
     X = [x x .^ 2 x .^ 3]
