@@ -18,6 +18,15 @@ Random.seed!(0)
     return (; y)
 end
 
+# adapted from https://github.com/TuringLang/Turing.jl/issues/2195
+@model function dynamic_const_model()
+    lb ~ Uniform(0, 0.1)
+    ub ~ Uniform(0.11, 0.2)
+    return x ~ Bijectors.transformed(
+        Normal(0, 1), Bijectors.inverse(Bijectors.Logit(lb, ub))
+    )
+end
+
 @testset "Turing integration" begin
     @testset "create_log_density_problem" begin
         @testset for bijector in [elementwise(log), Bijectors.SimplexBijector()],
@@ -38,6 +47,18 @@ end
             # be the same as the log-density of the distribution in unconstrained space
             @test LogDensityProblems.logdensity.(Ref(prob), eachcol(x)) ≈ logpdf(dist, x)
         end
+    end
+
+    @testset "draws_to_chains" begin
+        draws = randn(3, 100)
+        model = dynamic_const_model()
+        chns = PathfinderTuringExt.draws_to_chains(model, draws)
+        @test chns isa MCMCChains.Chains
+        @test size(chns) == (100, 3, 1)
+        @test names(chns) == [:lb, :ub, :x]
+        @test all(0 .< chns[:, :lb, 1] .< 0.1)
+        @test all(0.11 .< chns[:, :ub, 1] .< 0.2)
+        @test all(chns[:, :lb, 1] .< chns[:, :x, 1] .< chns[:, :ub, 1])
     end
 
     x = 0:0.01:1

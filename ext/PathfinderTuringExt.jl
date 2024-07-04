@@ -39,6 +39,27 @@ function create_log_density_problem(model::DynamicPPL.Model)
     return prob
 end
 
+"""
+    draws_to_chains(model::DynamicPPL.Model, draws) -> MCMCChains.Chains
+
+Convert a `(nparams, ndraws)` matrix of unconstrained `draws` to an `MCMCChains.Chains`
+object with corresponding constrained draws and names according to `model`.
+"""
+function draws_to_chains(model::DynamicPPL.Model, draws::AbstractMatrix)
+    varinfo = DynamicPPL.link(DynamicPPL.VarInfo(model), model)
+    draw_con_varinfos = map(eachcol(draws)) do draw
+        # this re-evaluates the model but allows supporting dynamic bijectors
+        # https://github.com/TuringLang/Turing.jl/issues/2195
+        return Turing.Inference.getparams(model, DynamicPPL.unflatten(varinfo, draw))
+    end
+    param_con_names = map(first, first(draw_con_varinfos))
+    draws_con = reduce(
+        vcat, Iterators.map(transpose ∘ Base.Fix1(map, last), draw_con_varinfos)
+    )
+    chns = MCMCChains.Chains(draws_con, param_con_names)
+    return chns
+end
+
 # utilities for working with Turing model parameter names using only the DynamicPPL API
 
 function Pathfinder.flattened_varnames_list(model::DynamicPPL.Model)
