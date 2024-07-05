@@ -52,25 +52,6 @@ function draws_to_chains(model::DynamicPPL.Model, draws::AbstractMatrix)
     return chns
 end
 
-"""
-    transform_to_constrained(
-        p::AbstractArray, vi::DynamicPPL.VarInfo, model::DynamicPPL.Model
-    )
-
-Transform a vector of parameters `p` from unconstrained to constrained space.
-"""
-function transform_to_constrained(
-    p::AbstractArray, vi::DynamicPPL.VarInfo, model::DynamicPPL.Model
-)
-    p = copy(p)
-    @assert DynamicPPL.istrans(vi)
-    vi = DynamicPPL.unflatten(vi, p)
-    p .= DynamicPPL.invlink!!(vi, model)[:]
-    # Restore the linking, since we mutated vi.
-    DynamicPPL.link!!(vi, model)
-    return p
-end
-
 function Pathfinder.pathfinder(model::DynamicPPL.Model; kwargs...)
     log_density_problem = create_log_density_problem(model)
     result = Pathfinder.pathfinder(log_density_problem; input=model, kwargs...)
