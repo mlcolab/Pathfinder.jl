@@ -50,8 +50,6 @@ include("resample.jl")
 include("singlepath.jl")
 include("multipath.jl")
 
-include("integration/turing.jl")
-
 function __init__()
     Requires.@require AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d" begin
         include("integration/advancedhmc.jl")
