@@ -1,12 +1,12 @@
 module Pathfinder
 
+using ADTypes: ADTypes
 using Distributions: Distributions
 using Folds: Folds
-# ensure that ForwardDiff is conditionally loaded by Optimization
-using ForwardDiff: ForwardDiff
 using IrrationalConstants: log2π
 using LinearAlgebra
 using LogDensityProblems: LogDensityProblems
+using LogDensityProblemsAD: LogDensityProblemsAD
 using Optim: Optim, LineSearches
 using Optimization: Optimization
 using OptimizationOptimJL: OptimizationOptimJL
@@ -37,6 +37,9 @@ function default_optimizer(history_length)
     )
 end
 
+# We depend on Optim, and Optim depends on ForwardDiff, so we can offer it as a default.
+default_ad() = ADTypes.AutoForwardDiff()
+
 include("transducers.jl")
 include("woodbury.jl")
 include("optimize.jl")
@@ -46,8 +49,6 @@ include("elbo.jl")
 include("resample.jl")
 include("singlepath.jl")
 include("multipath.jl")
-
-include("integration/turing.jl")
 
 function __init__()
     Requires.@require AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d" begin

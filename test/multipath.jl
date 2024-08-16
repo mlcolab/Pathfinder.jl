@@ -1,14 +1,14 @@
+using ADTypes
 using Distributions
 using ForwardDiff
 using LinearAlgebra
 using Optimization
 using Pathfinder
 using PSIS
+using ReverseDiff
 using SciMLBase
 using Test
 using Transducers
-
-include("test_utils.jl")
 
 @testset "multi path pathfinder" begin
     @testset "MvNormal" begin
@@ -21,7 +21,7 @@ include("test_utils.jl")
         μ = randn(dim)
         d = MvNormal(μ, Σ)
         logp(x) = logpdf(d, x)
-        ℓ = build_logdensityproblem(logp, dim)
+        ℓ = build_logdensityproblem(logp, dim, 2)
         rngs = if VERSION ≥ v"1.7"
             [MersenneTwister(), Random.default_rng()]
         else
@@ -91,16 +91,23 @@ include("test_utils.jl")
         @test ncomponents(result.fit_distribution) == nruns
         @test size(result.draws) == (dim, ndraws)
     end
-    @testset "errors if no gradient provided" begin
+
+    @testset "does not error if no gradient provided" begin
         logp(x) = -sum(abs2, x) / 2
-        f(x, p) = -logp(x)
         init = [randn(5) for _ in 1:10]
-        fun = SciMLBase.OptimizationFunction(f, Optimization.AutoForwardDiff())
-        @test_throws ArgumentError multipathfinder(fun, 10; init)
+        @testset for adtype in [AutoForwardDiff(), AutoReverseDiff()]
+            result = multipathfinder(logp, 10; init, adtype)
+            @test result.optim_fun.adtype === adtype
+            for component in result.fit_distribution.components
+                @test component.μ ≈ zeros(5) atol = 1e-6
+                @test component.Σ ≈ I(5) atol = 1e-6
+            end
+        end
     end
+
     @testset "errors if neither init nor nruns valid" begin
         logp(x) = -sum(abs2, x) / 2
-        ℓ = build_logdensityproblem(logp, 5)
+        ℓ = build_logdensityproblem(logp, 5, 2)
         @test_throws ArgumentError multipathfinder(ℓ, 10; nruns=0)
         multipathfinder(ℓ, 10; nruns=2)
     end

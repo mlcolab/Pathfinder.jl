@@ -24,4 +24,8 @@ makedocs(;
     ],
 )
 
-deploydocs(; repo="github.com/mlcolab/Pathfinder.jl", devbranch="main", push_preview=true)
+if get(ENV, "DEPLOY_DOCS", "true") == "true"
+    deploydocs(;
+        repo="github.com/mlcolab/Pathfinder.jl", devbranch="main", push_preview=true
+    )
+end
