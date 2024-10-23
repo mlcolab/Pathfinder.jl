@@ -1,6 +1,6 @@
 # Running Pathfinder on Turing.jl models
 
-This tutorial demonstrates how [Turing](https://turing.ml/stable/) can be used with Pathfinder.
+This tutorial demonstrates how [Turing](https://turinglang.org/) can be used with Pathfinder.
 
 We'll demonstrate with a regression example.
 
