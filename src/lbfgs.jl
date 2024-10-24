@@ -33,14 +33,19 @@ function lbfgs_inverse_hessians(
 
     # allocate caches/containers
     history_ind = 0 # index of last set history entry
+    history_length_min = min(history_length, L)
     history_length_effective = 0 # length of history so far
     s = similar(θ) # cache for BFGS update, i.e. sₗ = θₗ₊₁ - θₗ = -λ Hₗ ∇logpθₗ
     y = similar(∇logpθ) # cache for yₗ = ∇logpθₗ₊₁ - ∇logpθₗ = Hₗ₊₁ \ s₁ (secant equation)
-    S = similar(s, n, min(history_length, L)) # history of s
-    Y = similar(y, n, min(history_length, L)) # history of y
+    S = similar(s, n, history_length_min) # history of s
+    Y = similar(y, n, history_length_min) # history of y
     α = fill!(similar(θ), true) # diag(H₀)
-    H = lbfgs_inverse_hessian(Diagonal(α), S, Y, history_ind, history_length_effective) # H₀ = I
-    Hs = [H] # trace of H
+    H0 = Diagonal(α)
+    B0 = similar(α, n, 2 * history_length_min)
+    D0 = similar(α, 2 * history_length_min, 2 * history_length_min)
+
+    H = lbfgs_inverse_hessian!(B0, D0, H0, S, Y, history_ind, history_length_effective) # H₀ = I
+    Hs = [deepcopy(H)] # trace of H
 
     num_bfgs_updates_rejected = 0
     for l in 1:L
@@ -61,17 +66,15 @@ function lbfgs_inverse_hessians(
         end
 
         θ, ∇logpθ = θlp1, ∇logpθlp1
-        H = lbfgs_inverse_hessian(
-            Diagonal(copy(α)), S, Y, history_ind, history_length_effective
-        )
-        push!(Hs, H)
+        H = lbfgs_inverse_hessian!(B0, D0, H0, S, Y, history_ind, history_length_effective)
+        push!(Hs, deepcopy(H))
     end
 
     return Hs, num_bfgs_updates_rejected
 end
 
 """
-    lbfgs_inverse_hessian(H₀, S₀, Y₀, history_ind, history_length) -> WoodburyPDMat
+    lbfgs_inverse_hessian!(B₀, D₀, H₀, S₀, Y₀, history_ind, history_length) -> WoodburyPDMat
 
 Compute approximate inverse Hessian initialized from `H₀` from history stored in `S₀` and `Y₀`.
 
@@ -101,11 +104,11 @@ H &= H_0 + B D B^\\mathrm{T}
              Mathematical Programming 63, 129–156 (1994).
              doi: [10.1007/BF01582063](https://doi.org/10.1007/BF01582063)
 """
-function lbfgs_inverse_hessian(H₀::Diagonal, S0, Y0, history_ind, history_length)
+function lbfgs_inverse_hessian!(B0, D0, H₀::Diagonal, S0, Y0, history_ind, history_length)
     J = history_length
-    α = H₀.diag
-    B = similar(α, size(α, 1), 2J)
-    D = fill!(similar(α, 2J, 2J), false)
+    B = @view B0[:, 1:(2J)]
+    D = @view D0[1:(2J), 1:(2J)]
+    fill!(D, false)
     iszero(J) && return WoodburyPDMat(H₀, B, D)
 
     hist_inds = [(history_ind + 1):history_length; 1:history_ind]
@@ -120,7 +123,7 @@ function lbfgs_inverse_hessian(H₀::Diagonal, S0, Y0, history_ind, history_leng
         D₂₂ = D[(J + 1):(2J), (J + 1):(2J)]
     end
 
-    mul!(B₁, Diagonal(α), Y)
+    mul!(B₁, H₀, Y)
     copyto!(B₂, S)
     mul!(D₂₂, S', Y)
     triu!(D₂₂)

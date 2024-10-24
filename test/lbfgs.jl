@@ -24,21 +24,25 @@ end
         N, history_length = size(S)
         α = rand(N)
         H₀ = Diagonal(α)
+        B0 = similar(α, N, 2 * history_length)
+        D0 = similar(α, 2 * history_length, 2 * history_length)
 
-        @test @inferred(Pathfinder.lbfgs_inverse_hessian(H₀, S, Y, 0, 0)) ≈ H₀
+        @test @inferred(Pathfinder.lbfgs_inverse_hessian!(B0, D0, H₀, S, Y, 0, 0)) ≈ H₀
 
-        H = Pathfinder.lbfgs_inverse_hessian(H₀, S, Y, 3, 3)
+        H = Pathfinder.lbfgs_inverse_hessian!(B0, D0, H₀, S, Y, 3, 3)
         Hexp = lbfgs_inverse_hessian_explicit(H₀, S[:, 1:3], Y[:, 1:3])
         @test H ≈ Hexp
 
         S2 = S[:, [4:history_length; 1:3]]
         Y2 = Y[:, [4:history_length; 1:3]]
         ilast = argmax(axes(S, 2)[[4:history_length; 1:3]])
-        H = Pathfinder.lbfgs_inverse_hessian(H₀, S2, Y2, ilast, history_length)
+        H = Pathfinder.lbfgs_inverse_hessian!(B0, D0, H₀, S2, Y2, ilast, history_length)
         Hexp = lbfgs_inverse_hessian_explicit(H₀, S, Y)
         @test H ≈ Hexp
 
-        H = Pathfinder.lbfgs_inverse_hessian(H₀, S, Y, history_length, history_length)
+        H = Pathfinder.lbfgs_inverse_hessian!(
+            B0, D0, H₀, S, Y, history_length, history_length
+        )
         Hexp = lbfgs_inverse_hessian_explicit(H₀, S, Y)
         @test H ≈ Hexp
     end
