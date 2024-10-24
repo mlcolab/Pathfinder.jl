@@ -47,7 +47,7 @@ end
         n = 10
         history_length = 5
         logp(x) = logp_banana(x)
-        nocedal_wright_scaling(α, s, y) = fill!(similar(α), dot(y, s) / sum(abs2, y))
+        nocedal_wright_invH_init!(α, s, y) = fill!(α, dot(y, s) / sum(abs2, y))
         θ₀ = 10 * randn(n)
 
         ℓ = build_logdensityproblem(logp, n, 2)
@@ -65,7 +65,7 @@ end
             optim_trace.points,
             optim_trace.gradients;
             history_length,
-            Hinit=nocedal_wright_scaling,
+            (invH_init!)=nocedal_wright_invH_init!,
         )
         ss = diff(optim_trace.points)
         ps = (Hs .* optim_trace.gradients)[1:(end - 1)]

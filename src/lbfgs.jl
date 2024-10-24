@@ -2,11 +2,12 @@
 # eq 4.9
 # Gilbert, J.C., Lemaréchal, C. Some numerical experiments with variable-storage quasi-Newton algorithms.
 # Mathematical Programming 45, 407–435 (1989). https://doi.org/10.1007/BF01589113
-function gilbert_init(α, s, y)
+function gilbert_invH_init!(α, s, y)
     a = dot(y, Diagonal(α), y)
     b = dot(y, s)
     c = dot(s, inv(Diagonal(α)), s)
-    return @. b / (a / α + y^2 - (a / c) * (s / α)^2)
+    @. α = b / (a / α + y^2 - (a / c) * (s / α)^2)
+    return α
 end
 
 """
@@ -22,7 +23,9 @@ approximations with the provided `history_length`.
 The 2nd returned value is the number of BFGS updates to the inverse Hessian matrices that
 were rejected due to keeping the inverse Hessian positive definite.
 """
-function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_length=5, ϵ=1e-12)
+function lbfgs_inverse_hessians(
+    θs, ∇logpθs; (invH_init!)=gilbert_invH_init!, history_length=5, ϵ=1e-12
+)
     L = length(θs) - 1
     θ = θs[1]
     ∇logpθ = ∇logpθs[1]
@@ -52,13 +55,15 @@ function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_len
             Y[1:n, history_ind] .= y
 
             # initial diagonal estimate of H
-            α = Hinit(α, s, y)
+            invH_init!(α, s, y)
         else
             num_bfgs_updates_rejected += 1
         end
 
         θ, ∇logpθ = θlp1, ∇logpθlp1
-        H = lbfgs_inverse_hessian(Diagonal(α), S, Y, history_ind, history_length_effective)
+        H = lbfgs_inverse_hessian(
+            Diagonal(copy(α)), S, Y, history_ind, history_length_effective
+        )
         push!(Hs, H)
     end
 
