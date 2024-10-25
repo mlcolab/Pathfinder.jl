@@ -68,7 +68,7 @@ jobs:
         include:
           - version: '1'
             downgrade: false
-          - version: '1.7'
+          - version: '1.8'
             downgrade: true
     steps:
       - uses: actions/checkout@v4
