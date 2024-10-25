@@ -41,7 +41,7 @@ function mean_and_mcse(θs)
     return ms, ses
 end
 
-function compare_estimates(xs1, xs2, α=0.05)
+function compare_estimates(xs1, xs2, α=0.01)
     nparams = first(size(xs1))
     α /= nparams  # bonferroni correction
     p = α / 2
