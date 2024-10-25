@@ -1,4 +1,3 @@
-
 # eq 4.9
 # Gilbert, J.C., Lemaréchal, C. Some numerical experiments with variable-storage quasi-Newton algorithms.
 # Mathematical Programming 45, 407–435 (1989). https://doi.org/10.1007/BF01589113
@@ -26,7 +25,7 @@ function LBFGSHistory{T}(n::Int, history_length::Int) where {T<:Real}
 end
 
 function _history_matrices(history::LBFGSHistory)
-    @unpack position_diffs, gradient_diffs, history_perm, history_length = history
+    (; position_diffs, gradient_diffs, history_perm, history_length) = history
     history_inds = @view history_perm[(end - history_length + 1):end]
     return @views (position_diffs[:, history_inds], gradient_diffs[:, history_inds])
 end
@@ -34,7 +33,7 @@ end
 function _propose_history_update!(
     history::LBFGSHistory, position, position_new, gradient, gradient_new
 )
-    @unpack history_perm = history
+    (; history_perm) = history
     queue_ind = first(history_perm)
     history.position_diffs[:, queue_ind] .= position_new .- position
     history.gradient_diffs[:, queue_ind] .= gradient .- gradient_new
@@ -42,13 +41,13 @@ function _propose_history_update!(
 end
 
 function _proposed_history_updates(history::LBFGSHistory)
-    @unpack position_diffs, gradient_diffs, history_perm = history
+    (; position_diffs, gradient_diffs, history_perm) = history
     queue_ind = first(history_perm)
     return @views position_diffs[:, queue_ind], gradient_diffs[:, queue_ind]
 end
 
 function _accept_history_update!(history::LBFGSHistory)
-    @unpack history_perm = history
+    (; history_perm) = history
     circshift!(history_perm, -1)
     history.history_length = min(history.history_length + 1, length(history_perm) - 1)
     return history
@@ -154,7 +153,7 @@ H^{-1} &= H_0^{-1} + B D B^\\mathrm{T}
              doi: [10.1007/BF01582063](https://doi.org/10.1007/BF01582063)
 """
 function lbfgs_inverse_hessian!(cache::LBFGSInverseHessianCache, history::LBFGSHistory)
-    @unpack B, D, diag_invH0 = cache
+    (; B, D, diag_invH0) = cache
     return lbfgs_inverse_hessian!(B, D, diag_invH0, history)
 end
 function lbfgs_inverse_hessian!(B_cache, D_cache, diag_invH0, history)

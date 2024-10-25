@@ -101,7 +101,7 @@ end
 @static if isdefined(Optimization, :OptimizationState)
     # Optimization v3.21.0 and later
     function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args...)
-        @unpack (
+        (;
             xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
         ) = cb
         ret = callback !== nothing && callback(state, args...)
@@ -127,7 +127,7 @@ end
 else
     # Optimization v3.20.X and earlier
     function (cb::OptimizationCallback)(x, nfx, args...)
-        @unpack (
+        (;
             xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
         ) = cb
         ret = callback !== nothing && callback(x, nfx, args...)

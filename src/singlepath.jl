@@ -199,7 +199,7 @@ function pathfinder(
             kwargs...,
         )
     end
-    @unpack (
+    (;
         itry,
         success,
         optim_prob,
