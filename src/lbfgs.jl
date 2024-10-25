@@ -10,6 +10,68 @@ function gilbert_invH_init!(α, s, y)
     return α
 end
 
+# history storage for L-BFGS and accessor methods
+mutable struct LBFGSHistory{T<:Real}
+    const position_diffs::Matrix{T}
+    const gradient_diffs::Matrix{T}
+    const history_perm::Vector{Int}
+    history_length::Int
+end
+
+function LBFGSHistory{T}(n::Int, history_length::Int) where {T<:Real}
+    position_diffs = Matrix{T}(undef, n, history_length + 1)
+    gradient_diffs = Matrix{T}(undef, n, history_length + 1)
+    history_perm = collect(1:(history_length + 1))
+    return LBFGSHistory{T}(position_diffs, gradient_diffs, history_perm, 0)
+end
+
+function _history_matrices(history::LBFGSHistory)
+    @unpack position_diffs, gradient_diffs, history_perm, history_length = history
+    history_inds = @view history_perm[(end - history_length + 1):end]
+    return @views (position_diffs[:, history_inds], gradient_diffs[:, history_inds])
+end
+
+function _propose_history_update!(
+    history::LBFGSHistory, position, position_new, gradient, gradient_new
+)
+    @unpack history_perm = history
+    queue_ind = first(history_perm)
+    history.position_diffs[:, queue_ind] .= position_new .- position
+    history.gradient_diffs[:, queue_ind] .= gradient .- gradient_new
+    return history
+end
+
+function _proposed_history_updates(history::LBFGSHistory)
+    @unpack position_diffs, gradient_diffs, history_perm = history
+    queue_ind = first(history_perm)
+    return @views position_diffs[:, queue_ind], gradient_diffs[:, queue_ind]
+end
+
+function _accept_history_update!(history::LBFGSHistory)
+    @unpack history_perm = history
+    circshift!(history_perm, -1)
+    history.history_length = min(history.history_length + 1, length(history_perm) - 1)
+    return history
+end
+
+function _has_positive_curvature(pos_diff, grad_diff, ϵ)
+    return dot(grad_diff, pos_diff) > ϵ * sum(abs2, grad_diff)
+end
+
+# cache for L-BFGS inverse Hessian approximations
+struct LBFGSInverseHessianCache{T<:Real}
+    diag_invH0::Vector{T}
+    B::Matrix{T}
+    D::Matrix{T}
+end
+
+function LBFGSInverseHessianCache{T}(n::Int, history_length::Int) where {T<:Real}
+    diag_invH0 = ones(T, n)
+    B = Matrix{T}(undef, n, 2 * history_length)
+    D = zeros(T, 2 * history_length, 2 * history_length)
+    return LBFGSInverseHessianCache(diag_invH0, B, D)
+end
+
 """
     lbfgs_inverse_hessians(
         θs, ∇logpθs; Hinit=gilbert_init, history_length=5, ϵ=1e-12
@@ -30,43 +92,32 @@ function lbfgs_inverse_hessians(
     θ = θs[1]
     ∇logpθ = ∇logpθs[1]
     n = length(θ)
+    T = Base.promote_eltype(θ, ∇logpθ)
+    history_length = min(history_length, L)
 
     # allocate caches/containers
-    history_ind = 0 # index of last set history entry
-    history_length_min = min(history_length, L)
-    history_length_effective = 0 # length of history so far
-    s = similar(θ) # cache for BFGS update, i.e. sₗ = θₗ₊₁ - θₗ = -λ Hₗ ∇logpθₗ
-    y = similar(∇logpθ) # cache for yₗ = ∇logpθₗ₊₁ - ∇logpθₗ = Hₗ₊₁ \ s₁ (secant equation)
-    S = similar(s, n, history_length_min) # history of s
-    Y = similar(y, n, history_length_min) # history of y
-    α = fill!(similar(θ), true) # diag(H₀)
-    H0 = Diagonal(α)
-    B0 = similar(α, n, 2 * history_length_min)
-    D0 = similar(α, 2 * history_length_min, 2 * history_length_min)
+    history = LBFGSHistory{T}(n, history_length)
+    cache = LBFGSInverseHessianCache{T}(n, history_length)
 
-    H = lbfgs_inverse_hessian!(B0, D0, H0, S, Y, history_ind, history_length_effective) # H₀ = I
+    H = lbfgs_inverse_hessian!(cache, history) # H₀ = I
     Hs = [deepcopy(H)] # trace of H
 
     num_bfgs_updates_rejected = 0
     for l in 1:L
         θlp1, ∇logpθlp1 = θs[l + 1], ∇logpθs[l + 1]
-        s .= θlp1 .- θ
-        y .= ∇logpθ .- ∇logpθlp1
-        if dot(y, s) > ϵ * sum(abs2, y)  # curvature is positive, safe to update inverse Hessian
-            # add s and y to history
-            history_ind = mod1(history_ind + 1, history_length)
-            history_length_effective = max(history_ind, history_length_effective)
-            S[1:n, history_ind] .= s
-            Y[1:n, history_ind] .= y
+        _propose_history_update!(history, θ, θlp1, ∇logpθ, ∇logpθlp1)
+        pos_diff, grad_diff = _proposed_history_updates(history)
 
-            # initial diagonal estimate of H
-            invH_init!(α, s, y)
+        # only update inverse Hessian if will not destroy positive definiteness
+        if _has_positive_curvature(pos_diff, grad_diff, ϵ)
+            _accept_history_update!(history)
+            invH_init!(cache.diag_invH0, pos_diff, grad_diff)
+            H = lbfgs_inverse_hessian!(cache, history)
         else
             num_bfgs_updates_rejected += 1
         end
 
         θ, ∇logpθ = θlp1, ∇logpθlp1
-        H = lbfgs_inverse_hessian!(B0, D0, H0, S, Y, history_ind, history_length_effective)
         push!(Hs, deepcopy(H))
     end
 
@@ -74,28 +125,26 @@ function lbfgs_inverse_hessians(
 end
 
 """
-    lbfgs_inverse_hessian!(B₀, D₀, H₀, S₀, Y₀, history_ind, history_length) -> WoodburyPDMat
+    lbfgs_inverse_hessian!(cache::LBFGSInverseHessianCache, history::LBFGSHistory) -> WoodburyPDMat
 
-Compute approximate inverse Hessian initialized from `H₀` from history stored in `S₀` and `Y₀`.
+Compute approximate inverse Hessian initialized from history stored in `cache` and `history`.
 
-`history_ind` indicates the column in `S₀` and `Y₀` that was most recently added to the
-history, while `history_length` indicates the number of first columns in `S₀` and `Y₀`
-currently being used for storing history.
-`S = S₀[:, history_ind+1:history_length; 1:history_ind]` reorders the columns of `₀` so that the
-oldest is first and newest is last.
+`cache` stores the diagonal of the initial inverse Hessian ``H₀^{-1}`` and the matrices
+``B₀`` and ``D₀``, which are overwritten here and are used in the construction of the
+returned approximate inverse Hessian ``H^{-1}``.
 
-From Theorem 2.2 of [^Byrd1994], the expression for the inverse Hessian ``H`` is
+From Theorem 2.2 of [^Byrd1994], the expression for the inverse Hessian ``H^{-1}`` is
 
 ```math
 \\begin{align}
-B &= \\begin{pmatrix}H_0 Y & S\\end{pmatrix}\\\\
+B &= \\begin{pmatrix}H_0^{-1} Y & S\\end{pmatrix}\\\\
 R &= \\operatorname{triu}(S^\\mathrm{T} Y)\\\\
 E &= I \\circ R\\\\
 D &= \\begin{pmatrix}
     0 & -R^{-1}\\\\
     -R^{-\\mathrm{T}} & R^\\mathrm{-T} (E + Y^\\mathrm{T} H_0 Y ) R^\\mathrm{-1}\\\\
 \\end{pmatrix}\\
-H &= H_0 + B D B^\\mathrm{T}
+H^{-1} &= H_0^{-1} + B D B^\\mathrm{T}
 \\end{align}
 ```
 
@@ -104,17 +153,19 @@ H &= H_0 + B D B^\\mathrm{T}
              Mathematical Programming 63, 129–156 (1994).
              doi: [10.1007/BF01582063](https://doi.org/10.1007/BF01582063)
 """
-function lbfgs_inverse_hessian!(B0, D0, H₀::Diagonal, S0, Y0, history_ind, history_length)
-    J = history_length
-    B = @view B0[:, 1:(2J)]
-    D = @view D0[1:(2J), 1:(2J)]
-    fill!(D, false)
-    iszero(J) && return WoodburyPDMat(H₀, B, D)
+function lbfgs_inverse_hessian!(cache::LBFGSInverseHessianCache, history::LBFGSHistory)
+    @unpack B, D, diag_invH0 = cache
+    return lbfgs_inverse_hessian!(B, D, diag_invH0, history)
+end
+function lbfgs_inverse_hessian!(B_cache, D_cache, diag_invH0, history)
+    S, Y = _history_matrices(history)
+    J = history.history_length
+    B = @view B_cache[:, 1:(2J)]
+    D = @view D_cache[1:(2J), 1:(2J)]
+    invH0 = Diagonal(diag_invH0)
+    iszero(J) && return WoodburyPDMat(invH0, B, D)
 
-    hist_inds = [(history_ind + 1):history_length; 1:history_ind]
     @views begin
-        S = S0[:, hist_inds]
-        Y = Y0[:, hist_inds]
         B₁ = B[:, 1:J]
         B₂ = B[:, (J + 1):(2J)]
         D₁₁ = D[1:J, 1:J]
@@ -123,7 +174,8 @@ function lbfgs_inverse_hessian!(B0, D0, H₀::Diagonal, S0, Y0, history_ind, his
         D₂₂ = D[(J + 1):(2J), (J + 1):(2J)]
     end
 
-    mul!(B₁, H₀, Y)
+    fill!(D₁₁, false)
+    mul!(B₁, invH0, Y)
     copyto!(B₂, S)
     mul!(D₂₂, S', Y)
     triu!(D₂₂)
@@ -138,5 +190,5 @@ function lbfgs_inverse_hessian!(B0, D0, H₀::Diagonal, S0, Y0, history_ind, his
     rmul!(D₂₂, nRinv)
     lmul!(nRinv′, D₂₂)
 
-    return WoodburyPDMat(H₀, B, D)
+    return WoodburyPDMat(invH0, B, D)
 end
