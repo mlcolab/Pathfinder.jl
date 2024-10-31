@@ -2,6 +2,7 @@ using Distributions
 using Optim
 using Pathfinder
 using Random
+using SciMLBase
 using Test
 
 @testset "MvNormal functions" begin
@@ -28,17 +29,19 @@ using Test
         @test optim_trace.points .+ Σs .* optim_trace.gradients ≈ getproperty.(dists, :μ)
     end
 
-    @testset "rand_and_logpdf" begin
-        ndraws = 20
+    @testset "rand_and_logpdf!" begin
         @testset "MvNormal" begin
             n = 10
+            ndraws = 20
+            draws = Matrix{Float64}(undef, n, ndraws)
             Σ = rand_pd_mat(Float64, 10)
             μ = randn(n)
             dist = MvNormal(μ, Σ)
 
             seed = 42
             rng = Random.seed!(Random.default_rng(), seed)
-            x, logpx = @inferred Pathfinder.rand_and_logpdf(rng, dist, ndraws)
+            x, logpx = @inferred Pathfinder.rand_and_logpdf!(rng, dist, draws)
+            @test x === draws
             Random.seed!(rng, seed)
             x2 = rand(rng, dist, ndraws)
             logpx2 = logpdf(dist, x2)
@@ -51,7 +54,8 @@ using Test
                 n = 10
                 ndraws = 20
                 nhist = 4
-                A = rand_pd_diag_mat(Float64, 10)
+                draws = Matrix{Float64}(undef, n, ndraws)
+                A = rand_pd_diag_mat(Float64, n)
                 D = rand_pd_mat(Float64, 2nhist)
                 B = randn(n, 2nhist)
                 Σ = Pathfinder.WoodburyPDMat(A, B, D)
@@ -60,7 +64,8 @@ using Test
 
                 seed = 42
                 rng = Random.seed!(Random.default_rng(), seed)
-                x, logpx = @inferred Pathfinder.rand_and_logpdf(rng, dist, ndraws)
+                x, logpx = @inferred Pathfinder.rand_and_logpdf!(rng, dist, draws)
+                @test x === draws
                 Random.seed!(rng, seed)
                 x2 = rand(rng, dist, ndraws)
                 logpx2 = logpdf(dist, x2)
@@ -72,7 +77,7 @@ using Test
                 n = 10
                 ndraws = 300_000
                 nhist = 4
-                A = rand_pd_diag_mat(Float64, 10)
+                A = rand_pd_diag_mat(Float64, n)
                 D = rand_pd_mat(Float64, 2nhist)
                 B = randn(n, 2nhist)
 
@@ -108,13 +113,16 @@ using Test
         end
 
         @testset "Normal" begin
+            ndraws = 20
             σ = rand() * 10
             μ = randn()
             dist = Normal(μ, σ)
 
             seed = 42
             rng = Random.seed!(Random.default_rng(), seed)
-            x, logpx = @inferred Pathfinder.rand_and_logpdf(rng, dist, ndraws)
+            draws = Matrix{Float64}(undef, 1, ndraws)
+            x, logpx = @inferred Pathfinder.rand_and_logpdf!(rng, dist, draws)
+            @test x === draws
             Random.seed!(rng, seed)
             x2 = rand(rng, dist, ndraws)
             logpx2 = logpdf.(dist, x2)

@@ -22,16 +22,15 @@ function fit_mvnormals(θs, ∇logpθs; kwargs...)
     return dists, num_bfgs_updates_rejected
 end
 
-# faster than computing `logpdf` and `rand` independently
-function rand_and_logpdf(rng, dist::Distributions.MvNormal, ndraws)
-    μ = dist.μ
-    Σ = dist.Σ
-    N = length(μ)
+# faster than computing `logpdf` and `rand!` independently
+function rand_and_logpdf!(rng, dist::Distributions.MvNormal, x)
+    (; μ, Σ) = dist
+    N = length(dist)
 
     # draw points
-    u = Random.randn!(rng, similar(μ, N, ndraws))
-    unormsq = vec(sum(abs2, u; dims=1))
-    x = PDMats.unwhiten!(u, Σ, u)
+    Random.randn!(rng, x)
+    unormsq = vec(sum(abs2, x; dims=1))
+    PDMats.unwhiten!(x, Σ, x)
     x .+= μ
 
     # compute log density at each point
