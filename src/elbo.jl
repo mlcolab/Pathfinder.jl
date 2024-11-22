@@ -1,14 +1,16 @@
 function maximize_elbo(rng, logp, dists, ndraws, executor; save_samples::Bool=true)
     dim = isempty(dists) ? 0 : length(first(dists))
-    draws = Matrix{eltype(eltype(dists))}(undef, (dim, ndraws))
+    Tdraws = Matrix{eltype(eltype(dists))}
+    draws = save_samples ? nothing : Tdraws(undef, (dim, ndraws))
     EE = Core.Compiler.return_type(
-        elbo_and_samples!, Tuple{typeof(draws),typeof(rng),typeof(logp),eltype(dists)}
+        elbo_and_samples!, Tuple{Tdraws,typeof(rng),typeof(logp),eltype(dists)}
     )
     estimates = similar(dists, EE)
     isempty(estimates) && return 0, estimates
 
     Folds.map!(estimates, dists, executor) do dist
-        return elbo_and_samples!(draws, rng, logp, dist; save_samples)
+        _draws = draws === nothing ? Tdraws(undef, (dim, ndraws)) : draws
+        return elbo_and_samples!(_draws, rng, logp, dist; save_samples)
     end
     _, iteration_opt = _findmax(estimates |> Transducers.Map(est -> est.value))
     return iteration_opt, estimates
