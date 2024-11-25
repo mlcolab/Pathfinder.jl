@@ -83,6 +83,7 @@ end
         # run lbfgs_inverse_hessians with the same initialization as Optim.LBFGS
         invHs, num_bfgs_updates_rejected = Pathfinder.lbfgs_inverse_hessians(
             optim_trace.points,
+            optim_trace.log_densities,
             optim_trace.gradients;
             history_length,
             (invH_init!)=nocedal_wright_invH_init!,

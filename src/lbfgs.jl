@@ -71,6 +71,44 @@ function LBFGSInverseHessianCache{T}(n::Int, history_length::Int) where {T<:Real
     return LBFGSInverseHessianCache(diag_invH0, B, D)
 end
 
+# state for each iteration of L-BFGS optimization
+mutable struct LBFGSState{T<:Real,IH<:WoodburyPDMat{T}}
+    const x::Vector{T}
+    fx::T
+    const ∇fx::Vector{T}
+    const history::LBFGSHistory{T}
+    const cache::LBFGSInverseHessianCache{T}
+    invH::IH
+    num_bfgs_updates_rejected::Int
+end
+function LBFGSState(x, fx, ∇fx, history_length::Int)
+    T = Base.promote_eltype(x, fx, ∇fx)
+    n = length(x)
+    history = LBFGSHistory{T}(n, history_length)
+    cache = LBFGSInverseHessianCache{T}(n, history_length)
+    invH = lbfgs_inverse_hessian!(cache, history) # H₀ = I
+    return LBFGSState{T,typeof(invH)}(copy(x), fx, copy(∇fx), history, cache, invH, 0)
+end
+
+function _update_state!(state::LBFGSState, x, fx, ∇fx, invH_init!, ϵ)
+    _propose_history_update!(state.history, state.x, x, state.∇fx, ∇fx)
+    pos_diff, grad_diff = _proposed_history_updates(state.history)
+
+    # only update inverse Hessian if will not destroy positive definiteness
+    if _has_positive_curvature(pos_diff, grad_diff, ϵ)
+        _accept_history_update!(state.history)
+        invH_init!(state.cache.diag_invH0, pos_diff, grad_diff)
+        state.invH = lbfgs_inverse_hessian!(state.cache, state.history)
+    else
+        state.num_bfgs_updates_rejected += 1
+    end
+
+    copyto!(state.x, x)
+    state.fx = fx
+    copyto!(state.∇fx, ∇fx)
+    return state
+end
+
 """
     lbfgs_inverse_hessians(
         θs, ∇logpθs; Hinit=gilbert_init, history_length=5, ϵ=1e-12
@@ -85,42 +123,19 @@ The 2nd returned value is the number of BFGS updates to the inverse Hessian matr
 were rejected due to keeping the inverse Hessian positive definite.
 """
 function lbfgs_inverse_hessians(
-    θs, ∇logpθs; (invH_init!)=gilbert_invH_init!, history_length=5, ϵ=1e-12
+    θs, logpθs, ∇logpθs; (invH_init!)=gilbert_invH_init!, history_length=5, ϵ=1e-12
 )
     L = length(θs) - 1
-    θ = θs[1]
-    ∇logpθ = ∇logpθs[1]
-    n = length(θ)
-    T = Base.promote_eltype(θ, ∇logpθ)
     history_length = min(history_length, L)
+    state = LBFGSState(first(θs), first(logpθs), first(∇logpθs), history_length)
+    invHs = [deepcopy(state.invH)] # trace of invH
 
-    # allocate caches/containers
-    history = LBFGSHistory{T}(n, history_length)
-    cache = LBFGSInverseHessianCache{T}(n, history_length)
-
-    H = lbfgs_inverse_hessian!(cache, history) # H₀ = I
-    Hs = [deepcopy(H)] # trace of H
-
-    num_bfgs_updates_rejected = 0
-    for l in 1:L
-        θlp1, ∇logpθlp1 = θs[l + 1], ∇logpθs[l + 1]
-        _propose_history_update!(history, θ, θlp1, ∇logpθ, ∇logpθlp1)
-        pos_diff, grad_diff = _proposed_history_updates(history)
-
-        # only update inverse Hessian if will not destroy positive definiteness
-        if _has_positive_curvature(pos_diff, grad_diff, ϵ)
-            _accept_history_update!(history)
-            invH_init!(cache.diag_invH0, pos_diff, grad_diff)
-            H = lbfgs_inverse_hessian!(cache, history)
-        else
-            num_bfgs_updates_rejected += 1
-        end
-
-        θ, ∇logpθ = θlp1, ∇logpθlp1
-        push!(Hs, deepcopy(H))
+    for (θ, logpθ, ∇logpθ) in Iterators.drop(zip(θs, logpθs, ∇logpθs), 1)
+        _update_state!(state, θ, logpθ, ∇logpθ, invH_init!, ϵ)
+        push!(invHs, deepcopy(state.invH))
     end
 
-    return Hs, num_bfgs_updates_rejected
+    return invHs, state.num_bfgs_updates_rejected
 end
 
 """
