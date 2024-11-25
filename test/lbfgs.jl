@@ -32,7 +32,7 @@ end
 
         for i in 1:3
             Pathfinder._propose_history_update!(
-                history, zero(S_vecs[i]), S_vecs[i], Y_vecs[i], zero(Y_vecs[i])
+                history, zero(S_vecs[i]), S_vecs[i], zero(Y_vecs[i]), Y_vecs[i]
             )
             Pathfinder._accept_history_update!(history)
         end
@@ -44,7 +44,7 @@ end
         Y2 = Y[:, [4:history_length; 1:3]]
         for i in vcat(4:history_length, 1:3)
             Pathfinder._propose_history_update!(
-                history, zero(S_vecs[i]), S_vecs[i], Y_vecs[i], zero(Y_vecs[i])
+                history, zero(S_vecs[i]), S_vecs[i], zero(Y_vecs[i]), Y_vecs[i]
             )
             Pathfinder._accept_history_update!(history)
         end
@@ -54,7 +54,7 @@ end
 
         for i in 1:history_length
             Pathfinder._propose_history_update!(
-                history, zero(S_vecs[i]), S_vecs[i], Y_vecs[i], zero(Y_vecs[i])
+                history, zero(S_vecs[i]), S_vecs[i], zero(Y_vecs[i]), Y_vecs[i]
             )
             Pathfinder._accept_history_update!(history)
         end

@@ -36,7 +36,7 @@ function _propose_history_update!(
     (; history_perm) = history
     queue_ind = first(history_perm)
     history.position_diffs[:, queue_ind] .= position_new .- position
-    history.gradient_diffs[:, queue_ind] .= gradient .- gradient_new
+    history.gradient_diffs[:, queue_ind] .= gradient_new .- gradient
     return history
 end
 
@@ -127,11 +127,11 @@ function lbfgs_inverse_hessians(
 )
     L = length(θs) - 1
     history_length = min(history_length, L)
-    state = LBFGSState(first(θs), first(logpθs), first(∇logpθs), history_length)
+    state = LBFGSState(first(θs), -first(logpθs), -first(∇logpθs), history_length)
     invHs = [deepcopy(state.invH)] # trace of invH
 
     for (θ, logpθ, ∇logpθ) in Iterators.drop(zip(θs, logpθs, ∇logpθs), 1)
-        _update_state!(state, θ, logpθ, ∇logpθ, invH_init!, ϵ)
+        _update_state!(state, θ, -logpθ, -∇logpθ, invH_init!, ϵ)
         push!(invHs, deepcopy(state.invH))
     end
 
