@@ -9,8 +9,6 @@
 [![DOI](https://zenodo.org/badge/417810442.svg)](https://doi.org/10.5281/zenodo.5914975)
 
 
-
-
 An implementation of Pathfinder, [^Zhang2021] a variational method for initializing Markov chain Monte Carlo (MCMC) methods.
 
 [^Zhang2021]: Lu Zhang, Bob Carpenter, Andrew Gelman, Aki Vehtari (2021).
