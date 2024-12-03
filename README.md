@@ -6,7 +6,9 @@
 [![Coverage](https://codecov.io/gh/mlcolab/Pathfinder.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/mlcolab/Pathfinder.jl)
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle)
 [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5914975.svg)](https://doi.org/10.5281/zenodo.5914975)
+[![DOI](https://zenodo.org/badge/417810442.svg)](https://doi.org/10.5281/zenodo.5914975)
+
+
 
 
 An implementation of Pathfinder, [^Zhang2021] a variational method for initializing Markov chain Monte Carlo (MCMC) methods.
