@@ -16,11 +16,7 @@ using Transducers
         # here pathfinder finds the exact solution after 1 iteration
         logp(x) = -sum(abs2, x) / 2
         ndraws = 100
-        rngs = if VERSION ≥ v"1.7"
-            [MersenneTwister(), Random.default_rng()]
-        else
-            [MersenneTwister()]
-        end
+        rngs = [MersenneTwister(), Random.default_rng()]
         seed = 42
         @testset for dim in [1, 5, 10, 100], rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
@@ -83,11 +79,7 @@ using Transducers
         dim = 5
         ℓ = build_logdensityproblem(logp, dim, 2)
         ndraws_elbo = 100
-        rngs = if VERSION ≥ v"1.7"
-            [MersenneTwister(), Random.default_rng()]
-        else
-            [MersenneTwister()]
-        end
+        rngs = [MersenneTwister(), Random.default_rng()]
         x = randn(dim)
         seed = 38
         optimizer = Optim.LBFGS(; m=6)

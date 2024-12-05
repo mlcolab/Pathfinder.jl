@@ -22,11 +22,7 @@ using Transducers
         d = MvNormal(μ, Σ)
         logp(x) = logpdf(d, x)
         ℓ = build_logdensityproblem(logp, dim, 2)
-        rngs = if VERSION ≥ v"1.7"
-            [MersenneTwister(), Random.default_rng()]
-        else
-            [MersenneTwister()]
-        end
+        rngs = [MersenneTwister(), Random.default_rng()]
         seed = 76
         @testset for rng in rngs
             executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
