@@ -1,7 +1,7 @@
 name = "Pathfinder"
 uuid = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
 authors = ["Seth Axen <seth.axen@gmail.com> and contributors"]
-version = "0.9.5"
+version = "0.9.6"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
@@ -41,7 +41,7 @@ ADTypes = "0.2, 1"
 Accessors = "0.1.12"
 Distributions = "0.25.87"
 DynamicHMC = "3.4.0"
-DynamicPPL = "0.25.2, 0.27, 0.28, 0.29, 0.30"
+DynamicPPL = "0.25.2, 0.27, 0.28, 0.29, 0.30, 0.31"
 Folds = "0.2.9"
 ForwardDiff = "0.10.19"
 IrrationalConstants = "0.1.1, 0.2"
