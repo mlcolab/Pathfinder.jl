@@ -240,7 +240,7 @@ thrown during construction.
 
 Upon construction, `WoodburyPDMat` calls [`pdfactorize`](@ref) to construct a
 [`WoodburyPDFactorization`](@ref), which is used in its overloads.
-z
+
 See [`pdfactorize`](@ref), [`WoodburyPDFactorization`](@ref)
 """
 struct WoodburyPDMat{

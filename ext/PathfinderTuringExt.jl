@@ -34,8 +34,9 @@ end
 """
     draws_to_chains(model::DynamicPPL.Model, draws) -> MCMCChains.Chains
 
-Convert a `(nparams, ndraws)` matrix of unconstrained `draws` to an `MCMCChains.Chains`
-object with corresponding constrained draws and names according to `model`.
+Convert a `(nparams, ndraws)` matrix of unconstrained `draws` to a
+[`MCMCChains.Chains`](@extref) object with corresponding constrained draws and names
+according to `model`.
 """
 function draws_to_chains(model::DynamicPPL.Model, draws::AbstractMatrix)
     varinfo = DynamicPPL.link(DynamicPPL.VarInfo(model), model)
