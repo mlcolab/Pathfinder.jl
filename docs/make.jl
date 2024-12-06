@@ -5,6 +5,17 @@ using DocumenterInterLinks
 DocMeta.setdocmeta!(Pathfinder, :DocTestSetup, :(using Pathfinder); recursive=true)
 
 links = InterLinks(
+    "AdvancedHMC" => "https://turinglang.org/AdvancedHMC.jl/stable/",
+    "ADTypes" => "https://sciml.github.io/ADTypes.jl/stable/",
+    "DynamicPPL" => "https://turinglang.org/DynamicPPL.jl/stable/",
+    "LogDensityProblems" => "https://www.tamaspapp.eu/LogDensityProblems.jl/stable/",
+    "MCMCChains" => (
+        "https://turinglang.org/MCMCChains.jl/stable/",
+        "https://turinglang.org/MCMCChains.jl/dev/objects.inv",
+    ),
+    "Optim" => "https://julianlsolvers.github.io/Optim.jl/stable/",
+    "Optimization" => "https://docs.sciml.ai/Optimization/stable/",
+    "PSIS" => "https://julia.arviz.org/PSIS/stable/",
 )
 
 makedocs(;
