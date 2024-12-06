@@ -24,7 +24,7 @@ model = regress(collect(x), y)
 n_chains = 8
 ```
 
-For convenience, [`pathfinder`](@ref) and [`multipathfinder`](@ref) can take Turing models as inputs and produce `MCMCChains.Chains` objects as outputs.
+For convenience, [`pathfinder`](@ref) and [`multipathfinder`](@ref) can take Turing models as inputs and produce [`MCMCChains.Chains`](@extref) objects as outputs.
 
 ```@example 1
 result_single = pathfinder(model; ndraws=1_000)
@@ -36,7 +36,7 @@ result_multi = multipathfinder(model, 1_000; nruns=n_chains)
 
 Here, the Pareto shape diagnostic indicates that it is likely safe to use these draws to compute posterior estimates.
 
-When passed a `Model`, Pathfinder also gives access to the posterior draws in a familiar `MCMCChains.Chains` object.
+When passed a [`DynamicPPL.Model`](@extref), Pathfinder also gives access to the posterior draws in a familiar `Chains` object.
 
 ```@example 1
 result_multi.draws_transformed

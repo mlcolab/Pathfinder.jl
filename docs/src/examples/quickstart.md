@@ -121,7 +121,7 @@ Now we will run Pathfinder on the following banana-shaped distribution with dens
 \pi(x_1, x_2) = e^{-x_1^2 / 2} e^{-5 (x_2 - x_1^2)^2 / 2}.
 ```
 
-Pathfinder can also take any object that implements the [LogDensityProblems](https://www.tamaspapp.eu/LogDensityProblems.jl) interface.
+Pathfinder can also take any object that implements the [LogDensityProblems interface](@extref LogDensityProblems log-density-api) interface.
 This can also be used to manually define the gradient of the log-density function.
 
 First we define the log density problem:
@@ -185,9 +185,9 @@ result = multipathfinder(prob_banana, ndraws; nruns=20, init_scale=10)
 `result` is a [`MultiPathfinderResult`](@ref).
 See its docstring for a description of its fields.
 
-`result.fit_distribution` is a uniformly-weighted `Distributions.MixtureModel`.
+`result.fit_distribution` is a uniformly-weighted [`Distributions.MixtureModel`](@extref).
 Each component is the result of a single Pathfinder run.
-It's possible that some runs fit the target distribution much better than others, so instead of just drawing samples from `result.fit_distribution`, `multipathfinder` draws many samples from each component and then uses Pareto-smoothed importance resampling (using [PSIS.jl](https://psis.julia.arviz.org/stable/)) from these draws to better target `prob_banana`.
+It's possible that some runs fit the target distribution much better than others, so instead of just drawing samples from `result.fit_distribution`, `multipathfinder` draws many samples from each component and then uses Pareto-smoothed importance resampling (using [PSIS.jl](@extref PSIS PSIS)) from these draws to better target `prob_banana`.
 
 The Pareto shape diagnostic informs us on the quality of these draws.
 Here the Pareto shape ``k`` diagnostic is bad (``k > 0.7``), which tells us that these draws are unsuitable for computing posterior estimates, so we should definitely run MCMC to get better draws.
@@ -238,7 +238,7 @@ nothing # hide
 
 First, let's fit this posterior with single-path Pathfinder.
 For high-dimensional problems, it's better to use reverse-mode automatic differentiation.
-Here, we'll use `ADTypes.AutoReverseDiff()` to specify that [ReverseDiff.jl](https://github.com/JuliaDiff/ReverseDiff.jl) should be used.
+Here, we'll use [`ADTypes.AutoReverseDiff`](@extref) to specify that [ReverseDiff.jl](https://github.com/JuliaDiff/ReverseDiff.jl) should be used.
 
 
 ```@example 1

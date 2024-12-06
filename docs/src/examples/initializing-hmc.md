@@ -82,7 +82,7 @@ nothing # hide
 
 ## DynamicHMC.jl
 
-To use DynamicHMC, we first need to transform our model to an unconstrained space using [TransformVariables.jl](https://tamaspapp.eu/TransformVariables.jl/stable/) and wrap it in a type that implements the [LogDensityProblems.jl](https://github.com/tpapp/LogDensityProblems.jl) interface:
+To use DynamicHMC, we first need to transform our model to an unconstrained space using [TransformVariables.jl](https://tamaspapp.eu/TransformVariables.jl/stable/) and wrap it in a type that implements the [LogDensityProblems interface](@extref LogDensityProblems log-density-api) (see [DynamicHMC's worked example](@extref DynamicHMC worked_example)):
 
 ```@example 1
 using DynamicHMC, ForwardDiff, LogDensityProblems, LogDensityProblemsAD, TransformVariables
@@ -123,7 +123,7 @@ result_dhmc1 = mcmc_with_warmup(
 
 ### Initializing metric adaptation from Pathfinder's estimate
 
-To start with Pathfinder's inverse metric estimate, we just need to initialize a `GaussianKineticEnergy` object with it as input: 
+To start with Pathfinder's inverse metric estimate, we just need to initialize a [`DynamicHMC.GaussianKineticEnergy`](@extref) object with it as input: 
 
 ```@example 1
 result_dhmc2 = mcmc_with_warmup(
@@ -212,7 +212,7 @@ samples_ahmc2, stats_ahmc2 = sample(
 
 ### Use Pathfinder's metric estimate for sampling
 
-To use Pathfinder's metric with no metric adaptation, we need to use Pathfinder's own `RankUpdateEuclideanMetric` type, which just wraps our inverse metric estimate for use with AdvancedHMC:
+To use Pathfinder's metric with no metric adaptation, we need to use Pathfinder's own [`Pathfinder.RankUpdateEuclideanMetric`](@ref) type, which just wraps our inverse metric estimate for use with AdvancedHMC:
 
 ```@example 1
 nadapts = 75
