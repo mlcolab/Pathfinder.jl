@@ -1,7 +1,11 @@
 using Pathfinder
 using Documenter
+using DocumenterInterLinks
 
 DocMeta.setdocmeta!(Pathfinder, :DocTestSetup, :(using Pathfinder); recursive=true)
+
+links = InterLinks(
+)
 
 makedocs(;
     modules=[Pathfinder],
@@ -22,6 +26,7 @@ makedocs(;
             "Turing usage" => "examples/turing.md",
         ],
     ],
+    plugins=[links],
 )
 
 if get(ENV, "DEPLOY_DOCS", "true") == "true"
