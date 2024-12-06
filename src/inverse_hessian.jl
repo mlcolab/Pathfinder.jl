@@ -73,10 +73,10 @@ Compute approximate inverse Hessian initialized from `H₀` from history stored 
 `history_ind` indicates the column in `S₀` and `Y₀` that was most recently added to the
 history, while `history_length` indicates the number of first columns in `S₀` and `Y₀`
 currently being used for storing history.
-`S = S₀[:, history_ind+1:history_length; 1:history_ind]` reorders the columns of `₀` so that the
-oldest is first and newest is last.
+`S = S₀[:, history_ind+1:history_length; 1:history_ind]` reorders the columns of `S₀` so
+that the oldest is first and newest is last.
 
-From Theorem 2.2 of [^Byrd1994], the expression for the inverse Hessian ``H`` is
+From [Byrd1994; Theorem 2.2](@citet), the expression for the inverse Hessian ``H`` is
 
 ```math
 \\begin{align}
@@ -91,10 +91,9 @@ H &= H_0 + B D B^\\mathrm{T}
 \\end{align}
 ```
 
-[^Byrd1994]: Byrd, R.H., Nocedal, J. & Schnabel, R.B.
-             Representations of quasi-Newton matrices and their use in limited memory methods.
-             Mathematical Programming 63, 129–156 (1994).
-             doi: [10.1007/BF01582063](https://doi.org/10.1007/BF01582063)
+# References
+
+- [Byrd1994](@cite): Byrd et al. Math. Program. 63, 1994.
 """
 function lbfgs_inverse_hessian(H₀::Diagonal, S0, Y0, history_ind, history_length)
     J = history_length
