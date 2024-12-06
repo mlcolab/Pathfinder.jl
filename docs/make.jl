@@ -1,5 +1,6 @@
 using Pathfinder
 using Documenter
+using DocumenterCitations
 using DocumenterInterLinks
 
 DocMeta.setdocmeta!(Pathfinder, :DocTestSetup, :(using Pathfinder); recursive=true)
