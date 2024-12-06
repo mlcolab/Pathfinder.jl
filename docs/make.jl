@@ -5,7 +5,7 @@ using DocumenterInterLinks
 
 DocMeta.setdocmeta!(Pathfinder, :DocTestSetup, :(using Pathfinder); recursive=true)
 
-bib = CitationBibliography(joinpath(@__DIR__, "src", "references.bib"); style=:alpha)
+bib = CitationBibliography(joinpath(@__DIR__, "src", "references.bib"); style=:numeric)
 
 links = InterLinks(
     "AdvancedHMC" => "https://turinglang.org/AdvancedHMC.jl/stable/",
