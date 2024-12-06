@@ -7,7 +7,7 @@ When using MCMC to draw samples from some target distribution, there is often a 
 2. adapt any tunable parameters of the MCMC sampler (optional)
 
 While (1) often happens fairly quickly, (2) usually requires a lengthy exploration of the typical set to iteratively adapt parameters suitable for further exploration.
-An example is the widely used windowed adaptation scheme of Hamiltonian Monte Carlo (HMC) in Stan, where a step size and positive definite metric (aka mass matrix) are adapted.[^1]
+An example is the widely used windowed adaptation scheme of Hamiltonian Monte Carlo (HMC) in Stan [StanHMCParameters](@citep), where a step size and positive definite metric (aka mass matrix) are adapted.
 For posteriors with complex geometry, the adaptation phase can require many evaluations of the gradient of the log density function of the target distribution.
 
 Pathfinder can be used to initialize MCMC, and in particular HMC, in 3 ways:
@@ -233,5 +233,3 @@ samples_ahmc3, stats_ahmc3 = sample(
     progress=false,
 )
 ```
-
-[^1]: https://mc-stan.org/docs/reference-manual/hmc-algorithm-parameters.html
