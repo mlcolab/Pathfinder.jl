@@ -5,6 +5,8 @@ using DocumenterInterLinks
 
 DocMeta.setdocmeta!(Pathfinder, :DocTestSetup, :(using Pathfinder); recursive=true)
 
+bib = CitationBibliography(joinpath(@__DIR__, "src", "references.bib"); style=:alpha)
+
 links = InterLinks(
     "AdvancedHMC" => "https://turinglang.org/AdvancedHMC.jl/stable/",
     "ADTypes" => "https://sciml.github.io/ADTypes.jl/stable/",
@@ -42,7 +44,7 @@ makedocs(;
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
         canonical="https://mlcolab.github.io/Pathfinder.jl",
-        assets=String[],
+        assets=String["assets/citations.css"],
     ),
     pages=[
         "Home" => "index.md",
@@ -52,8 +54,9 @@ makedocs(;
             "Initializing HMC" => "examples/initializing-hmc.md",
             "Turing usage" => "examples/turing.md",
         ],
+        "References" => "references.md",
     ],
-    plugins=[links],
+    plugins=[bib, links],
 )
 
 if get(ENV, "DEPLOY_DOCS", "true") == "true"
