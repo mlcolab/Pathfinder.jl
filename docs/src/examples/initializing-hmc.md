@@ -7,7 +7,7 @@ When using MCMC to draw samples from some target distribution, there is often a 
 2. adapt any tunable parameters of the MCMC sampler (optional)
 
 While (1) often happens fairly quickly, (2) usually requires a lengthy exploration of the typical set to iteratively adapt parameters suitable for further exploration.
-An example is the widely used windowed adaptation scheme of Hamiltonian Monte Carlo (HMC) in Stan, where a step size and positive definite metric (aka mass matrix) are adapted.[^1]
+An example is the widely used windowed adaptation scheme of Hamiltonian Monte Carlo (HMC) in Stan [StanHMCParameters](@citep), where a step size and positive definite metric (aka mass matrix) are adapted.
 For posteriors with complex geometry, the adaptation phase can require many evaluations of the gradient of the log density function of the target distribution.
 
 Pathfinder can be used to initialize MCMC, and in particular HMC, in 3 ways:
@@ -82,7 +82,7 @@ nothing # hide
 
 ## DynamicHMC.jl
 
-To use DynamicHMC, we first need to transform our model to an unconstrained space using [TransformVariables.jl](https://tamaspapp.eu/TransformVariables.jl/stable/) and wrap it in a type that implements the [LogDensityProblems.jl](https://github.com/tpapp/LogDensityProblems.jl) interface:
+To use DynamicHMC, we first need to transform our model to an unconstrained space using [TransformVariables.jl](https://tamaspapp.eu/TransformVariables.jl/stable/) and wrap it in a type that implements the [LogDensityProblems interface](@extref LogDensityProblems log-density-api) (see [DynamicHMC's worked example](@extref DynamicHMC worked_example)):
 
 ```@example 1
 using DynamicHMC, ForwardDiff, LogDensityProblems, LogDensityProblemsAD, TransformVariables
@@ -123,7 +123,7 @@ result_dhmc1 = mcmc_with_warmup(
 
 ### Initializing metric adaptation from Pathfinder's estimate
 
-To start with Pathfinder's inverse metric estimate, we just need to initialize a `GaussianKineticEnergy` object with it as input: 
+To start with Pathfinder's inverse metric estimate, we just need to initialize a [`DynamicHMC.GaussianKineticEnergy`](@extref) object with it as input: 
 
 ```@example 1
 result_dhmc2 = mcmc_with_warmup(
@@ -212,7 +212,7 @@ samples_ahmc2, stats_ahmc2 = sample(
 
 ### Use Pathfinder's metric estimate for sampling
 
-To use Pathfinder's metric with no metric adaptation, we need to use Pathfinder's own `RankUpdateEuclideanMetric` type, which just wraps our inverse metric estimate for use with AdvancedHMC:
+To use Pathfinder's metric with no metric adaptation, we need to use Pathfinder's own [`Pathfinder.RankUpdateEuclideanMetric`](@ref) type, which just wraps our inverse metric estimate for use with AdvancedHMC:
 
 ```@example 1
 nadapts = 75
@@ -233,5 +233,3 @@ samples_ahmc3, stats_ahmc3 = sample(
     progress=false,
 )
 ```
-
-[^1]: https://mc-stan.org/docs/reference-manual/hmc-algorithm-parameters.html

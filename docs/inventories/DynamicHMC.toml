@@ -1,0 +1,13 @@
+# DocInventory version 1
+project = "DynamicHMC.jl"
+version = "3.4.7"
+
+# Filtered to just the types we link to
+[[std.doc]]
+dispname = "A worked example"
+name = "worked_example"
+uri = "worked_example/"
+
+[[jl.type]]
+name = "DynamicHMC.GaussianKineticEnergy"
+uri = "interface/#$"

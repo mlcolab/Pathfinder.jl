@@ -1,0 +1,11 @@
+# DocInventory version 1
+project = "Transducers.jl"
+version = "0.4.84"
+
+# Filtered to just the types we link to
+[[jl.type]]
+name = "Transducers.PreferParallel"
+uri = "reference/manual/#$"
+[[jl.type]]
+name = "Transducers.SequentialEx"
+uri = "reference/manual/#$"
