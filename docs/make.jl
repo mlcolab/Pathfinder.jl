@@ -7,6 +7,16 @@ DocMeta.setdocmeta!(Pathfinder, :DocTestSetup, :(using Pathfinder); recursive=tr
 links = InterLinks(
     "AdvancedHMC" => "https://turinglang.org/AdvancedHMC.jl/stable/",
     "ADTypes" => "https://sciml.github.io/ADTypes.jl/stable/",
+    "Distributions" => (
+        "https://juliastats.org/Distributions.jl/stable/",
+        "https://juliastats.org/Distributions.jl/dev/objects.inv",
+        joinpath(@__DIR__, "inventories", "Distributions.toml"),
+    ),
+    "DynamicHMC" => (
+        "https://www.tamaspapp.eu/DynamicHMC.jl/stable/",
+        "https://www.tamaspapp.eu/DynamicHMC.jl/dev/objects.inv",
+        joinpath(@__DIR__, "inventories", "DynamicHMC.toml"),
+    ),
     "DynamicPPL" => "https://turinglang.org/DynamicPPL.jl/stable/",
     "LogDensityProblems" => "https://www.tamaspapp.eu/LogDensityProblems.jl/stable/",
     "MCMCChains" => (
@@ -16,6 +26,11 @@ links = InterLinks(
     "Optim" => "https://julianlsolvers.github.io/Optim.jl/stable/",
     "Optimization" => "https://docs.sciml.ai/Optimization/stable/",
     "PSIS" => "https://julia.arviz.org/PSIS/stable/",
+    "Transducers" => (
+        "https://juliafolds2.github.io/Transducers.jl/stable/",  # not built for a while
+        "https://juliafolds2.github.io/Transducers.jl/dev/objects.inv",
+        joinpath(@__DIR__, "inventories", "Transducers.toml"),
+    ),
 )
 
 makedocs(;
