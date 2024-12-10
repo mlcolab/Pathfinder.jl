@@ -147,7 +147,7 @@ Compute approximate inverse Hessian initialized from history stored in `cache` a
 ``B₀`` and ``D₀``, which are overwritten here and are used in the construction of the
 returned approximate inverse Hessian ``H^{-1}``.
 
-From Theorem 2.2 of [^Byrd1994], the expression for the inverse Hessian ``H^{-1}`` is
+From [Byrd1994; Theorem 2.2](@citet), the expression for the inverse Hessian ``H^{-1}`` is
 
 ```math
 \\begin{align}
@@ -162,10 +162,9 @@ H^{-1} &= H_0^{-1} + B D B^\\mathrm{T}
 \\end{align}
 ```
 
-[^Byrd1994]: Byrd, R.H., Nocedal, J. & Schnabel, R.B.
-             Representations of quasi-Newton matrices and their use in limited memory methods.
-             Mathematical Programming 63, 129–156 (1994).
-             doi: [10.1007/BF01582063](https://doi.org/10.1007/BF01582063)
+# References
+
+- [Byrd1994](@cite): Byrd et al. Math. Program. 63, 1994.
 """
 function lbfgs_inverse_hessian!(cache::LBFGSInverseHessianCache, history::LBFGSHistory)
     (; B, D, diag_invH0) = cache

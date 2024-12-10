@@ -4,7 +4,7 @@ CurrentModule = Pathfinder
 
 # Pathfinder.jl: Parallel quasi-Newton variational inference
 
-This package implements Pathfinder, [^Zhang2021] a variational method for initializing Markov chain Monte Carlo (MCMC) methods.
+This package implements Pathfinder [ZhangPathfinder2021](@citep), a variational method for initializing Markov chain Monte Carlo (MCMC) methods.
 
 ## Single-path Pathfinder
 
@@ -45,8 +45,3 @@ Pathfinder uses several packages for extended functionality:
 - [Distributions.jl](https://juliastats.org/Distributions.jl/stable/)/[PDMats.jl](https://github.com/JuliaStats/PDMats.jl): fits can be used anywhere a `Distribution` can be used
 - [LogDensityProblems.jl](https://www.tamaspapp.eu/LogDensityProblems.jl/stable/): defining the log-density function, gradient, and Hessian
 - [ProgressLogging.jl](https://julialogging.github.io/ProgressLogging.jl/stable/): In Pluto, Juno, and VSCode, nested progress bars are shown. In the REPL, use TerminalLoggers.jl to get progress bars.
-
-[^Zhang2021]: Lu Zhang, Bob Carpenter, Andrew Gelman, Aki Vehtari (2021).
-              Pathfinder: Parallel quasi-Newton variational inference.
-              arXiv: [2108.03782](https://arxiv.org/abs/2108.03782) [stat.ML].
-              [Code](https://github.com/LuZhangstat/Pathfinder)

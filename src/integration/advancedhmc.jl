@@ -4,7 +4,8 @@ using .Random
 """
     RankUpdateEuclideanMetric{T,M} <: AdvancedHMC.AbstractMetric
 
-A Gaussian Euclidean metric whose inverse is constructed by rank-updates.
+A Gaussian Euclidean [metric](@extref AdvancedHMC Hamiltonian-mass-matrix-(metric)) whose
+inverse is constructed by rank-updates.
 
 # Constructors
 

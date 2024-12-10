@@ -190,13 +190,13 @@ The positive definite requirement is equivalent to the requirement that both ``A
 ``C`` are positive definite.
 
 For a derivation of this decomposition for the special case of diagonal ``A``, see
-appendix A of [^Zhang2021].
-
-[^Zhang2021]: Lu Zhang, Bob Carpenter, Andrew Gelman, Aki Vehtari (2021).
-                Pathfinder: Parallel quasi-Newton variational inference.
-                arXiv: [2108.03782](https://arxiv.org/abs/2108.03782) [stat.ML]
+[ZhangPathfinder2021; appendix A](@citet).
 
 See [`pdunfactorize`](@ref), [`WoodburyPDFactorization`](@ref), [`WoodburyPDMat`](@ref)
+
+# References
+
+- [ZhangPathfinder2021](@cite): Zhang et al. JMLR 23(306), 2022.
 """
 function pdfactorize(A::AbstractMatrix, B::AbstractMatrix, D::AbstractMatrix)
     cholA = cholesky(A isa Diagonal ? A : Symmetric(A))
@@ -240,7 +240,7 @@ thrown during construction.
 
 Upon construction, `WoodburyPDMat` calls [`pdfactorize`](@ref) to construct a
 [`WoodburyPDFactorization`](@ref), which is used in its overloads.
-z
+
 See [`pdfactorize`](@ref), [`WoodburyPDFactorization`](@ref)
 """
 struct WoodburyPDMat{

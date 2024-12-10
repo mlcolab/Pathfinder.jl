@@ -4,15 +4,15 @@ const _ARGUMENT_DOCSTRING = """
     - a callable with the signature
         `f(params::AbstractVector{<:Real}) -> log_density::Real`.
     - an object implementing the
-        [LogDensityProblems](https://www.tamaspapp.eu/LogDensityProblems.jl) interface.
-    - `SciMLBase.OptimizationFunction`: wraps the *negative* log density. It must have the
-        necessary features (e.g. a gradient or Hessian function) for the chosen `optimizer`.
-        For details, see
-        [Optimization.jl: OptimizationFunction](https://optimization.sciml.ai/stable/API/optimization_function/).
-    - `SciMLBase.OptimizationProblem`: an optimization problem containing a function with
-        the same properties as the above `OptimizationFunction`, as well as an initial
-        point. If provided, `init` and `dim` are ignored.
-    - `DynamicPPL.Model`: a Turing model. If provided, `init` and `dim` are ignored.
+        [LogDensityProblems interface](@extref LogDensityProblems log-density-api).
+    - [`SciMLBase.OptimizationFunction`](@extref): wraps the *negative* log density. It must
+        have the necessary features (e.g. a gradient or Hessian function) for the chosen
+        `optimizer`.
+    - [`SciMLBase.OptimizationProblem`](@extref): an optimization problem containing a
+        function with the same properties as the above `OptimizationFunction`, as well as an
+        initial point. If provided, `init` and `dim` are ignored.
+    - [`DynamicPPL.Model`](@extref): a Turing model. If provided, `init` and `dim` are
+        ignored.
 """
 
 """
@@ -25,11 +25,11 @@ Container for results of single-path Pathfinder.
     or another object.
 - `optimizer`: Optimizer used for maximizing the log-density
 - `rng`: Pseudorandom number generator that was used for sampling
-- `optim_prob::SciMLBase.OptimizationProblem`: Otimization problem used for
+- `optim_prob::`[`SciMLBase.OptimizationProblem`](@extref): Optimization problem used for
     optimization
 - `logp`: Log-density function
-- `fit_distribution::Distributions.MvNormal`: ELBO-maximizing multivariate normal
-    distribution
+- `fit_distribution::`[`Distributions.MvNormal`](@extref): ELBO-maximizing multivariate
+    normal distribution
 - `draws::AbstractMatrix{<:Real}`: draws from multivariate normal with size `(dim, ndraws)`
 - `fit_distribution_transformed`: `fit_distribution` transformed to the same space as the
     user-supplied target distribution. This is only different from `fit_distribution` when
@@ -37,7 +37,8 @@ Container for results of single-path Pathfinder.
 - `draws_transformed`: `draws` transformed to be draws from `fit_distribution_transformed`.
 - `fit_iteration::Int`: Iteration at which ELBO estimate was maximized
 - `num_tries::Int`: Number of tries until Pathfinder succeeded
-- `optim_solution::SciMLBase.OptimizationSolution`: Solution object of optimization.
+- `optim_solution::`[`SciMLBase.OptimizationSolution`](@extref): Solution object of
+    optimization.
 - `optim_trace::Pathfinder.OptimizationTrace`: container for optimization trace of points,
     log-density, and gradient. The first point is the initial point.
 - `fit_distributions::AbstractVector{Distributions.MvNormal}`: Multivariate normal
@@ -112,30 +113,32 @@ $(_ARGUMENT_DOCSTRING)
 - `ndraws_elbo::Int=$DEFAULT_NDRAWS_ELBO`: Number of draws used to estimate the ELBO
 - `ndraws::Int=ndraws_elbo`: number of approximate draws to return
 - `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
-- `executor::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl executor that
+- `executor::Transducers.Executor`: Transducers.jl executor that
     determines if and how to perform ELBO computation in parallel. The default
-    (`SequentialEx()`) performs no parallelization. If `rng` is known to be thread-safe, and
-    the log-density function is known to have no internal state, then
-    `Transducers.PreferParallel()` may be used to parallelize log-density evaluation.
-    This is generally only faster for expensive log density functions.
+    ([`Transducers.SequentialEx()`](@extref `Transducers.SequentialEx`)) performs no
+    parallelization. If `rng` is known to be thread-safe, and the log-density function is
+    known to have no internal state, then
+    [`Transducers.PreferParallel()`](@extref `Transducers.PreferParallel`) may be used to
+    parallelize log-density evaluation. This is generally only faster for expensive log
+    density functions.
 - `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
     inverse Hessian.
 - `optimizer`: Optimizer to be used for constructing trajectory. Can be any optimizer
-    compatible with Optimization.jl, so long as it supports callbacks. Defaults to
-    `Optim.LBFGS(; m=history_length, linesearch=LineSearches.HagerZhang(), alphaguess=LineSearches.InitialHagerZhang())`.
-    See the [Optimization.jl documentation](https://optimization.sciml.ai/stable) for
-    details.
-- `adtype::ADTypes.AbstractADType=AutoForwardDiff()`: Specifies which automatic
+    compatible with [Optimization.jl](https://docs.sciml.ai/Optimization/stable/), so long
+    as it supports callbacks. Defaults to
+    [`Optim.LBFGS`](@extref Optim `algo/lbfgs`)`(; m=history_length, linesearch=LineSearches.HagerZhang(), alphaguess=LineSearches.InitialHagerZhang())`.
+- `adtype::`[`ADTypes.AbstractADType`](@extref): Specifies which automatic
     differentiation backend should be used to compute the gradient, if `fun` does not
-    already specify the gradient. See
-    [SciML's Automatic Differentiation Recommendations](https://docs.sciml.ai/Optimization/stable/API/optimization_function/#Automatic-Differentiation-Construction-Choice-Recommendations).
-- `ntries::Int=1_000`: Number of times to try the optimization, restarting if it fails. Before
-    every restart, a new initial point is drawn using `init_sampler`.
+    already specify the gradient. Default is
+    [`ADTypes.AutoForwardDiff()`](@extref `ADTypes.AutoForwardDiff`) See
+    [Optimization.jl's Automatic Differentiation Recommendations](@extref Optimization ad).
+- `ntries::Int=1_000`: Number of times to try the optimization, restarting if it fails.
+    Before every restart, a new initial point is drawn using `init_sampler`.
 - `fail_on_nonfinite::Bool=true`: If `true`, optimization fails if the log-density is a
     `NaN` or `Inf` or if the gradient is ever non-finite. If `nretries > 0`, then
     optimization will be retried after reinitialization.
 - `kwargs...` : Remaining keywords are forwarded to
-    [`Optimization.solve`](https://optimization.sciml.ai/stable/API/solve).
+    [`Optimization.solve`](@extref Optimization `CommonSolve.solve`).
 
 # Returns
 - [`PathfinderResult`](@ref)

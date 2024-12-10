@@ -8,11 +8,11 @@ Container for results of multi-path Pathfinder.
     `optim_prob`, or another object.
 - `optimizer`: Optimizer used for maximizing the log-density
 - `rng`: Pseudorandom number generator that was used for sampling
-- `optim_prob::SciMLBase.OptimizationProblem`: Otimization problem used for
+- `optim_prob::`[`SciMLBase.OptimizationProblem`](@extref): Otimization problem used for
     optimization
 - `logp`: Log-density function
-- `fit_distribution::Distributions.MixtureModel`: uniformly-weighted mixture of ELBO-
-    maximizing multivariate normal distributions from each run.
+- `fit_distribution::`[`Distributions.MixtureModel`](@extref): uniformly-weighted mixture of
+    ELBO-maximizing multivariate normal distributions from each run.
 - `draws::AbstractMatrix{<:Real}`: draws from `fit_distribution` with size `(dim, ndraws)`,
     potentially resampled using importance resampling to be closer to the target
     distribution.
@@ -21,13 +21,12 @@ Container for results of multi-path Pathfinder.
     user-supplied target distribution. This is only different from `fit_distribution` when
     integrating with other packages, and its type depends on the type of `input`.
 - `draws_transformed`: `draws` transformed to be draws from `fit_distribution_transformed`.
-- `pathfinder_results::Vector{<:PathfinderResult}`: results of each single-path Pathfinder
-    run.
-- `psis_result::Union{Nothing,<:PSIS.PSISResult}`: If importance resampling was used, the
-    result of Pareto-smoothed importance resampling. `psis_result.pareto_shape` also
-    diagnoses whether `draws` can be used to compute estimates from the target distribution.
-    See [`PSIS.PSISResult`](https://psis.julia.arviz.org/stable/api/#PSIS.PSISResult) for
-    details
+- `pathfinder_results::Vector{<:`[`PathfinderResult`](@ref)`}`: results of each single-path
+    Pathfinder run.
+- `psis_result::Union{Nothing,<:`[`PSIS.PSISResult`](@extref)`}`: If importance resampling
+    was used, the result of Pareto-smoothed importance resampling.
+    `psis_result.pareto_shape` also diagnoses whether `draws` can be used to compute
+    estimates from the target distribution.
 """
 struct MultiPathfinderResult{I,O,R,OF,LP,FD,D,C,FDT,DT,PFR,PR}
     input::I
@@ -102,13 +101,15 @@ $(_ARGUMENT_DOCSTRING)
 - `importance::Bool=true`: Perform Pareto smoothed importance resampling of draws.
 - `rng::AbstractRNG=Random.GLOBAL_RNG`: Pseudorandom number generator. It is recommended to
     use a parallelization-friendly PRNG like the default PRNG on Julia 1.7 and up.
-- `executor::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl executor that
-    determines if and how to run the single-path runs in parallel. If a transducer for
+- `executor::Transducers.Executor`: Transducers.jl executor that determines if and how to
+    run the single-path runs in parallel, defaulting to
+    [`Transducers.SequentialEx()`](@extref `Transducers.SequentialEx`). If a transducer for
     multi-threaded computation is selected, you must first verify that `rng` and the log
     density function are thread-safe.
-- `executor_per_run::Transducers.Executor=Transducers.SequentialEx()`: Transducers.jl
-    executor used within each run to parallelize PRNG calls. Defaults to no parallelization.
-    See [`pathfinder`](@ref) for a description.
+- `executor_per_run::Transducers.Executor`: Transducers.jl executor used within each run to
+    parallelize PRNG calls, defaulting to
+    [`Transducers.SequentialEx()`](@extref `Transducers.SequentialEx`). See
+    [`pathfinder`](@ref) for further description.
 - `kwargs...` : Remaining keywords are forwarded to [`pathfinder`](@ref).
 
 # Returns

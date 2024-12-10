@@ -1,0 +1,11 @@
+# DocInventory version 1
+project = "Distributions.jl"
+version = "0.25.113"
+
+# Filtered to just the types we link to
+[[jl.type]]
+name = "Distributions.MixtureModel"
+uri = "mixture/#$"
+[[jl.type]]
+name = "Distributions.MvNormal"
+uri = "multivariate/#$"
