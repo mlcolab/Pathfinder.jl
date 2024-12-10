@@ -202,7 +202,7 @@ function pathfinder(
             kwargs...,
         )
     end
-    @unpack (
+    (;
         itry,
         success,
         optim_prob,
@@ -305,7 +305,7 @@ function _pathfinder(
 
     # fit mv-normal distributions to trajectory
     fit_distributions, num_bfgs_updates_rejected = fit_mvnormals(
-        optim_trace.points, optim_trace.gradients; history_length
+        optim_trace.points, optim_trace.log_densities, optim_trace.gradients; history_length
     )
 
     # find ELBO-maximizing distribution

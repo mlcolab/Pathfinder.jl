@@ -19,7 +19,6 @@ using SciMLBase: SciMLBase
 using Statistics: Statistics
 using StatsBase: StatsBase
 using Transducers: Transducers
-using UnPack: @unpack
 
 export PathfinderResult, MultiPathfinderResult
 export pathfinder, multipathfinder
@@ -43,7 +42,7 @@ default_ad() = ADTypes.AutoForwardDiff()
 include("transducers.jl")
 include("woodbury.jl")
 include("optimize.jl")
-include("inverse_hessian.jl")
+include("lbfgs.jl")
 include("mvnormal.jl")
 include("elbo.jl")
 include("resample.jl")
