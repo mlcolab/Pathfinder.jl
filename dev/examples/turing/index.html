@@ -34,33 +34,33 @@ Summary Statistics
  <span class="sgr1"> parameters </span> <span class="sgr1">    mean </span> <span class="sgr1">     std </span> <span class="sgr1">    mcse </span> <span class="sgr1">  ess_bulk </span> <span class="sgr1"> ess_tail </span> <span class="sgr1">    rhat </span> <span class="sgr1"> </span> ⋯
  <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90">  Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> </span> ⋯
 
-           α    1.4748    0.0465    0.0015    931.3334   809.2502    1.0020    ⋯
-           β    2.0061    0.0076    0.0002    959.7284   825.6883    0.9999    ⋯
-           σ    0.2177    0.0151    0.0005   1008.8839   856.3196    0.9997    ⋯
+           α    1.4724    0.0478    0.0015   1065.3828   913.0206    0.9994    ⋯
+           β    2.0062    0.0080    0.0003   1015.5842   915.7711    1.0005    ⋯
+           σ    0.2167    0.0155    0.0005    970.6707   981.1794    1.0044    ⋯
 <span class="sgr36">                                                                1 column omitted</span>
 
 Quantiles
  <span class="sgr1"> parameters </span> <span class="sgr1">    2.5% </span> <span class="sgr1">   25.0% </span> <span class="sgr1">   50.0% </span> <span class="sgr1">   75.0% </span> <span class="sgr1">   97.5% </span>
  <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span>
 
-           α    1.3843    1.4443    1.4736    1.5070    1.5785
-           β    1.9906    2.0010    2.0064    2.0113    2.0214
-           σ    0.1867    0.2071    0.2175    0.2283    0.2487
+           α    1.3695    1.4449    1.4716    1.5058    1.5650
+           β    1.9912    2.0009    2.0062    2.0113    2.0233
+           σ    0.1877    0.2055    0.2167    0.2263    0.2487
 </code></pre><p>We can also use these posterior draws to initialize MCMC sampling.</p><pre><code class="language-julia hljs">init_params = collect.(eachrow(result_multi.draws_transformed.value[1:n_chains, :, 1]))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">8-element Vector{Vector{Float64}}:
- [1.4385712947204663, 2.0124531815275466, 0.22904948833216876]
- [1.4310600350829619, 2.0147325585717835, 0.21996283990803556]
- [1.5002556397980622, 2.003403475861116, 0.22333298780409003]
- [1.4294167790341619, 2.01261352543737, 0.19601159618654096]
- [1.4589565127911095, 2.0110309527354775, 0.20341109008509684]
- [1.4852487222683175, 2.002876073142997, 0.23306041711870143]
- [1.4594382602969214, 2.002946535777802, 0.21961434030119226]
- [1.5219652756468702, 2.001773415039179, 0.19921379658345859]</code></pre><pre><code class="language-julia hljs">chns = sample(model, Turing.NUTS(), MCMCThreads(), 1_000, n_chains; init_params, progress=false)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Chains MCMC chain (1000×15×8 Array{Float64, 3}):
+ [1.479212845730115, 2.004653673862574, 0.21849816572974648]
+ [1.4671204662341366, 2.012072479722318, 0.20509591806923821]
+ [1.4923892790853188, 2.0086214878196524, 0.228872014351796]
+ [1.4791378091021459, 2.002988635852001, 0.22831136691078066]
+ [1.4671474996393061, 2.0005490100751167, 0.2218504094567497]
+ [1.5145012645039009, 1.9997383313646964, 0.22909663767338675]
+ [1.4368178924986255, 2.008327650310952, 0.20435142557946706]
+ [1.4738700123059079, 2.004895674382526, 0.21028541630912995]</code></pre><pre><code class="language-julia hljs">chns = sample(model, Turing.NUTS(), MCMCThreads(), 1_000, n_chains; init_params, progress=false)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Chains MCMC chain (1000×15×8 Array{Float64, 3}):
 
 Iterations        = 501:1:1500
 Number of chains  = 8
 Samples per chain = 1000
-Wall duration     = 6.73 seconds
-Compute duration  = 4.95 seconds
+Wall duration     = 6.81 seconds
+Compute duration  = 4.99 seconds
 parameters        = α, β, σ
 internals         = lp, n_steps, is_accept, acceptance_rate, log_density, hamiltonian_energy, hamiltonian_energy_error, max_hamiltonian_energy_error, tree_depth, numerical_error, step_size, nom_step_size
 
@@ -68,18 +68,18 @@ Summary Statistics
  <span class="sgr1"> parameters </span> <span class="sgr1">    mean </span> <span class="sgr1">     std </span> <span class="sgr1">    mcse </span> <span class="sgr1">  ess_bulk </span> <span class="sgr1">  ess_tail </span> <span class="sgr1">    rhat </span>  ⋯
  <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90"> Float64 </span>  ⋯
 
-           α    1.4767    0.0435    0.0008   3242.8022   3099.0731    1.0021   ⋯
-           β    2.0059    0.0075    0.0001   3463.0034   3814.4803    1.0016   ⋯
-           σ    0.2166    0.0157    0.0002   5169.4255   4494.8310    1.0025   ⋯
+           α    1.4759    0.0419    0.0007   3813.7080   3621.4712    1.0032   ⋯
+           β    2.0059    0.0073    0.0001   3934.7941   4375.7196    1.0023   ⋯
+           σ    0.2169    0.0154    0.0002   5036.6452   4494.3731    1.0012   ⋯
 <span class="sgr36">                                                                1 column omitted</span>
 
 Quantiles
  <span class="sgr1"> parameters </span> <span class="sgr1">    2.5% </span> <span class="sgr1">   25.0% </span> <span class="sgr1">   50.0% </span> <span class="sgr1">   75.0% </span> <span class="sgr1">   97.5% </span>
  <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span>
 
-           α    1.3918    1.4476    1.4769    1.5057    1.5627
-           β    1.9913    2.0009    2.0059    2.0110    2.0204
-           σ    0.1882    0.2055    0.2157    0.2267    0.2503
+           α    1.3942    1.4486    1.4753    1.5038    1.5579
+           β    1.9918    2.0010    2.0060    2.0108    2.0204
+           σ    0.1881    0.2059    0.2161    0.2267    0.2486
 </code></pre><p>We can use Pathfinder&#39;s estimate of the metric and only perform enough warm-up to tune the step size.</p><pre><code class="language-julia hljs">inv_metric = result_multi.pathfinder_results[1].fit_distribution.Σ
 metric = Pathfinder.RankUpdateEuclideanMetric(inv_metric)
 kernel = HMCKernel(Trajectory{MultinomialTS}(Leapfrog(0.0), GeneralisedNoUTurn()))
@@ -102,8 +102,8 @@ chns = sample(
 Iterations        = 51:1:1050
 Number of chains  = 8
 Samples per chain = 1000
-Wall duration     = 2.76 seconds
-Compute duration  = 2.38 seconds
+Wall duration     = 2.82 seconds
+Compute duration  = 2.44 seconds
 parameters        = α, β, σ
 internals         = lp, n_steps, is_accept, acceptance_rate, log_density, hamiltonian_energy, hamiltonian_energy_error, max_hamiltonian_energy_error, tree_depth, numerical_error, step_size, nom_step_size, is_adapt
 
@@ -111,16 +111,16 @@ Summary Statistics
  <span class="sgr1"> parameters </span> <span class="sgr1">    mean </span> <span class="sgr1">     std </span> <span class="sgr1">    mcse </span> <span class="sgr1">  ess_bulk </span> <span class="sgr1">  ess_tail </span> <span class="sgr1">    rhat </span>  ⋯
  <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90"> Float64 </span>  ⋯
 
-           α    1.4750    0.0424    0.0005   7523.8083   6310.0739    1.0004   ⋯
-           β    2.0060    0.0074    0.0001   6840.6333   5656.1131    1.0008   ⋯
-           σ    0.2168    0.0157    0.0002   6722.9557   5627.0576    1.0003   ⋯
+           α    1.4741    0.0518    0.0010   7513.5356   5475.5536    1.0005   ⋯
+           β    2.0058    0.0115    0.0002   6448.2684   4316.4928    1.0013   ⋯
+           σ    0.2192    0.0568    0.0015   6307.6893   4617.7063    1.0008   ⋯
 <span class="sgr36">                                                                1 column omitted</span>
 
 Quantiles
  <span class="sgr1"> parameters </span> <span class="sgr1">    2.5% </span> <span class="sgr1">   25.0% </span> <span class="sgr1">   50.0% </span> <span class="sgr1">   75.0% </span> <span class="sgr1">   97.5% </span>
  <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span>
 
-           α    1.3916    1.4468    1.4750    1.5028    1.5585
-           β    1.9914    2.0011    2.0061    2.0110    2.0205
-           σ    0.1890    0.2057    0.2160    0.2267    0.2501
-</code></pre><p>See <a href="../initializing-hmc/#Initializing-HMC-with-Pathfinder">Initializing HMC with Pathfinder</a> for further examples.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../initializing-hmc/">« Initializing HMC</a><a class="docs-footer-nextpage" href="../../references/">References »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Friday 13 December 2024 00:23">Friday 13 December 2024</span>. Using Julia version 1.11.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+           α    1.3887    1.4468    1.4742    1.5028    1.5598
+           β    1.9912    2.0014    2.0062    2.0110    2.0208
+           σ    0.1884    0.2059    0.2159    0.2267    0.2502
+</code></pre><p>See <a href="../initializing-hmc/#Initializing-HMC-with-Pathfinder">Initializing HMC with Pathfinder</a> for further examples.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../initializing-hmc/">« Initializing HMC</a><a class="docs-footer-nextpage" href="../../references/">References »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Saturday 14 December 2024 00:23">Saturday 14 December 2024</span>. Using Julia version 1.11.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
