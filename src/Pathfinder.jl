@@ -19,7 +19,6 @@ using SciMLBase: SciMLBase
 using Statistics: Statistics
 using StatsBase: StatsBase
 using Transducers: Transducers
-using UnPack: @unpack
 
 export PathfinderResult, MultiPathfinderResult
 export pathfinder, multipathfinder

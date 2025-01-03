@@ -99,9 +99,8 @@ struct OptimizationCallback{X,FX,∇FX,ID,CB}
 end
 
 function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args...)
-    @unpack (
-        xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
-    ) = cb
+    (; xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite) =
+        cb
     ret = callback !== nothing && callback(state, args...)
     iteration = state.iter
     Base.@logmsg ProgressLogging.ProgressLevel progress_name progress = iteration / maxiters _id =
