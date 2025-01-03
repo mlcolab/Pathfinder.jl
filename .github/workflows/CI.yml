@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.8'
+          - 'lts'
           - '1'
           - 'pre'
         os:
@@ -68,7 +68,7 @@ jobs:
         include:
           - version: '1'
             downgrade: false
-          - version: '1.8'
+          - version: 'lts'
             downgrade: true
     steps:
       - uses: actions/checkout@v4
