@@ -292,7 +292,7 @@ function Base.AbstractMatrix{T}(W::WoodburyPDMat) where {T}
     F = pdfactorize(W)
     Fnew = WoodburyPDFactorization(
         convert(AbstractMatrix{T}, F.U),
-        convert(AbstractMatrix{T}, F.Q),
+        convert(LinearAlgebra.AbstractQ{T}, F.Q),
         convert(AbstractMatrix{T}, F.V),
     )
     return WoodburyPDMat(
