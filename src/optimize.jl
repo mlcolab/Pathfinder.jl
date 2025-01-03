@@ -98,54 +98,29 @@ struct OptimizationCallback{X,FX,∇FX,ID,CB}
     fail_on_nonfinite::Bool
 end
 
-@static if isdefined(Optimization, :OptimizationState)
-    # Optimization v3.21.0 and later
-    function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args...)
-        @unpack (
-            xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
-        ) = cb
-        ret = callback !== nothing && callback(state, args...)
-        iteration = state.iter
-        Base.@logmsg ProgressLogging.ProgressLevel progress_name progress =
-            iteration / maxiters _id = progress_id
+function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args...)
+    @unpack (
+        xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
+    ) = cb
+    ret = callback !== nothing && callback(state, args...)
+    iteration = state.iter
+    Base.@logmsg ProgressLogging.ProgressLevel progress_name progress = iteration / maxiters _id =
+        progress_id
 
-        x = copy(state.u)
-        fx = -state.objective
-        ∇fx = state.grad === nothing ? nothing : -state.grad
+    x = copy(state.u)
+    fx = -state.objective
+    ∇fx = state.grad === nothing ? nothing : -state.grad
 
-        # some backends mutate x, so we must copy it
-        push!(xs, x)
-        push!(fxs, fx)
-        push!(∇fxs, ∇fx)
+    # some backends mutate x, so we must copy it
+    push!(xs, x)
+    push!(fxs, fx)
+    push!(∇fxs, ∇fx)
 
-        if fail_on_nonfinite && !ret
-            ret = (isnan(fx) || fx == Inf || (∇fx !== nothing && any(!isfinite, ∇fx)))::Bool
-        end
-
-        return ret
+    if fail_on_nonfinite && !ret
+        ret = (isnan(fx) || fx == Inf || (∇fx !== nothing && any(!isfinite, ∇fx)))::Bool
     end
-else
-    # Optimization v3.20.X and earlier
-    function (cb::OptimizationCallback)(x, nfx, args...)
-        @unpack (
-            xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
-        ) = cb
-        ret = callback !== nothing && callback(x, nfx, args...)
-        iteration = length(cb.xs)
-        Base.@logmsg ProgressLogging.ProgressLevel progress_name progress =
-            iteration / maxiters _id = progress_id
 
-        # some backends mutate x, so we must copy it
-        push!(xs, copy(x))
-        push!(fxs, -nfx)
-        push!(∇fxs, nothing)
-
-        if fail_on_nonfinite && !ret
-            ret = (isnan(nfx) || nfx == -Inf)::Bool
-        end
-
-        return ret
-    end
+    return ret
 end
 
 struct OptimizationTrace{P,L}
