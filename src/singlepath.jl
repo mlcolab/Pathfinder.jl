@@ -294,24 +294,24 @@ function _pathfinder(
     logp;
     history_length::Int=DEFAULT_HISTORY_LENGTH,
     optimizer=default_optimizer(history_length),
-    ndraws_elbo=DEFAULT_NDRAWS_ELBO,
     executor::Transducers.Executor=Transducers.SequentialEx(),
     kwargs...,
 )
     # compute trajectory
-    optim_solution, optim_trace = optimize_with_trace(prob, optimizer; kwargs...)
+    optim_solution, optim_trace, fit_distributions, elbo_estimates = optimize_with_trace(
+        prob, optimizer; rng, kwargs...
+    )
+    num_bfgs_updates_rejected = 0
     L = length(optim_trace) - 1
     success = L > 0
 
-    # fit mv-normal distributions to trajectory
-    fit_distributions, num_bfgs_updates_rejected = fit_mvnormals(
-        optim_trace.points, optim_trace.log_densities, optim_trace.gradients; history_length
-    )
-
     # find ELBO-maximizing distribution
-    fit_iteration, elbo_estimates = @views maximize_elbo(
-        rng, logp, fit_distributions[(begin + 1):end], ndraws_elbo, executor
-    )
+    if isempty(elbo_estimates)
+        fit_iteration = 0
+    else
+        _, fit_iteration = _findmax(est.value for est in elbo_estimates)
+    end
+
     if isempty(elbo_estimates)
         success = false
     else

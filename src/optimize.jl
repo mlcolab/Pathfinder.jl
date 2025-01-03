@@ -55,22 +55,73 @@ function optimize_with_trace(
     maxiters=1_000,
     callback=nothing,
     fail_on_nonfinite=true,
+    ndraws_elbo::Int=5,
+    rng=Random.GLOBAL_RNG,
+    (invH_init!)=gilbert_invH_init!,
+    save_trace::Bool=true,
     kwargs...,
 )
-    u0 = prob.u0
-    fun = prob.f
+    if prob.f.grad === nothing
+        # Generate a cache to use Optimization's native functionality for adding missing
+        # gradient values
+        fun = Optimization.OptimizationCache(prob, optimizer).f
+        if fun.grad === nothing
+            throw(
+                ArgumentError(
+                    "Gradient function is not available. Please provide an OptimizationProblem with an explicit gradient function.",
+                ),
+            )
+        end
+    else
+        fun = prob.f
+    end
+
+    logp(x) = -fun.f(x, nothing)
+    function ∇logp(x)
+        SciMLBase.isinplace(fun) || return -fun.grad(x)
+        res = similar(x)
+        fun.grad(res, x)
+        rmul!(res, -1)
+        return res
+    end
+
     # caches for the trace of x and f(x)
+    (; u0) = prob
+    T = eltype(u0)
     xs = typeof(u0)[]
     fxs = typeof(fun.f(u0, nothing))[]
-    ∇fxs = Union{Nothing,typeof(u0)}[]
+    ∇fxs = typeof(u0)[]
+    optim_trace = OptimizationTrace(xs, fxs, ∇fxs)
+    # TODO: fix this
+    lbfgs_state = LBFGSState(u0, -logp(u0), ∇logp(u0), 10)
+    draws_cache = similar(u0, size(u0, 1), ndraws_elbo)
+    elbo_estimates = ELBOEstimate{T,typeof(draws_cache),Vector{T}}[]
+    # TODO: make this a concrete type
+    fit_distributions = typeof(fit_mvnormal(lbfgs_state))[]
+
+    # TODO: keep deepcopy of ELBO-maximizing fit distribution so far, iteration where built,
+    # and maximum ELBO value
+
     _callback = OptimizationCallback(
-        xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
+        logp,
+        ∇logp,
+        rng,
+        save_trace,
+        maxiters,
+        fail_on_nonfinite,
+        callback,
+        lbfgs_state,
+        draws_cache,
+        optim_trace,
+        fit_distributions,
+        elbo_estimates,
+        invH_init!,
+        progress_name,
+        progress_id,
     )
     sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
 
-    _∇fxs = _fill_missing_gradient_values!(∇fxs, xs, sol.cache.f)
-
-    return sol, OptimizationTrace(xs, fxs, _∇fxs)
+    return sol, optim_trace, fit_distributions, elbo_estimates[(begin + 1):end]
 end
 
 function _fill_missing_gradient_values!(∇fxs, xs, optim_fun)
@@ -87,37 +138,92 @@ function _fill_missing_gradient_values!(∇fxs, xs, optim_fun)
     return convert(typeof(xs), ∇fxs)
 end
 
-struct OptimizationCallback{X,FX,∇FX,ID,CB}
-    xs::X
-    fxs::FX
-    ∇fxs::∇FX
+struct OptimizationCallback{
+    F,
+    DF,
+    R<:Random.AbstractRNG,
+    CB,
+    L<:LBFGSState,
+    DC<:AbstractMatrix,
+    OT,
+    FD<:Vector{<:Distributions.MvNormal},
+    EE<:Vector,
+    IH,
+    ID,
+}
+    # Generated functions
+    logp::F
+    ∇logp::DF
+    # User-provided options
+    rng::R
+    save_trace::Bool
+    maxiters::Int
+    fail_on_nonfinite::Bool
+    callback::CB
+    # State/caches
+    lbfgs_state::L
+    draws_cache::DC
+    optim_trace::OT
+    fit_distributions::FD
+    elbo_estimates::EE
+    # Internally set options
+    invH_init!::IH
     progress_name::String
     progress_id::ID
-    maxiters::Int
-    callback::CB
-    fail_on_nonfinite::Bool
 end
 
 function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args...)
     (;
-        xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
+        logp,
+        ∇logp,
+        rng,
+        save_trace,
+        maxiters,
+        fail_on_nonfinite,
+        callback,
+        lbfgs_state,
+        optim_trace,
+        fit_distributions,
+        elbo_estimates,
+        draws_cache,
+        invH_init!,
+        progress_name,
+        progress_id,
     ) = cb
     ret = callback !== nothing && callback(state, args...)
     iteration = state.iter
-    Base.@logmsg ProgressLogging.ProgressLevel progress_name progress =
-        iteration / maxiters _id = progress_id
+    Base.@logmsg ProgressLogging.ProgressLevel progress_name progress = iteration / maxiters _id =
+        progress_id
 
+    # some optimizers mutate x, so we must copy it
     x = copy(state.u)
-    fx = -state.objective
-    ∇fx = state.grad === nothing ? nothing : -state.grad
+    logp_x = -state.objective
+    ∇logp_x = state.grad === nothing ? ∇logp(x) : -state.grad
 
-    # some backends mutate x, so we must copy it
-    push!(xs, x)
-    push!(fxs, fx)
-    push!(∇fxs, ∇fx)
+    # Update L-BFGS state
+    ϵ = sqrt(eps(eltype(x)))
+    _update_state!(lbfgs_state, x, -logp_x, -∇logp_x, invH_init!, ϵ)
+
+    # Fit distribution
+    fit_distribution = fit_mvnormal(lbfgs_state)
+    elbo_estimate = elbo_and_samples!(
+        draws_cache, rng, logp, fit_distribution; save_samples=save_trace
+    )
+
+    push!(optim_trace.log_densities, logp_x)
+    push!(elbo_estimates, elbo_estimate)
+    if save_trace
+        push!(optim_trace.points, x)
+        push!(optim_trace.gradients, ∇logp_x)
+        push!(fit_distributions, fit_distribution)
+    end
 
     if fail_on_nonfinite && !ret
-        ret = (isnan(fx) || fx == Inf || (∇fx !== nothing && any(!isfinite, ∇fx)))::Bool
+        ret = (
+            isnan(logp_x) ||
+            logp_x == -Inf ||
+            (∇logp_x !== nothing && any(!isfinite, ∇logp_x))
+        )::Bool
     end
 
     return ret

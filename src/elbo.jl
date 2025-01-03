@@ -27,7 +27,7 @@ function elbo_and_samples!(ϕ, rng, logp, dist; save_samples::Bool=true)
     return ELBOEstimate(elbo, elbo_se, ϕ_save, logpϕ, logqϕ, logr)
 end
 
-struct ELBOEstimate{T,P,L<:AbstractVector{T}}
+struct ELBOEstimate{T,P<:AbstractMatrix{T},L<:Vector{T}}
     value::T
     std_err::T
     draws::P

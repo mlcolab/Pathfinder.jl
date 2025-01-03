@@ -22,6 +22,12 @@ function fit_mvnormals(θs, logpθs, ∇logpθs; kwargs...)
     return dists, num_bfgs_updates_rejected
 end
 
+function fit_mvnormal(state::LBFGSState)
+    Σ = state.invH
+    μ = muladd(Σ, state.∇fx, state.x)
+    return Distributions.MvNormal(μ, Σ)
+end
+
 # faster than computing `logpdf` and `rand!` independently
 function rand_and_logpdf!(rng, dist::Distributions.MvNormal, x)
     (; μ, Σ) = dist
