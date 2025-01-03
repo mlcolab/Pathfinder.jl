@@ -18,7 +18,7 @@ TransformedLogDensities = "f9bc47f6-f3f8-4f3b-ab21-f8bc73906f26"
 [compat]
 AdvancedHMC = "0.6"
 Distributions = "0.25.87"
-ForwardDiff = "0.10.19"
+ForwardDiff = "0.10.26"
 LogDensityProblems = "2.1.0"
 LogDensityProblemsAD = "1.7"
 MCMCDiagnosticTools = "0.3"
