@@ -73,18 +73,13 @@ end
                         (isdefined(Optimization, :OptimizationState) && !isfinite(gval))
                     )
                 )
-            if isdefined(Optimization, :OptimizationState)
-                # Optimization v3.21.0 and later
-                callback = (state, args...) -> cbfail
-                state = Optimization.OptimizationState(;
-                    iter=0, u=x, objective=-fval, grad=-∇f(x)
-                )
-                cb_args = (state, -fval)
-            else
-                # Optimization v3.20.X and earlier
-                callback = (x, fx, args...) -> cbfail
-                cb_args = (x, -fval)
-            end
+
+            callback = (state, args...) -> cbfail
+            state = Optimization.OptimizationState(;
+                iter=0, u=x, objective=-fval, grad=-∇f(x)
+            )
+            cb_args = (state, -fval)
+
             cb = Pathfinder.OptimizationCallback(
                 xs,
                 fxs,

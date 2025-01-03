@@ -34,11 +34,7 @@ using Transducers
         logp(x) = logpdf(target_dist, x[1])
         σs = [1e-3, 0.05, σ_target, 1.0, 1.1, 1.2, 5.0, 10.0]
         dists = Normal.(0, σs)
-        if VERSION ≥ v"1.7.0"
-            executors = [SequentialEx(), ThreadedEx()]
-        else
-            executors = [SequentialEx()]
-        end
+        executors = [SequentialEx(), ThreadedEx()]
         @testset "$executor" for executor in executors
             rng = Random.seed!(Random.default_rng(), 42)
             lopt, estimates = @inferred Pathfinder.maximize_elbo(
