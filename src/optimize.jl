@@ -87,17 +87,6 @@ function optimize_with_trace(
 
     # caches for the trace of x and f(x)
     (; u0) = prob
-    T = eltype(u0)
-    xs = typeof(u0)[]
-    fxs = typeof(fun.f(u0, nothing))[]
-    ∇fxs = typeof(u0)[]
-    optim_trace = OptimizationTrace(xs, fxs, ∇fxs)
-    # TODO: fix this
-    lbfgs_state = LBFGSState(u0, -logp(u0), ∇logp(u0), 10)
-    draws_cache = similar(u0, size(u0, 1), ndraws_elbo)
-    elbo_estimates = ELBOEstimate{T,typeof(draws_cache),Vector{T}}[]
-    # TODO: make this a concrete type
-    fit_distributions = typeof(fit_mvnormal(lbfgs_state))[]
 
     # TODO: keep deepcopy of ELBO-maximizing fit distribution so far, iteration where built,
     # and maximum ELBO value
@@ -105,21 +94,19 @@ function optimize_with_trace(
     _callback = OptimizationCallback(
         logp,
         ∇logp,
+        u0;
         rng,
         save_trace,
         maxiters,
         fail_on_nonfinite,
         callback,
-        lbfgs_state,
-        draws_cache,
-        optim_trace,
-        fit_distributions,
-        elbo_estimates,
         invH_init!,
         progress_name,
         progress_id,
     )
     sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
+
+    (; optim_trace, fit_distributions, elbo_estimates) = _callback
 
     return sol, optim_trace, fit_distributions, elbo_estimates[(begin + 1):end]
 end
@@ -170,6 +157,51 @@ struct OptimizationCallback{
     invH_init!::IH
     progress_name::String
     progress_id::ID
+end
+
+# New constructor
+function OptimizationCallback(
+    logp,
+    ∇logp,
+    u0;
+    rng::Random.AbstractRNG=Random.default_rng(),
+    save_trace::Bool=true,
+    maxiters::Int=1_000,
+    fail_on_nonfinite::Bool=true,
+    ndraws_elbo::Int=5,
+    callback=nothing,
+    (invH_init!)=gilbert_invH_init!,
+    progress_name::String="Optimizing",
+    progress_id=nothing,
+)
+    T = eltype(u0)
+    xs = typeof(u0)[]
+    fxs = typeof(logp(u0))[]
+    ∇fxs = typeof(u0)[]
+    optim_trace = OptimizationTrace(xs, fxs, ∇fxs)
+    lbfgs_state = LBFGSState(u0, -logp(u0), ∇logp(u0), 10)
+    draws_cache = similar(u0, size(u0, 1), ndraws_elbo)
+    elbo_estimates = ELBOEstimate{T,typeof(draws_cache),Vector{T}}[]
+    # TODO: make this a concrete type
+    fit_distributions = typeof(fit_mvnormal(lbfgs_state))[]
+
+    return OptimizationCallback(
+        logp,
+        ∇logp,
+        rng,
+        save_trace,
+        maxiters,
+        fail_on_nonfinite,
+        callback,
+        lbfgs_state,
+        draws_cache,
+        optim_trace,
+        fit_distributions,
+        elbo_estimates,
+        invH_init!,
+        progress_name,
+        progress_id,
+    )
 end
 
 function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args...)

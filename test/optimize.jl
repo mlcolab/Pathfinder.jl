@@ -57,33 +57,26 @@ end
             gval in check_vals,
             cbfail in [true, false]
 
-            xs = Vector{Float64}[]
-            fxs = Float64[]
-            ∇fxs = Union{Nothing,Vector{Float64}}[]
-            ∇f = function (x)
+            logp = x -> fval
+            ∇logp = function (x)
                 g = -x
                 g[end] = gval
                 return g
             end
             should_fail =
-                cbfail || (
-                    fail_on_nonfinite && (
-                        isnan(fval) ||
-                        fval == Inf ||
-                        (isdefined(Optimization, :OptimizationState) && !isfinite(gval))
-                    )
-                )
+                cbfail ||
+                (fail_on_nonfinite && (isnan(fval) || fval == Inf || !isfinite(gval)))
 
             callback = (state, args...) -> cbfail
             state = Optimization.OptimizationState(;
-                iter=0, u=x, objective=-fval, grad=-∇f(x)
+                iter=0, u=x, objective=-logp(x), grad=-∇logp(x)
             )
-            cb_args = (state, -fval)
+            cb_args = (state, -logp(x))
 
             cb = Pathfinder.OptimizationCallback(
-                xs,
-                fxs,
-                ∇fxs,
+                logp,
+                ∇logp,
+                x;
                 progress_name,
                 progress_id,
                 maxiters,
