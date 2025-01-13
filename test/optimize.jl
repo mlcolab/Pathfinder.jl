@@ -85,6 +85,7 @@ end
             )
             @test cb isa Pathfinder.OptimizationCallback
             @test cb(cb_args...) == should_fail
+            @test isconcretetype(typeof(cb.fit_distributions))
         end
     end
 end
