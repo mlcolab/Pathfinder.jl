@@ -95,6 +95,7 @@ function optimize_with_trace(
         logp,
         ∇logp,
         u0;
+        ndraws_elbo,
         rng,
         save_trace,
         maxiters,
