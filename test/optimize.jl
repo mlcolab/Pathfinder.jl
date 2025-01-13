@@ -50,6 +50,7 @@ end
         progress_name = "Optimizing"
         progress_id = nothing
         maxiters = 1_000
+        history_length = 11
         x = randn(5)
         check_vals = [0.0, NaN, -Inf, Inf]
         @testset for fail_on_nonfinite in [true, false],
@@ -77,6 +78,7 @@ end
                 logp,
                 ∇logp,
                 x;
+                history_length,
                 progress_name,
                 progress_id,
                 maxiters,
@@ -86,6 +88,7 @@ end
             @test cb isa Pathfinder.OptimizationCallback
             @test cb(cb_args...) == should_fail
             @test isconcretetype(typeof(cb.fit_distributions))
+            @test length(cb.lbfgs_state.history.history_perm) == history_length + 1
         end
     end
 end

@@ -299,7 +299,7 @@ function _pathfinder(
 )
     # compute trajectory
     optim_solution, optim_trace, fit_distributions, elbo_estimates = optimize_with_trace(
-        prob, optimizer; rng, kwargs...
+        prob, optimizer; rng, history_length, kwargs...
     )
     num_bfgs_updates_rejected = 0
     L = length(optim_trace) - 1

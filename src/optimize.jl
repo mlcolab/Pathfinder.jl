@@ -59,6 +59,7 @@ function optimize_with_trace(
     rng=Random.GLOBAL_RNG,
     (invH_init!)=gilbert_invH_init!,
     save_trace::Bool=true,
+    history_length::Int=DEFAULT_HISTORY_LENGTH,
     kwargs...,
 )
     if prob.f.grad === nothing
@@ -96,6 +97,7 @@ function optimize_with_trace(
         ∇logp,
         u0;
         ndraws_elbo,
+        history_length,
         rng,
         save_trace,
         maxiters,
@@ -170,6 +172,7 @@ function OptimizationCallback(
     maxiters::Int=1_000,
     fail_on_nonfinite::Bool=true,
     ndraws_elbo::Int=5,
+    history_length::Int=DEFAULT_HISTORY_LENGTH,
     callback=nothing,
     (invH_init!)=gilbert_invH_init!,
     progress_name::String="Optimizing",
@@ -181,7 +184,7 @@ function OptimizationCallback(
     fxs = FT[]
     ∇fxs = typeof(u0)[]
     optim_trace = OptimizationTrace(xs, fxs, ∇fxs)
-    lbfgs_state = LBFGSState(u0, zero(T), zero(u0), 10)
+    lbfgs_state = LBFGSState(u0, zero(T), zero(u0), history_length)
     draws_cache = similar(u0, size(u0, 1), ndraws_elbo)
     elbo_estimates = ELBOEstimate{T,typeof(draws_cache),Vector{T}}[]
     DT = Core.Compiler.return_type(fit_mvnormal, Tuple{typeof(lbfgs_state)})
