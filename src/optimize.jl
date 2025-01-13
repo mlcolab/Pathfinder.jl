@@ -221,7 +221,7 @@ function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args.
     if fail_on_nonfinite && !ret
         ret = (
             isnan(logp_x) ||
-            logp_x == -Inf ||
+            logp_x == Inf ||
             (∇logp_x !== nothing && any(!isfinite, ∇logp_x))
         )::Bool
     end
