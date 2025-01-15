@@ -65,7 +65,18 @@ function optimize_with_trace(
     if prob.f.grad === nothing
         # Generate a cache to use Optimization's native functionality for adding missing
         # gradient values
-        fun = Optimization.OptimizationCache(prob, optimizer).f
+        optim_cache = try
+            Optimization.OptimizationCache(prob, optimizer)
+        catch e
+            if e isa MethodError
+                # OptimizationBase <v2.0.1
+                data = Iterators.cycle((Optimization.OptimizationBase.NullData(),))
+                Optimization.OptimizationCache(prob, optimizer, data)
+            else
+                throw(e)
+            end
+        end
+        fun = optim_cache.f
         if fun.grad === nothing
             throw(
                 ArgumentError(
