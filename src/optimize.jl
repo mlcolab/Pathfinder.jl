@@ -189,13 +189,12 @@ function OptimizationCallback(
     progress_name::String="Optimizing",
     progress_id=nothing,
 )
-    T = eltype(u0)
-    FT = Core.Compiler.return_type(logp, Tuple{typeof(u0)})
+    T = FT = eltype(u0)
     xs = typeof(u0)[]
     fxs = FT[]
     ∇fxs = typeof(u0)[]
     optim_trace = OptimizationTrace(xs, fxs, ∇fxs)
-    lbfgs_state = LBFGSState(u0, zero(T), zero(u0), history_length)
+    lbfgs_state = LBFGSState(u0, zero(FT), zero(u0), history_length)
     draws_cache = similar(u0, size(u0, 1), ndraws_elbo)
     elbo_estimates = ELBOEstimate{T,typeof(draws_cache),Vector{T}}[]
     DT = Core.Compiler.return_type(fit_mvnormal, Tuple{typeof(lbfgs_state)})
