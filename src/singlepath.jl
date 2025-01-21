@@ -208,9 +208,10 @@ function pathfinder(
         optim_prob,
         optim_solution,
         optim_trace,
-        fit_distributions,
-        fit_iteration,
         elbo_estimates,
+        fit_distributions,
+        fit_distribution,
+        fit_iteration,
         num_bfgs_updates_rejected,
     ) = path_result
 
@@ -226,8 +227,6 @@ function pathfinder(
         perc = round(num_bfgs_updates_rejected * (100//length(fit_distributions)); digits=1)
         @warn "$num_bfgs_updates_rejected ($(perc)%) updates to the inverse Hessian estimate were rejected to keep it positive definite."
     end
-
-    fit_distribution = fit_distributions[fit_iteration + 1]
 
     # reuse existing draws; draw additional ones if necessary
     draws = if ndraws_elbo_actual == 0
@@ -298,19 +297,12 @@ function _pathfinder(
     kwargs...,
 )
     # compute trajectory
-    optim_solution, optim_trace, fit_distributions, elbo_estimates = optimize_with_trace(
+    (; optim_solution, optim_trace, fit_distributions, elbo_estimates, fit_distribution, fit_iteration) = optimize_with_trace(
         prob, optimizer; rng, history_length, kwargs...
     )
     num_bfgs_updates_rejected = 0
     L = length(optim_trace) - 1
     success = L > 0
-
-    # find ELBO-maximizing distribution
-    if isempty(elbo_estimates)
-        fit_iteration = 0
-    else
-        _, fit_iteration = _findmax(est.value for est in elbo_estimates)
-    end
 
     if isempty(elbo_estimates)
         success = false
@@ -323,9 +315,10 @@ function _pathfinder(
         success,
         optim_solution,
         optim_trace,
-        fit_distributions,
-        fit_iteration,
         elbo_estimates,
+        fit_distributions,
+        fit_distribution,
+        fit_iteration,
         num_bfgs_updates_rejected,
     )
 end

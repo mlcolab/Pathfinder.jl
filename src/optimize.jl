@@ -120,9 +120,17 @@ function optimize_with_trace(
     )
     sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
 
-    (; optim_trace, fit_distributions, elbo_estimates) = _callback
+    (; optim_trace, fit_distributions, elbo_estimates, fit_distribution, fit_iteration) =
+        _callback
 
-    return sol, optim_trace, fit_distributions, elbo_estimates[(begin + 1):end]
+    return (;
+        optim_solution=sol,
+        optim_trace,
+        fit_distributions,
+        elbo_estimates=elbo_estimates[(begin + 1):end],
+        fit_distribution,
+        fit_iteration,
+    )
 end
 
 function _fill_missing_gradient_values!(∇fxs, xs, optim_fun)
@@ -139,7 +147,7 @@ function _fill_missing_gradient_values!(∇fxs, xs, optim_fun)
     return convert(typeof(xs), ∇fxs)
 end
 
-struct OptimizationCallback{
+mutable struct OptimizationCallback{
     F,
     DF,
     R<:Random.AbstractRNG,
@@ -147,30 +155,33 @@ struct OptimizationCallback{
     L<:LBFGSState,
     DC<:AbstractMatrix,
     OT,
-    FD<:Vector{<:Distributions.MvNormal},
+    FD<:Distributions.MvNormal,
+    FDs<:Vector{<:FD},
     EE<:Vector,
     IH,
     ID,
 }
     # Generated functions
-    logp::F
-    ∇logp::DF
+    const logp::F
+    const ∇logp::DF
     # User-provided options
-    rng::R
-    save_trace::Bool
-    maxiters::Int
-    fail_on_nonfinite::Bool
-    callback::CB
+    const rng::R
+    const save_trace::Bool
+    const maxiters::Int
+    const fail_on_nonfinite::Bool
+    const callback::CB
     # State/caches
-    lbfgs_state::L
-    draws_cache::DC
-    optim_trace::OT
-    fit_distributions::FD
-    elbo_estimates::EE
+    const lbfgs_state::L
+    const draws_cache::DC
+    const optim_trace::OT
+    const fit_distributions::FDs
+    const elbo_estimates::EE
+    fit_distribution::FD
+    fit_iteration::Int
     # Internally set options
-    invH_init!::IH
-    progress_name::String
-    progress_id::ID
+    const invH_init!::IH
+    const progress_name::String
+    const progress_id::ID
 end
 
 # New constructor
@@ -197,8 +208,9 @@ function OptimizationCallback(
     lbfgs_state = LBFGSState(u0, zero(FT), zero(u0), history_length)
     draws_cache = similar(u0, size(u0, 1), ndraws_elbo)
     elbo_estimates = ELBOEstimate{T,typeof(draws_cache),Vector{T}}[]
-    DT = Core.Compiler.return_type(fit_mvnormal, Tuple{typeof(lbfgs_state)})
-    fit_distributions = DT[]
+    fit_iteration = -1
+    fit_distribution = deepcopy(fit_mvnormal(lbfgs_state))
+    fit_distributions = typeof(fit_distribution)[]
 
     return OptimizationCallback(
         logp,
@@ -213,6 +225,8 @@ function OptimizationCallback(
         optim_trace,
         fit_distributions,
         elbo_estimates,
+        fit_distribution,
+        fit_iteration,
         invH_init!,
         progress_name,
         progress_id,
@@ -262,7 +276,16 @@ function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args.
     if save_trace
         push!(optim_trace.points, x)
         push!(optim_trace.gradients, ∇logp_x)
-        push!(fit_distributions, fit_distribution)
+        push!(fit_distributions, deepcopy(fit_distribution))
+    end
+
+    # Keep track of the ELBO-maximizing iteration
+    if cb.fit_iteration < 0 || (
+        isfinite(elbo_estimate.value) &&
+        elbo_estimate.value > elbo_estimates[cb.fit_iteration + 1].value
+    )
+        cb.fit_iteration += 1
+        cb.fit_distribution = deepcopy(fit_distribution)
     end
 
     if fail_on_nonfinite && !ret
