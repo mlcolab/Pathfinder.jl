@@ -305,7 +305,7 @@ struct OptimizationTrace{P,L}
     gradients::P
 end
 
-Base.length(trace::OptimizationTrace) = length(trace.points)
+Base.length(trace::OptimizationTrace) = length(trace.log_densities)
 
 function Base.show(io::IO, trace::OptimizationTrace)
     print(io, "OptimizationTrace with $(length(trace) - 1) iterations")
