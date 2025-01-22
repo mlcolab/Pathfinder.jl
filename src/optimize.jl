@@ -284,7 +284,7 @@ function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args.
         isfinite(elbo_estimate.value) &&
         elbo_estimate.value > elbo_estimates[cb.fit_iteration + 1].value
     )
-        cb.fit_iteration += 1
+        cb.fit_iteration = iteration
         cb.fit_distribution = deepcopy(fit_distribution)
     end
 
