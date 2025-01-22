@@ -280,7 +280,7 @@ function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args.
     end
 
     # Keep track of the ELBO-maximizing iteration
-    if cb.fit_iteration < 0 || (
+    if cb.fit_iteration ≤ 0 || (
         isfinite(elbo_estimate.value) &&
         elbo_estimate.value > elbo_estimates[cb.fit_iteration + 1].value
     )
