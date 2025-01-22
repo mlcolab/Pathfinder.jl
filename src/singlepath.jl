@@ -229,7 +229,7 @@ function pathfinder(
     end
 
     # reuse existing draws; draw additional ones if necessary
-    draws = if ndraws_elbo_actual == 0
+    draws = if ndraws_elbo_actual == 0 || !save_trace
         rand(rng, fit_distribution, ndraws)
     elseif ndraws_elbo_actual < ndraws
         hcat(elbo_estimate_opt.draws, rand(rng, fit_distribution, ndraws - ndraws_elbo_actual))
