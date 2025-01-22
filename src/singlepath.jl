@@ -127,6 +127,8 @@ $(_ARGUMENT_DOCSTRING)
     compatible with [Optimization.jl](https://docs.sciml.ai/Optimization/stable/), so long
     as it supports callbacks. Defaults to
     [`Optim.LBFGS`](@extref Optim `algo/lbfgs`)`(; m=history_length, linesearch=LineSearches.HagerZhang(), alphaguess=LineSearches.InitialHagerZhang())`.
+- `save_trace::Bool=true`: Whether to save the optimization trace and intermediate distributions.
+    If `false`, `fit_distributions` will be empty.
 - `adtype::`[`ADTypes.AbstractADType`](@extref): Specifies which automatic
     differentiation backend should be used to compute the gradient, if `fun` does not
     already specify the gradient. Default is
@@ -187,6 +189,7 @@ function pathfinder(
     ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
     ndraws::Int=ndraws_elbo,
     input=prob,
+    save_trace::Bool=true,
     kwargs...,
 )
     logp(x) = -prob.f.f(x, nothing)
@@ -199,6 +202,7 @@ function pathfinder(
             optimizer,
             progress_id,
             ndraws_elbo,
+            save_trace,
             kwargs...,
         )
     end
