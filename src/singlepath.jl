@@ -127,8 +127,10 @@ $(_ARGUMENT_DOCSTRING)
     compatible with [Optimization.jl](https://docs.sciml.ai/Optimization/stable/), so long
     as it supports callbacks. Defaults to
     [`Optim.LBFGS`](@extref Optim `algo/lbfgs`)`(; m=history_length, linesearch=LineSearches.HagerZhang(), alphaguess=LineSearches.InitialHagerZhang())`.
-- `save_trace::Bool=true`: Whether to save the optimization trace and intermediate distributions.
-    If `false`, `fit_distributions` will be empty.
+- `save_trace::Bool=true`: Whether to save the optimization trace and intermediate
+    distributions. For very high-dimensional problems, setting this to `false` can
+    substantially reduce memory usage. If `false`, the traces of `fit_distributions`,
+    optimization positions/gradients, and draws used to estimate the ELBO are not stored.
 - `adtype::`[`ADTypes.AbstractADType`](@extref): Specifies which automatic
     differentiation backend should be used to compute the gradient, if `fun` does not
     already specify the gradient. Default is
