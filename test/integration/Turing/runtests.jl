@@ -15,7 +15,7 @@ Random.seed!(0)
     α ~ Normal()
     β ~ filldist(Normal(), size(x, 2))
     y_hat = muladd(x, β, α)
-    y .~ Normal.(y_hat, σ)
+    y ~ product_distribution(Normal.(y_hat, σ))
     return (; y)
 end
 

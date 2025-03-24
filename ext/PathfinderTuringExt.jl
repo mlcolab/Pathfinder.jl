@@ -27,7 +27,7 @@ function create_log_density_problem(model::DynamicPPL.Model)
     # create an unconstrained VarInfo
     varinfo = DynamicPPL.link(DynamicPPL.VarInfo(model), model)
     # DefaultContext ensures that the log-density adjustment is computed
-    prob = DynamicPPL.LogDensityFunction(varinfo, model, DynamicPPL.DefaultContext())
+    prob = DynamicPPL.LogDensityFunction(model, varinfo, DynamicPPL.DefaultContext())
     return prob
 end
 
