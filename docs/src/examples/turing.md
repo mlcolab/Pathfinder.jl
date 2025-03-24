@@ -12,7 +12,7 @@ Random.seed!(39)
     α ~ Normal()
     β ~ Normal()
     σ ~ truncated(Normal(); lower=0)
-    y .~ Normal.(α .+ β .* x, σ)
+    y ~ product_distribution(Normal.(α .+ β .* x, σ))
 end
 x = 0:0.1:10
 y = @. 2x + 1.5 + randn() * 0.2
