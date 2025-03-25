@@ -11,8 +11,8 @@ point are returned.
 The 2nd returned value is the number of BFGS updates to the inverse Hessian matrices that
 were rejected due to keeping the inverse Hessian positive definite.
 """
-function fit_mvnormals(θs, ∇logpθs; kwargs...)
-    Σs, num_bfgs_updates_rejected = lbfgs_inverse_hessians(θs, ∇logpθs; kwargs...)
+function fit_mvnormals(θs, logpθs, ∇logpθs; kwargs...)
+    Σs, num_bfgs_updates_rejected = lbfgs_inverse_hessians(θs, logpθs, ∇logpθs; kwargs...)
     trans = Transducers.MapSplat() do Σ, ∇logpθ, θ
         μ = muladd(Σ, ∇logpθ, θ)
         return Distributions.MvNormal(μ, Σ)
@@ -22,16 +22,21 @@ function fit_mvnormals(θs, ∇logpθs; kwargs...)
     return dists, num_bfgs_updates_rejected
 end
 
-# faster than computing `logpdf` and `rand` independently
-function rand_and_logpdf(rng, dist::Distributions.MvNormal, ndraws)
-    μ = dist.μ
-    Σ = dist.Σ
-    N = length(μ)
+function fit_mvnormal(state::LBFGSState)
+    Σ = state.invH
+    μ = muladd(Σ, state.∇fx, state.x)
+    return Distributions.MvNormal(μ, Σ)
+end
+
+# faster than computing `logpdf` and `rand!` independently
+function rand_and_logpdf!(rng, dist::Distributions.MvNormal, x)
+    (; μ, Σ) = dist
+    N = length(dist)
 
     # draw points
-    u = Random.randn!(rng, similar(μ, N, ndraws))
-    unormsq = vec(sum(abs2, u; dims=1))
-    x = PDMats.unwhiten!(u, Σ, u)
+    Random.randn!(rng, x)
+    unormsq = vec(sum(abs2, x; dims=1))
+    PDMats.unwhiten!(x, Σ, x)
     x .+= μ
 
     # compute log density at each point

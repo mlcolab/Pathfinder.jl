@@ -171,4 +171,30 @@ using Transducers
         @test_throws ArgumentError pathfinder(build_logdensityproblem(logp, 0, 2))
         pathfinder(build_logdensityproblem(logp, 3, 2))
     end
+
+    @testset "save_trace" begin
+        dim = 5
+        Σ = rand_pd_mat(Float64, 5)
+        logp(x) = -dot(x, Σ, x) / 2
+        ℓ = build_logdensityproblem(logp, dim, 2)
+
+        # Test with save_trace=true (default)
+        rng = MersenneTwister(42)
+        result_with_trace = pathfinder(ℓ; rng, dim, save_trace=true)
+        @test !isempty(result_with_trace.fit_distributions)
+        @test length(result_with_trace.fit_distributions) ==
+            length(result_with_trace.optim_trace.points) ==
+            length(result_with_trace.optim_trace.gradients)
+
+        # Test with save_trace=false
+        rng = MersenneTwister(42)
+        result_without_trace = pathfinder(ℓ; rng, dim, save_trace=false)
+        @test isempty(result_without_trace.fit_distributions)
+        @test isempty(result_without_trace.optim_trace.points)
+        @test isempty(result_without_trace.optim_trace.gradients)
+
+        # check consistency
+        @test result_without_trace.fit_iteration == result_with_trace.fit_iteration
+        @test result_without_trace.fit_distribution ≈ result_with_trace.fit_distribution
+    end
 end
