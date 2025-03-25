@@ -344,7 +344,7 @@ struct UniformSampler{T<:Real}
 end
 
 function (s::UniformSampler)(rng::Random.AbstractRNG, point)
-    scale = s.scale
+    (; scale) = s
     @. point = rand(rng) * 2scale - scale
     return point
 end

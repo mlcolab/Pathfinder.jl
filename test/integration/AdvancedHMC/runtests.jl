@@ -21,11 +21,8 @@ struct RegressionProblem{X,Y}
 end
 
 function (prob::RegressionProblem)(θ)
-    σ = θ.σ
-    α = θ.α
-    β = θ.β
-    x = prob.x
-    y = prob.y
+    (; σ, α, β) = θ
+    (; x, y) = prob
     lp = normlogpdf(σ) + logtwo
     lp += normlogpdf(α)
     lp += sum(normlogpdf, β)

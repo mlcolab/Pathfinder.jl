@@ -33,7 +33,7 @@ using Transducers
             @test result.rng === rng
             @test result.optimizer ===
                 Pathfinder.default_optimizer(Pathfinder.DEFAULT_HISTORY_LENGTH)
-            fit_distribution = result.fit_distribution
+            (; fit_distribution) = result
             @test fit_distribution isa MvNormal
             @test fit_distribution.μ ≈ zeros(dim) atol = 1e-6
             @test fit_distribution.Σ isa Pathfinder.WoodburyPDMat

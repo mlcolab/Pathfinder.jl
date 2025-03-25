@@ -47,7 +47,7 @@ function Base.show(io::IO, ::MIME"text/plain", result::MultiPathfinderResult)
     println(io, "Multi-path Pathfinder result")
     println(io, "  runs: $(length(result.pathfinder_results))")
     print(io, "  draws: $(size(result.draws, 2))")
-    psis_result = result.psis_result
+    (; psis_result) = result
     if psis_result !== nothing
         println(io)
         k = psis_result.pareto_shape
