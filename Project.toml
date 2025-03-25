@@ -39,7 +39,7 @@ PathfinderTuringExt = ["Accessors", "DynamicPPL", "MCMCChains", "Turing"]
 [compat]
 ADTypes = "0.2.5, 1"
 Accessors = "0.1.12"
-Compat = "3.47.0, 4.10.0"
+Compat = "4.10.0"
 Distributions = "0.25.87"
 DynamicHMC = "3.4.0"
 DynamicPPL = "0.25.2, 0.27, 0.28, 0.29, 0.30, 0.31, 0.32, 0.33, 0.34, 0.35"
