@@ -158,7 +158,7 @@ function pathfinder(fun; input=fun, adtype::ADTypes.AbstractADType=default_ad(),
 end
 function pathfinder(
     optim_fun::SciMLBase.OptimizationFunction;
-    rng=Random.GLOBAL_RNG,
+    rng=Random.default_rng(),
     init=nothing,
     dim::Int=-1,
     init_scale=2,
@@ -181,7 +181,7 @@ function pathfinder(
 end
 function pathfinder(
     prob::SciMLBase.OptimizationProblem;
-    rng::Random.AbstractRNG=Random.GLOBAL_RNG,
+    rng::Random.AbstractRNG=Random.default_rng(),
     history_length::Int=DEFAULT_HISTORY_LENGTH,
     optimizer=default_optimizer(history_length),
     ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
@@ -344,7 +344,7 @@ struct UniformSampler{T<:Real}
 end
 
 function (s::UniformSampler)(rng::Random.AbstractRNG, point)
-    scale = s.scale
+    (; scale) = s
     @. point = rand(rng) * 2scale - scale
     return point
 end

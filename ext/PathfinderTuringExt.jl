@@ -1,18 +1,10 @@
 module PathfinderTuringExt
 
-if isdefined(Base, :get_extension)
-    using Accessors: Accessors
-    using DynamicPPL: DynamicPPL
-    using MCMCChains: MCMCChains
-    using Pathfinder: Pathfinder
-    using Turing: Turing
-else  # using Requires
-    using ..Accessors: Accessors
-    using ..DynamicPPL: DynamicPPL
-    using ..MCMCChains: MCMCChains
-    using ..Pathfinder: Pathfinder
-    using ..Turing: Turing
-end
+using Accessors: Accessors
+using DynamicPPL: DynamicPPL
+using MCMCChains: MCMCChains
+using Pathfinder: Pathfinder
+using Turing: Turing
 
 """
     create_log_density_problem(model::DynamicPPL.Model)

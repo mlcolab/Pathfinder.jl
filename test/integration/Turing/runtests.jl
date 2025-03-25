@@ -1,11 +1,7 @@
 using LogDensityProblems, LinearAlgebra, Pathfinder, Random, Test, Turing
 using Turing.Bijectors
 
-if isdefined(Base, :get_extension)
-    PathfinderTuringExt = Base.get_extension(Pathfinder, :PathfinderTuringExt)
-else
-    PathfinderTuringExt = Pathfinder.PathfinderTuringExt
-end
+PathfinderTuringExt = Base.get_extension(Pathfinder, :PathfinderTuringExt)
 
 Random.seed!(0)
 

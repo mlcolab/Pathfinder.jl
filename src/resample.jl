@@ -8,7 +8,7 @@ If `log_weights` is provided, perform Pareto smoothed importance resampling.
 """
 function resample(rng, x, log_ratios, ndraws)
     psis_result = PSIS.psis(log_ratios)
-    weights = psis_result.weights
+    (; weights) = psis_result
     pweights = StatsBase.ProbabilityWeights(weights, one(eltype(weights)))
     return StatsBase.sample(rng, x, pweights, ndraws; replace=true), psis_result
 end
