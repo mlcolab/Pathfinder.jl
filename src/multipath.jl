@@ -99,7 +99,7 @@ $(_ARGUMENT_DOCSTRING)
 - `ndraws_per_run::Int`: The number of draws to take for each component before resampling.
     Defaults to a number such that `ndraws_per_run * nruns > ndraws`.
 - `importance::Bool=true`: Perform Pareto smoothed importance resampling of draws.
-- `rng::AbstractRNG=Random.GLOBAL_RNG`: Pseudorandom number generator. It is recommended to
+- `rng::AbstractRNG=Random.default_rng()`: Pseudorandom number generator. It is recommended to
     use a parallelization-friendly PRNG like the default PRNG on Julia 1.7 and up.
 - `executor::Transducers.Executor`: Transducers.jl executor that determines if and how to
     run the single-path runs in parallel, defaulting to
@@ -138,7 +138,7 @@ function multipathfinder(
     nruns::Int=init === nothing ? -1 : length(init),
     ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
     ndraws_per_run::Int=max(ndraws_elbo, cld(ndraws, max(nruns, 1))),
-    rng::Random.AbstractRNG=Random.GLOBAL_RNG,
+    rng::Random.AbstractRNG=Random.default_rng(),
     history_length::Int=DEFAULT_HISTORY_LENGTH,
     optimizer=default_optimizer(history_length),
     executor::Transducers.Executor=Transducers.SequentialEx(),

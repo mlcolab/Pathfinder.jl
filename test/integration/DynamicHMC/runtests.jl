@@ -81,7 +81,7 @@ end
         trans = as((σ=asℝ₊, α=asℝ, β=as(Array, size(X, 2))))
         P = TransformedLogDensity(trans, prob)
         ∇P = ADgradient(:ForwardDiff, P)
-        rng = Random.GLOBAL_RNG
+        rng = Random.default_rng()
 
         result_hmc1 = mcmc_with_warmup(rng, ∇P, ndraws; reporter=NoProgressReport())
 
