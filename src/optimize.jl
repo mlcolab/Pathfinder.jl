@@ -1,31 +1,16 @@
-function _log_density_problem_order(log_density_problem)
-    return _log_density_problem_order(LogDensityProblems.capabilities(log_density_problem))
-end
-function _log_density_problem_order(
-    ::LogDensityProblems.LogDensityOrder{order}
-) where {order}
-    return order
-end
-
-function _as_log_density_problem_with_derivatives(log_density_problem, adtype)
-    order = _log_density_problem_order(log_density_problem)
-    iszero(order) || return log_density_problem
-    return LogDensityProblemsAD.ADgradient(adtype, log_density_problem)
-end
-
 function build_optim_function(
-    _log_density_problem,
+    log_density_problem,
     adtype::ADTypes.AbstractADType,
-    ::LogDensityProblems.LogDensityOrder;
-)
-    log_density_problem = _as_log_density_problem_with_derivatives(
-        _log_density_problem, adtype
-    )
-    order = _log_density_problem_order(log_density_problem)
-    function grad(res, x, _...)
-        _, ∇fx = LogDensityProblems.logdensity_and_gradient(log_density_problem, x)
-        @. res = -∇fx
-        return res
+    ::LogDensityProblems.LogDensityOrder{order};
+) where {order}
+    if order > 0
+        function grad(res, x, _...)
+            _, ∇fx = LogDensityProblems.logdensity_and_gradient(log_density_problem, x)
+            @. res = -∇fx
+            return res
+        end
+    else
+        grad = nothing
     end
     if order > 1
         function hess(res, x, _...)

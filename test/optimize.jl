@@ -34,8 +34,10 @@ using Test
             @test fun.adtype === adtype
             @test fun.f(x, nothing) ≈ -ℓ.logp(x)
             ∇fx = similar(x)
-            fun.grad(∇fx, x, nothing)
-            @test ∇fx ≈ -ℓ_reference.∇logp(x)
+            if max_order > 0
+                fun.grad(∇fx, x, nothing)
+                @test ∇fx ≈ -ℓ_reference.∇logp(x)
+            end
             if max_order > 1
                 H = similar(x, n, n)
                 fun.hess(H, x, nothing)
