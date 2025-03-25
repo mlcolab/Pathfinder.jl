@@ -5,6 +5,7 @@ version = "0.9.14"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Folds = "41a02a25-b8f0-4f67-bc48-60067656b558"
 IrrationalConstants = "92d709cd-6900-40b7-9082-c6be49f344b6"
@@ -38,6 +39,7 @@ PathfinderTuringExt = ["Accessors", "DynamicPPL", "MCMCChains", "Turing"]
 [compat]
 ADTypes = "0.2.5, 1"
 Accessors = "0.1.12"
+Compat = "3.47.0, 4.10.0"
 Distributions = "0.25.87"
 DynamicHMC = "3.4.0"
 DynamicPPL = "0.25.2, 0.27, 0.28, 0.29, 0.30, 0.31, 0.32, 0.33, 0.34, 0.35"
