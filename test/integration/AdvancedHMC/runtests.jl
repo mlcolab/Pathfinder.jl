@@ -100,10 +100,23 @@ end
         @test AdvancedHMC.neg_energy(h, r, θ) ≈ AdvancedHMC.neg_energy(h_dense, r, θ)
         @test AdvancedHMC.∂H∂r(h, r) ≈ AdvancedHMC.∂H∂r(h_dense, r)
         kinetic = AdvancedHMC.GaussianKinetic()
-        compare_estimates(
-            as_draw_array([rand(metric, kinetic) for _ in 1:10_000]),
-            as_draw_array([rand(metric_dense, kinetic) for _ in 1:10_000]),
-        )
+        rng = Random.default_rng()
+        if isdefined(AdvancedHMC, :rand_momentum)  # AHMC ≥ v0.7.0
+            compare_estimates(
+                as_draw_array([
+                    AdvancedHMC.rand_momentum(rng, metric, kinetic, θ) for _ in 1:10_000
+                ]),
+                as_draw_array([
+                    AdvancedHMC.rand_momentum(rng, metric_dense, kinetic, θ) for
+                    _ in 1:10_000
+                ]),
+            )
+        else
+            compare_estimates(
+                as_draw_array([rand(rng, metric, kinetic) for _ in 1:10_000]),
+                as_draw_array([rand(rng, metric_dense, kinetic) for _ in 1:10_000]),
+            )
+        end
     end
 
     @testset "sample" begin

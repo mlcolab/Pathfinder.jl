@@ -63,13 +63,30 @@ function Base.show(io::IO, metric::RankUpdateEuclideanMetric)
     return nothing
 end
 
-function Base.rand(
-    rng::AbstractRNG, metric::RankUpdateEuclideanMetric{T}, ::AdvancedHMC.GaussianKinetic
+function _rand_momentum(
+    rng::Random.AbstractRNG, metric::RankUpdateEuclideanMetric{T}
 ) where {T}
     M⁻¹ = metric.M⁻¹
     r = randn(rng, T, size(metric)...)
     invunwhiten!(r, M⁻¹, r)
     return r
+end
+
+@static if isdefined(AdvancedHMC, :rand_momentum)  # AHMC ≥ v0.7.0
+    function AdvancedHMC.rand_momentum(
+        rng::Random.AbstractRNG,
+        metric::RankUpdateEuclideanMetric,
+        ::AdvancedHMC.GaussianKinetic,
+        ::AbstractVector,
+    )
+        return _rand_momentum(rng, metric)
+    end
+else
+    function Base.rand(
+        rng::AbstractRNG, metric::RankUpdateEuclideanMetric, ::AdvancedHMC.GaussianKinetic
+    )
+        return _rand_momentum(rng, metric)
+    end
 end
 
 function AdvancedHMC.neg_energy(
