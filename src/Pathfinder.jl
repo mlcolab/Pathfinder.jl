@@ -1,7 +1,6 @@
 module Pathfinder
 
 using ADTypes: ADTypes
-using Compat: Compat
 using Distributions: Distributions
 using Folds: Folds
 using IrrationalConstants: log2π
@@ -20,11 +19,9 @@ using Statistics: Statistics
 using StatsBase: StatsBase
 using Transducers: Transducers
 
+# Declare and export the public API
 export PathfinderResult, MultiPathfinderResult
 export pathfinder, multipathfinder
-
-# Declare the public API
-Compat.@compat public pathfinder, multipathfinder, PathfinderResult, MultiPathfinderResult
 
 const DEFAULT_HISTORY_LENGTH = 6
 const DEFAULT_LINE_SEARCH = LineSearches.HagerZhang()
