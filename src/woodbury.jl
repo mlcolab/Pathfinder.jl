@@ -414,7 +414,6 @@ function PDMats.whiten!(
     return ldiv!(pdfactorize(W).L, r)
 end
 
-# similar to unwhiten!(r, inv(W), x) but without the inversion
 function PDMats.invunwhiten!(
     r::AbstractVecOrMat{T}, W::WoodburyPDMat, x::AbstractVecOrMat{T}
 ) where {T}
