@@ -358,10 +358,10 @@ end
             _, R = factorize(W)
 
             x = randn(T, n)
-            @test @inferred(Pathfinder.invunwhiten!(similar(x), W, x)) ≈ R \ x
+            @test @inferred(invunwhiten!(similar(x), W, x)) ≈ R \ x
 
             X = randn(T, n, 100)
-            @test @inferred(Pathfinder.invunwhiten!(similar(X), W, X)) ≈ R \ X
+            @test @inferred(invunwhiten!(similar(X), W, X)) ≈ R \ X
         end
 
         @testset "quad/quad!" begin
@@ -369,7 +369,7 @@ end
             @test @inferred(quad(W, x)) ≈ dot(x, Wmat, x)
 
             u = randn(T, n)
-            @test quad(W, Pathfinder.invunwhiten!(similar(u), W, u)) ≈ dot(u, u)
+            @test quad(W, invunwhiten!(similar(u), W, u)) ≈ dot(u, u)
 
             X = randn(T, n, 10)
             quad_W_X = @inferred quad(W, X)
@@ -379,7 +379,7 @@ end
             @test quad_W_X2 ≈ quad_W_X
 
             U = randn(T, n, 10)
-            @test quad(W, Pathfinder.invunwhiten!(similar(U), W, U)) ≈
+            @test quad(W, invunwhiten!(similar(U), W, U)) ≈
                 vec(sum(abs2, U; dims=1))
         end
 

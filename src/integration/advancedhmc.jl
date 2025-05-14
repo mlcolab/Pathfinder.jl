@@ -70,7 +70,7 @@ function Base.rand(
 ) where {T}
     M⁻¹ = metric.M⁻¹
     r = randn(rng, T, size(metric)...)
-    invunwhiten!(r, M⁻¹, r)
+    PDMats.invunwhiten!(r, M⁻¹, r)
     return r
 end
 
