@@ -415,7 +415,7 @@ function PDMats.whiten!(
 end
 
 # similar to unwhiten!(r, inv(W), x) but without the inversion
-function invunwhiten!(
+function PDMats.invunwhiten!(
     r::AbstractVecOrMat{T}, W::WoodburyPDMat, x::AbstractVecOrMat{T}
 ) where {T}
     copyto!(r, x)
