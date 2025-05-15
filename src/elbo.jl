@@ -1,27 +1,33 @@
-function maximize_elbo(rng, logp, dists, ndraws, executor)
+function maximize_elbo(rng, logp, dists, ndraws, executor; save_samples::Bool=true)
+    dim = isempty(dists) ? 0 : length(first(dists))
+    Tdraws = Matrix{eltype(eltype(dists))}
+    draws = save_samples ? nothing : Tdraws(undef, (dim, ndraws))
     EE = Core.Compiler.return_type(
-        elbo_and_samples, Tuple{typeof(rng),typeof(logp),eltype(dists),Int}
+        elbo_and_samples!, Tuple{Tdraws,typeof(rng),typeof(logp),eltype(dists)}
     )
     estimates = similar(dists, EE)
     isempty(estimates) && return 0, estimates
+
     Folds.map!(estimates, dists, executor) do dist
-        return elbo_and_samples(rng, logp, dist, ndraws)
+        _draws = draws === nothing ? Tdraws(undef, (dim, ndraws)) : draws
+        return elbo_and_samples!(_draws, rng, logp, dist; save_samples)
     end
     _, iteration_opt = _findmax(estimates |> Transducers.Map(est -> est.value))
     return iteration_opt, estimates
 end
 
-function elbo_and_samples(rng, logp, dist, ndraws)
-    ϕ, logqϕ = rand_and_logpdf(rng, dist, ndraws)
+function elbo_and_samples!(ϕ, rng, logp, dist; save_samples::Bool=true)
+    ϕ, logqϕ = rand_and_logpdf!(rng, dist, ϕ)
     logpϕ = similar(logqϕ)
     logpϕ .= logp.(eachcol(ϕ))
     logr = logpϕ - logqϕ
     elbo = Statistics.mean(logr)
     elbo_se = sqrt(Statistics.var(logr) / length(logr))
-    return ELBOEstimate(elbo, elbo_se, ϕ, logpϕ, logqϕ, logr)
+    ϕ_save = save_samples ? copyto!(similar(ϕ), ϕ) : similar(ϕ, map(zero, size(ϕ)))
+    return ELBOEstimate(elbo, elbo_se, ϕ_save, logpϕ, logqϕ, logr)
 end
 
-struct ELBOEstimate{T,P,L<:AbstractVector{T}}
+struct ELBOEstimate{T,P<:AbstractMatrix{T},L<:Vector{T}}
     value::T
     std_err::T
     draws::P
