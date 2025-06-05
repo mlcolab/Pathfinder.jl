@@ -20,7 +20,7 @@ Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
 [compat]
 ADTypes = "0.2.5, 1"
-AdvancedHMC = "0.6"
+AdvancedHMC = "0.6, 0.8"
 Documenter = "1"
 DocumenterCitations = "1.2"
 DocumenterInterLinks = "1"
