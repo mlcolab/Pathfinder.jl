@@ -19,7 +19,7 @@ TransformedLogDensities = "f9bc47f6-f3f8-4f3b-ab21-f8bc73906f26"
 Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
 [compat]
-AdvancedHMC = "0.6, 0.7"
+AdvancedHMC = "0.6, 0.7, 0.8"
 Documenter = "1"
 DocumenterCitations = "1.2.1"
 DocumenterInterLinks = "1"
