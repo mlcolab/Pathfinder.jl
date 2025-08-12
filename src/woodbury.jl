@@ -183,7 +183,7 @@ Let ``U^\\mathrm{T} U = A`` be the Cholesky decomposition of ``A``, and let
 with the Cholesky decomposition ``V^\\mathrm{T} V = C``. Then, ``W = R^\\mathrm{T} R``,
 where
 ```math
-R = \\begin{pmatrix} U & 0 \\\\ 0 & I \\end{pmatrix} Q^\\mathrm{T} V.
+R = \\begin{pmatrix} V & 0 \\\\ 0 & I \\end{pmatrix} Q^\\mathrm{T} U.
 ```
 
 The positive definite requirement is equivalent to the requirement that both ``A`` and
@@ -414,8 +414,7 @@ function PDMats.whiten!(
     return ldiv!(pdfactorize(W).L, r)
 end
 
-# similar to unwhiten!(r, inv(W), x) but without the inversion
-function invunwhiten!(
+function PDMats.invunwhiten!(
     r::AbstractVecOrMat{T}, W::WoodburyPDMat, x::AbstractVecOrMat{T}
 ) where {T}
     copyto!(r, x)

@@ -58,11 +58,8 @@ function RegressionProblem(x, J, y)
 end
 
 function (prob::RegressionProblem)(θ)
-    σ = θ.σ
-    α = θ.α
-    β = θ.β
-    z = prob.z
-    y = prob.y
+    (; σ, α, β) = θ
+    (; z, y) = prob
     lp = normlogpdf(σ) + logtwo
     lp += normlogpdf(α)
     lp += sum(normlogpdf, β)
@@ -113,7 +110,7 @@ Here we just need to pass one of the draws as the initial point `q`:
 
 ```@example 1
 result_dhmc1 = mcmc_with_warmup(
-    Random.GLOBAL_RNG,
+    Random.default_rng(),
     ∇P,
     ndraws;
     initialization=(; q=init_params),
@@ -127,7 +124,7 @@ To start with Pathfinder's inverse metric estimate, we just need to initialize a
 
 ```@example 1
 result_dhmc2 = mcmc_with_warmup(
-    Random.GLOBAL_RNG,
+    Random.default_rng(),
     ∇P,
     ndraws;
     initialization=(; q=init_params, κ=GaussianKineticEnergy(inv_metric)),
@@ -145,7 +142,7 @@ To turn off metric adaptation entirely and use Pathfinder's estimate, we just se
 
 ```@example 1
 result_dhmc3 = mcmc_with_warmup(
-    Random.GLOBAL_RNG,
+    Random.default_rng(),
     ∇P,
     ndraws;
     initialization=(; q=init_params, κ=GaussianKineticEnergy(inv_metric)),

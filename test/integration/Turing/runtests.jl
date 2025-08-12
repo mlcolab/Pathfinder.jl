@@ -1,11 +1,8 @@
-using LogDensityProblems, LinearAlgebra, Pathfinder, Random, Test, Turing
+using ADTypes,
+    LogDensityProblems, LinearAlgebra, Pathfinder, Random, ReverseDiff, Test, Turing
 using Turing.Bijectors
 
-if isdefined(Base, :get_extension)
-    PathfinderTuringExt = Base.get_extension(Pathfinder, :PathfinderTuringExt)
-else
-    PathfinderTuringExt = Pathfinder.PathfinderTuringExt
-end
+PathfinderTuringExt = Base.get_extension(Pathfinder, :PathfinderTuringExt)
 
 Random.seed!(0)
 
@@ -15,7 +12,7 @@ Random.seed!(0)
     α ~ Normal()
     β ~ filldist(Normal(), size(x, 2))
     y_hat = muladd(x, β, α)
-    y .~ Normal.(y_hat, σ)
+    y ~ product_distribution(Normal.(y_hat, σ))
     return (; y)
 end
 
@@ -37,15 +34,22 @@ end
     @testset "create_log_density_problem" begin
         @testset for bijector in [elementwise(log), Bijectors.SimplexBijector()],
             udist in [Normal(1, 2), Normal(3, 4)],
-            n in [1, 5]
+            n in [1, 5],
+            adtype in [ADTypes.AutoForwardDiff, ADTypes.AutoReverseDiff]
 
             binv = Bijectors.inverse(bijector)
             dist = filldist(udist, n)
             dist_trans = Bijectors.transformed(dist, binv)
             model = transformed_model(dist, binv)
-            prob = PathfinderTuringExt.create_log_density_problem(model)
-            @test LogDensityProblems.capabilities(prob) isa
-                LogDensityProblems.LogDensityOrder{0}
+            prob = PathfinderTuringExt.create_log_density_problem(model, adtype())
+            if hasfield(typeof(prob), :adtype)
+                @test LogDensityProblems.capabilities(prob) isa
+                    LogDensityProblems.LogDensityOrder{1}
+                @test typeof(prob.adtype) <: adtype
+            else  # DynamicPPL < 0.35.0
+                @test LogDensityProblems.capabilities(prob) isa
+                    LogDensityProblems.LogDensityOrder{0}
+            end
             x = rand(n, 10)
             # after applying the Jacobian correction, the log-density of the model should
             # be the same as the log-density of the distribution in unconstrained space
@@ -107,17 +111,23 @@ end
     @testset "transformed IID normal solved exactly" begin
         @testset for bijector in [elementwise(log), Bijectors.SimplexBijector()],
             udist in [Normal(1, 2), Normal(3, 4)],
-            n in [1, 5]
+            n in [1, 5],
+            adtype in [ADTypes.AutoForwardDiff, ADTypes.AutoReverseDiff]
 
             binv = Bijectors.inverse(bijector)
             dist = filldist(udist, n)
             model = transformed_model(dist, binv)
-            result = pathfinder(model)
+            result = pathfinder(model; adtype=adtype())
+            @test typeof(result.optim_solution.cache.f.adtype) <: adtype
             @test mean(result.fit_distribution) ≈ fill(mean(udist), n)
             @test cov(result.fit_distribution) ≈ Diagonal(fill(var(udist), n))
 
-            result = multipathfinder(model, 100; nruns=4, ndraws_per_run=100)
+            result = multipathfinder(
+                model, 100; nruns=4, ndraws_per_run=100, adtype=adtype()
+            )
             @test result isa MultiPathfinderResult
+            @test typeof(result.pathfinder_results[1].optim_solution.cache.f.adtype) <:
+                adtype
             for r in result.pathfinder_results
                 @test mean(r.fit_distribution) ≈ fill(mean(udist), n)
                 @test cov(r.fit_distribution) ≈ Diagonal(fill(var(udist), n))
