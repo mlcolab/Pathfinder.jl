@@ -58,7 +58,9 @@ function Base.show(io::IO, metric::RankUpdateEuclideanMetric)
 end
 
 function Base.rand(
-    rng::Random.AbstractRNG, metric::RankUpdateEuclideanMetric{T}, ::AdvancedHMC.GaussianKinetic
+    rng::Random.AbstractRNG,
+    metric::RankUpdateEuclideanMetric{T},
+    ::AdvancedHMC.GaussianKinetic,
 ) where {T}
     M⁻¹ = metric.M⁻¹
     r = Random.randn(rng, T, size(metric)...)
