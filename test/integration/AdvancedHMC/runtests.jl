@@ -67,8 +67,9 @@ end
     ∂ℓπ∂θ(x) = -x
 
     @testset "RankUpdateEuclideanMetric" begin
-        metric = Pathfinder.RankUpdateEuclideanMetric(M⁻¹)
+        metric = @test_deprecated Pathfinder.RankUpdateEuclideanMetric(M⁻¹)
         @test metric.M⁻¹ === M⁻¹
+        @test metric === AdvancedHMC.AbstractMetric(M⁻¹)
         metric_dense = AdvancedHMC.DenseEuclideanMetric(Symmetric(Matrix(M⁻¹)))
         h = AdvancedHMC.Hamiltonian(metric, ℓπ, ∂ℓπ∂θ)
         h_dense = AdvancedHMC.Hamiltonian(metric_dense, ℓπ, ∂ℓπ∂θ)
@@ -163,7 +164,7 @@ end
         end
 
         @testset "Initial point and final metric" begin
-            metric = Pathfinder.RankUpdateEuclideanMetric(result_pf.fit_distribution.Σ)
+            metric = AdvancedHMC.AbstractMetric(result_pf.fit_distribution.Σ)
             hamiltonian = Hamiltonian(metric, ∇P)
             ϵ = find_good_stepsize(hamiltonian, θ₀)
             integrator = Leapfrog(ϵ)

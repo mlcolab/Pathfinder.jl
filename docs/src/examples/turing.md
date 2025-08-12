@@ -56,7 +56,7 @@ We can use Pathfinder's estimate of the metric and only perform enough warm-up t
 
 ```@example 1
 inv_metric = result_multi.pathfinder_results[1].fit_distribution.Σ
-metric = Pathfinder.RankUpdateEuclideanMetric(inv_metric)
+metric = AdvancedHMC.AbstractMetric(inv_metric)
 kernel = HMCKernel(Trajectory{MultinomialTS}(Leapfrog(0.0), GeneralisedNoUTurn()))
 adaptor = StepSizeAdaptor(0.8, 1.0)  # adapt only the step size
 nuts = AdvancedHMC.HMCSampler(kernel, metric, adaptor)

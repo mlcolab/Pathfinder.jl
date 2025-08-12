@@ -12,27 +12,20 @@ using Random: Random
 A Gaussian Euclidean metric (mass matrix) whose inverse is constructed by
 rank-updates.
 
-# Constructors
-
-    RankUpdateEuclideanMetric(n::Int)
-    RankUpdateEuclideanMetric(M⁻¹::Pathfinder.WoodburyPDMat)
-
-Construct a Gaussian Euclidean metric of size `(n, n)` with inverse of `M⁻¹`.
+To construct this metric, call `AdvancedHMC.AbstractMetric` with a
+[`Pathfinder.WoodburyPDMat`](@ref) as the argument.
 
 # Example
 
 ```jldoctest
 julia> using LinearAlgebra, Pathfinder, AdvancedHMC
 
-julia> Pathfinder.RankUpdateEuclideanMetric(3)
-RankUpdateEuclideanMetric(diag=[1.0, 1.0, 1.0])
-
 julia> W = Pathfinder.WoodburyPDMat(Diagonal([0.1, 0.2]), [0.7 0.2]', Diagonal([0.3]))
 2×2 Pathfinder.WoodburyPDMat{Float64, Diagonal{Float64, Vector{Float64}}, Adjoint{Float64, Matrix{Float64}}, Diagonal{Float64, Vector{Float64}}, Diagonal{Float64, Vector{Float64}}, QRCompactWYQ{Float64, Matrix{Float64}, Matrix{Float64}}, UpperTriangular{Float64, Matrix{Float64}}}:
  0.247  0.042
  0.042  0.212
 
-julia> Pathfinder.RankUpdateEuclideanMetric(W)
+julia> AdvancedHMC.AbstractMetric(W)
 RankUpdateEuclideanMetric(diag=[0.247, 0.21200000000000002])
 
 See also: The AdvancedHMC [metric](@extref AdvancedHMC hamiltonian_mm) documentation.
@@ -45,9 +38,13 @@ struct RankUpdateEuclideanMetric{T,M<:Pathfinder.WoodburyPDMat{T,<:Diagonal{T}}}
     M⁻¹::M
 end
 
-function Pathfinder.RankUpdateEuclideanMetric(M⁻¹::Pathfinder.WoodburyPDMat)
-    return RankUpdateEuclideanMetric(M⁻¹)
-end
+Base.@deprecate(
+    Pathfinder.RankUpdateEuclideanMetric(M⁻¹::Pathfinder.WoodburyPDMat),
+    AdvancedHMC.AbstractMetric(M⁻¹),
+    false,
+)
+
+AdvancedHMC.AbstractMetric(M⁻¹::Pathfinder.WoodburyPDMat) = RankUpdateEuclideanMetric(M⁻¹)
 
 AdvancedHMC.renew(::RankUpdateEuclideanMetric, M⁻¹) = RankUpdateEuclideanMetric(M⁻¹)
 
