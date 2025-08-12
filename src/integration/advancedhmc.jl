@@ -4,8 +4,8 @@ using .Random
 """
     RankUpdateEuclideanMetric{T,M} <: AdvancedHMC.AbstractMetric
 
-A Gaussian Euclidean [metric](@extref AdvancedHMC Hamiltonian-mass-matrix-(metric)) whose
-inverse is constructed by rank-updates.
+A Gaussian Euclidean metric (mass matrix) whose inverse is constructed by
+rank-updates.
 
 # Constructors
 
@@ -29,6 +29,8 @@ julia> W = Pathfinder.WoodburyPDMat(Diagonal([0.1, 0.2]), [0.7 0.2]', Diagonal([
 
 julia> Pathfinder.RankUpdateEuclideanMetric(W)
 RankUpdateEuclideanMetric(diag=[0.247, 0.21200000000000002])
+
+See also: The AdvancedHMC [metric](@extref AdvancedHMC hamiltonian_mm) documentation.
 ```
 """
 RankUpdateEuclideanMetric
@@ -68,7 +70,7 @@ function Base.rand(
 ) where {T}
     M⁻¹ = metric.M⁻¹
     r = randn(rng, T, size(metric)...)
-    invunwhiten!(r, M⁻¹, r)
+    PDMats.invunwhiten!(r, M⁻¹, r)
     return r
 end
 
