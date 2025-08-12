@@ -209,7 +209,7 @@ samples_ahmc2, stats_ahmc2 = sample(
 
 ### Use Pathfinder's metric estimate for sampling
 
-To use Pathfinder's metric with no metric adaptation, we need to use Pathfinder's own [`RankUpdateEuclideanMetric`](@ref) type, which just wraps our inverse metric estimate for use with AdvancedHMC.
+To use Pathfinder's metric with no metric adaptation, we need to use Pathfinder's own [`RankUpdateEuclideanMetric`](@ref PathfinderAdvancedHMCExt.RankUpdateEuclideanMetric) type, which just wraps our inverse metric estimate for use with AdvancedHMC.
 We can construct this metric by calling `AdvancedHMC.AbstractMetric`:
 
 ```@example 1

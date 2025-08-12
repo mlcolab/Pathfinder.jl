@@ -1,7 +1,10 @@
+using AdvancedHMC  # triggering loading of PathfinderAdvancedHMCExt
 using Pathfinder
 using Documenter
 using DocumenterCitations
 using DocumenterInterLinks
+
+PathfinderAdvancedHMCExt = Base.get_extension(Pathfinder, :PathfinderAdvancedHMCExt)
 
 DocMeta.setdocmeta!(Pathfinder, :DocTestSetup, :(using Pathfinder); recursive=true)
 
@@ -37,7 +40,7 @@ links = InterLinks(
 )
 
 makedocs(;
-    modules=[Pathfinder],
+    modules=[Pathfinder, PathfinderAdvancedHMCExt],
     authors="Seth Axen <seth.axen@gmail.com> and contributors",
     repo=Remotes.GitHub("mlcolab", "Pathfinder.jl"),
     sitename="Pathfinder.jl",
