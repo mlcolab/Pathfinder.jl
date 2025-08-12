@@ -1,5 +1,10 @@
-using .AdvancedHMC: AdvancedHMC
-using .Random
+module PathfinderAdvancedHMCExt
+
+using AdvancedHMC: AdvancedHMC
+using Pathfinder: Pathfinder
+using LinearAlgebra: Diagonal, diag
+using PDMats: PDMats
+using Random: Random
 
 """
     RankUpdateEuclideanMetric{T,M} <: AdvancedHMC.AbstractMetric
@@ -35,24 +40,14 @@ See also: The AdvancedHMC [metric](@extref AdvancedHMC hamiltonian_mm) documenta
 """
 RankUpdateEuclideanMetric
 
-struct RankUpdateEuclideanMetric{T,M<:WoodburyPDMat{T,<:Diagonal{T}}} <:
+struct RankUpdateEuclideanMetric{T,M<:Pathfinder.WoodburyPDMat{T,<:Diagonal{T}}} <:
        AdvancedHMC.AbstractMetric
     M⁻¹::M
 end
 
-function RankUpdateEuclideanMetric(n::Int)
-    M⁻¹ = WoodburyPDMat(Diagonal(ones(n)), zeros(n, 0), zeros(0, 0))
+function Pathfinder.RankUpdateEuclideanMetric(M⁻¹::Pathfinder.WoodburyPDMat)
     return RankUpdateEuclideanMetric(M⁻¹)
 end
-function RankUpdateEuclideanMetric(::Type{T}, D::Int) where {T}
-    return RankUpdateEuclideanMetric(
-        WoodburyPDMat(Diagonal(ones(T, D)), Matrix{T}(undef, D, 0), Matrix{T}(undef, 0, 0))
-    )
-end
-function RankUpdateEuclideanMetric(::Type{T}, sz::Tuple{Int}) where {T}
-    return RankUpdateEuclideanMetric(T, first(sz))
-end
-RankUpdateEuclideanMetric(sz::Tuple{Int}) = RankUpdateEuclideanMetric(Float64, sz)
 
 AdvancedHMC.renew(::RankUpdateEuclideanMetric, M⁻¹) = RankUpdateEuclideanMetric(M⁻¹)
 
@@ -66,10 +61,10 @@ function Base.show(io::IO, metric::RankUpdateEuclideanMetric)
 end
 
 function Base.rand(
-    rng::AbstractRNG, metric::RankUpdateEuclideanMetric{T}, ::AdvancedHMC.GaussianKinetic
+    rng::Random.AbstractRNG, metric::RankUpdateEuclideanMetric{T}, ::AdvancedHMC.GaussianKinetic
 ) where {T}
     M⁻¹ = metric.M⁻¹
-    r = randn(rng, T, size(metric)...)
+    r = Random.randn(rng, T, size(metric)...)
     PDMats.invunwhiten!(r, M⁻¹, r)
     return r
 end
@@ -88,3 +83,5 @@ function AdvancedHMC.∂H∂r(
 )
     return h.metric.M⁻¹ * r
 end
+
+end  # module
