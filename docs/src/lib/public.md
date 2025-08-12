@@ -27,3 +27,11 @@ Order = [:function, :type]
 Public = true
 Private = false
 ```
+
+```@meta
+CurrentModule = Base.get_extension(Pathfinder, :PathfinderAdvancedHMCExt)
+```
+
+```@docs
+RankUpdateEuclideanMetric
+```

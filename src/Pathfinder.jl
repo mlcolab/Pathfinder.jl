@@ -13,7 +13,6 @@ using PDMats: PDMats
 using ProgressLogging: ProgressLogging
 using PSIS: PSIS
 using Random
-using Requires: Requires
 using SciMLBase: SciMLBase
 using Statistics: Statistics
 using StatsBase: StatsBase
@@ -39,6 +38,8 @@ end
 # We depend on Optim, and Optim depends on ForwardDiff, so we can offer it as a default.
 default_ad() = ADTypes.AutoForwardDiff()
 
+function RankUpdateEuclideanMetric end
+
 include("transducers.jl")
 include("woodbury.jl")
 include("optimize.jl")
@@ -48,11 +49,5 @@ include("elbo.jl")
 include("resample.jl")
 include("singlepath.jl")
 include("multipath.jl")
-
-function __init__()
-    Requires.@require AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d" begin
-        include("integration/advancedhmc.jl")
-    end
-end
 
 end
