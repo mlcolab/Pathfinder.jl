@@ -45,7 +45,7 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
-      - uses: julia-actions/julia-downgrade-compat@v1
+      - uses: julia-actions/julia-downgrade-compat@v2
         with:
           skip: LinearAlgebra,Random,Statistics
         if: ${{ matrix.downgrade }}
@@ -65,20 +65,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - version: '1'
-            downgrade: false
-          - version: 'lts'
-            downgrade: true
+        version: ['1']
+        downgrade: [false, true]
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
+        id: setup-julia
         with:
           version: ${{ matrix.version }}
-      - uses: julia-actions/julia-downgrade-compat@v1.1
+      - uses: julia-actions/julia-downgrade-compat@v2
         with:
           skip: LinearAlgebra,Pathfinder,Random,Statistics,Folds,Transducers
           projects: ., docs
+          julia_version: ${{ steps['setup-julia'].outputs.julia-version }}
         if: matrix.downgrade
         name: Downgrade dependencies to oldest supported versions
       - uses: julia-actions/julia-buildpkg@v1
