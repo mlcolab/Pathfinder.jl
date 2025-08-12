@@ -20,16 +20,13 @@ To construct this metric, call `AdvancedHMC.AbstractMetric` with a
 ```jldoctest
 julia> using LinearAlgebra, Pathfinder, AdvancedHMC
 
-julia> W = Pathfinder.WoodburyPDMat(Diagonal([0.1, 0.2]), [0.7 0.2]', Diagonal([0.3]))
-2×2 Pathfinder.WoodburyPDMat{Float64, Diagonal{Float64, Vector{Float64}}, Adjoint{Float64, Matrix{Float64}}, Diagonal{Float64, Vector{Float64}}, Diagonal{Float64, Vector{Float64}}, QRCompactWYQ{Float64, Matrix{Float64}, Matrix{Float64}}, UpperTriangular{Float64, Matrix{Float64}}}:
- 0.247  0.042
- 0.042  0.212
+julia> W = Pathfinder.WoodburyPDMat(Diagonal([0.1, 0.2]), [0.7 0.2]', Diagonal([0.3]));
 
 julia> AdvancedHMC.AbstractMetric(W)
 RankUpdateEuclideanMetric(diag=[0.247, 0.21200000000000002])
+```
 
 See also: The AdvancedHMC [metric](@extref AdvancedHMC hamiltonian_mm) documentation.
-```
 """
 RankUpdateEuclideanMetric
 
