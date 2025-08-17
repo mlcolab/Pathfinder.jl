@@ -14,16 +14,10 @@ rand_pd_diag_mat(rng, T, n) = Diagonal(rand(rng, T, n))
 rand_pd_diag_mat(T, n) = rand_pd_diag_mat(Random.default_rng(), T, n)
 
 # defined for testing purposes
-function Pathfinder.rand_and_logpdf(rng, dist, ndraws)
-    x = rand(rng, dist, ndraws)
-    if x isa AbstractVector
-        xmat = permutedims(x)
-        logpx = Distributions.logpdf.(dist, x)
-    else
-        xmat = x
-        logpx = Distributions.logpdf(dist, x)
-    end
-    return xmat, logpx
+function Pathfinder.rand_and_logpdf!(rng, dist, x)
+    rand!(rng, dist, x)
+    logpx = Distributions.logpdf.(dist, vec(x))
+    return x, logpx
 end
 
 # banana distribution

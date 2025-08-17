@@ -127,6 +127,8 @@ $(_ARGUMENT_DOCSTRING)
     compatible with [Optimization.jl](https://docs.sciml.ai/Optimization/stable/), so long
     as it supports callbacks. Defaults to
     [`Optim.LBFGS`](@extref Optim `algo/lbfgs`)`(; m=history_length, linesearch=LineSearches.HagerZhang(), alphaguess=LineSearches.InitialHagerZhang())`.
+- `save_trace::Bool=true`: Whether to save the optimization trace and intermediate distributions.
+    If `false`, `fit_distributions` will be empty.
 - `adtype::`[`ADTypes.AbstractADType`](@extref): Specifies which automatic
     differentiation backend should be used to compute the gradient, if `fun` does not
     already specify the gradient. Default is
@@ -187,6 +189,7 @@ function pathfinder(
     ndraws_elbo::Int=DEFAULT_NDRAWS_ELBO,
     ndraws::Int=ndraws_elbo,
     input=prob,
+    save_trace::Bool=true,
     kwargs...,
 )
     logp(x) = -prob.f.f(x, nothing)
@@ -199,6 +202,7 @@ function pathfinder(
             optimizer,
             progress_id,
             ndraws_elbo,
+            save_trace,
             kwargs...,
         )
     end
@@ -208,9 +212,10 @@ function pathfinder(
         optim_prob,
         optim_solution,
         optim_trace,
-        fit_distributions,
-        fit_iteration,
         elbo_estimates,
+        fit_distributions,
+        fit_distribution,
+        fit_iteration,
         num_bfgs_updates_rejected,
     ) = path_result
 
@@ -227,10 +232,8 @@ function pathfinder(
         @warn "$num_bfgs_updates_rejected ($(perc)%) updates to the inverse Hessian estimate were rejected to keep it positive definite."
     end
 
-    fit_distribution = fit_distributions[fit_iteration + 1]
-
     # reuse existing draws; draw additional ones if necessary
-    draws = if ndraws_elbo_actual == 0
+    draws = if ndraws_elbo_actual == 0 || !save_trace
         rand(rng, fit_distribution, ndraws)
     elseif ndraws_elbo_actual < ndraws
         hcat(elbo_estimate_opt.draws, rand(rng, fit_distribution, ndraws - ndraws_elbo_actual))
@@ -294,24 +297,17 @@ function _pathfinder(
     logp;
     history_length::Int=DEFAULT_HISTORY_LENGTH,
     optimizer=default_optimizer(history_length),
-    ndraws_elbo=DEFAULT_NDRAWS_ELBO,
     executor::Transducers.Executor=Transducers.SequentialEx(),
     kwargs...,
 )
     # compute trajectory
-    optim_solution, optim_trace = optimize_with_trace(prob, optimizer; kwargs...)
+    (; optim_solution, optim_trace, fit_distributions, elbo_estimates, fit_distribution, fit_iteration) = optimize_with_trace(
+        prob, optimizer; rng, history_length, kwargs...
+    )
+    num_bfgs_updates_rejected = 0
     L = length(optim_trace) - 1
     success = L > 0
 
-    # fit mv-normal distributions to trajectory
-    fit_distributions, num_bfgs_updates_rejected = fit_mvnormals(
-        optim_trace.points, optim_trace.gradients; history_length
-    )
-
-    # find ELBO-maximizing distribution
-    fit_iteration, elbo_estimates = @views maximize_elbo(
-        rng, logp, fit_distributions[(begin + 1):end], ndraws_elbo, executor
-    )
     if isempty(elbo_estimates)
         success = false
     else
@@ -323,9 +319,10 @@ function _pathfinder(
         success,
         optim_solution,
         optim_trace,
-        fit_distributions,
-        fit_iteration,
         elbo_estimates,
+        fit_distributions,
+        fit_distribution,
+        fit_iteration,
         num_bfgs_updates_rejected,
     )
 end
