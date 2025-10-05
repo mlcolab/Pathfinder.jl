@@ -22,9 +22,13 @@ function create_log_density_problem(model::DynamicPPL.Model, adtype::ADTypes.Abs
     # DefaultContext ensures that the log-density adjustment is computed
     @static if pkgversion(DynamicPPL) < v"0.35.0"
         prob = DynamicPPL.LogDensityFunction(model, varinfo, DynamicPPL.DefaultContext())
-    else
+    elseif pkgversion(DynamicPPL) < v"0.37.0"
         prob = DynamicPPL.LogDensityFunction(
             model, varinfo, DynamicPPL.DefaultContext(); adtype
+        )
+    else
+        prob = DynamicPPL.LogDensityFunction(
+            model, DynamicPPL.getlogjoint_internal, varinfo; adtype
         )
     end
     return prob
@@ -47,7 +51,10 @@ function draws_to_chains(model::DynamicPPL.Model, draws::AbstractMatrix)
     draw_con_varinfos = map(eachcol(draws)) do draw
         # this re-evaluates the model but allows supporting dynamic bijectors
         # https://github.com/TuringLang/Turing.jl/issues/2195
-        return Turing.Inference.getparams(model, DynamicPPL.unflatten(varinfo, draw))
+        draw_varinfo = DynamicPPL.unflatten(varinfo, draw)
+        unlinked_params = DynamicPPL.values_as_in_model(model, true, draw_varinfo)
+        iters = map(DynamicPPL.varname_and_value_leaves, keys(unlinked_params), values(unlinked_params))
+        return mapreduce(collect, vcat, iters)
     end
     param_con_names = map(first, first(draw_con_varinfos))
     draws_con = reduce(
