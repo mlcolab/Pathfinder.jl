@@ -1,7 +1,7 @@
 name = "Pathfinder"
 uuid = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
-authors = ["Seth Axen <seth.axen@gmail.com> and contributors"]
 version = "0.9.22"
+authors = ["Seth Axen <seth.axen@gmail.com> and contributors"]
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
@@ -13,6 +13,7 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LogDensityProblems = "6fdf6af0-433a-55f7-b3ed-c6c6e0b8df7c"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
+OptimizationBase = "bca83a33-5cc9-4baa-983d-23429ab6bcbb"
 OptimizationOptimJL = "36348300-93cb-4f02-beb5-3c3902f8871e"
 PDMats = "90014a1f-27ba-587c-ab20-58faa44d9150"
 PSIS = "ce719bf2-d5d0-4fb9-925d-10a81b42ad04"
@@ -49,6 +50,7 @@ LogDensityProblems = "2.1.0"
 MCMCChains = "6.0.2, 7"
 Optim = "1.7.2"
 Optimization = "3.21, 4, 5"
+OptimizationBase = "0.0.5, 1, 2, 3"
 OptimizationNLopt = "0.2, 0.3"
 OptimizationOptimJL = "0.2.1, 0.3, 0.4"
 PDMats = "0.11.35"
