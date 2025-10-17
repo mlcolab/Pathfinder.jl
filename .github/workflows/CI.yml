@@ -84,6 +84,13 @@ jobs:
         if: matrix.downgrade
         name: Downgrade dependencies to oldest supported versions
       - uses: julia-actions/julia-buildpkg@v1
+      - name: Instantiate docs project
+        run: |
+          using Pkg; Pkg.instantiate()
+        shell: julia --color=yes {0}
+        env:
+          JULIA_PROJECT: docs
+        if: ${{ matrix.downgrade }}
       - uses: julia-actions/julia-docdeploy@v1
         with:
           install-package: ${{ !matrix.downgrade }}
