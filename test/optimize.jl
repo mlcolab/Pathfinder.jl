@@ -74,18 +74,11 @@ end
                 return g
             end
             should_fail =
-                cbfail || (
-                    fail_on_nonfinite && (
-                        isnan(fval) ||
-                        fval == Inf ||
-                        !isfinite(gval)
-                    )
-                )
+                cbfail ||
+                (fail_on_nonfinite && (isnan(fval) || fval == Inf || !isfinite(gval)))
 
             callback = (state, args...) -> cbfail
-            state = OptimizationState(;
-                iter=0, u=x, objective=-fval, grad=-∇f(x)
-            )
+            state = OptimizationState(; iter=0, u=x, objective=(-fval), grad=(-∇f(x)))
             cb_args = (state, -fval)
 
             cb = Pathfinder.OptimizationCallback(
