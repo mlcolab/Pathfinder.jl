@@ -85,6 +85,8 @@ jobs:
         name: Downgrade dependencies to oldest supported versions
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-docdeploy@v1
+        with:
+          install-package: ${{ !matrix.downgrade }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ matrix.version == '1' && secrets.DOCUMENTER_KEY || '' }}
