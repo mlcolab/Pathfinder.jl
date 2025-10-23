@@ -33,6 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
+        id: setup-julia
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
@@ -60,7 +61,16 @@ jobs:
           version: ${{ matrix.version }}
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
+      - name: Instantiate docs project
+        run: |
+          using Pkg; Pkg.instantiate()
+        shell: julia --color=yes {0}
+        env:
+          JULIA_PROJECT: docs
+        if: ${{ matrix.downgrade }}
       - uses: julia-actions/julia-docdeploy@v1
+        with:
+          install-package: ${{ !matrix.downgrade }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ matrix.version == '1' && secrets.DOCUMENTER_KEY || '' }}
