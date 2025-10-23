@@ -11,14 +11,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [1]
+        version: ['1']
         package:
           - DynamicHMC
           - AdvancedHMC
           - Turing
         downgrade:
-          - true
           - false
+        include:
+          - version: '1.11'
+            package: DynamicHMC
+            downgrade: true
+          - version: '1.11'
+            package: AdvancedHMC
+            downgrade: true
+          - version: '1.11'
+            package: Turing
+            downgrade: true
     steps:
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
