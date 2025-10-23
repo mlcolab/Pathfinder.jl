@@ -60,10 +60,10 @@ end
     @testset "draws_to_chains" begin
         draws = randn(3, 100)
         model = dynamic_const_model()
-        chns = PathfinderTuringExt.draws_to_chains(model, draws)
+        chns = PathfinderTuringExt.draws_to_chains(MCMCChains.Chains, model, draws)
         @test chns isa MCMCChains.Chains
-        @test size(chns) == (100, 3, 1)
-        @test names(chns) == [:lb, :ub, :x]
+        @test size(chns) == (100, 6, 1)
+        @test issetequal(names(chns), [:lb, :ub, :x, :logprior, :loglikelihood, :lp])
         @test all(0 .< chns[:, :lb, 1] .< 0.1)
         @test all(0.11 .< chns[:, :ub, 1] .< 0.2)
         @test all(chns[:, :lb, 1] .< chns[:, :x, 1] .< chns[:, :ub, 1])
@@ -75,14 +75,16 @@ end
             y = sin.(x) .+ randn.() .* 0.2 .+ x
             X = [x x .^ 2 x .^ 3]
             model = regression_model(X, y)
-            expected_param_names = Symbol.(["α", "β[1]", "β[2]", "β[3]", "σ"])
+            expected_param_names = Symbol.([
+                "α", "β[1]", "β[2]", "β[3]", "σ", "loglikelihood", "logprior", "lp"
+            ])
 
             result = pathfinder(model; ndraws=10_000)
             @test result isa PathfinderResult
             @test result.input === model
             @test size(result.draws) == (5, 10_000)
             @test result.draws_transformed isa MCMCChains.Chains
-            @test sort(names(result.draws_transformed)) == expected_param_names
+            @test issetequal(names(result.draws_transformed), expected_param_names)
             @test all(>(0), result.draws_transformed[:σ])
             init_params = Vector(result.draws_transformed.value[1, :, 1])
             chns = sample(model, NUTS(), 10_000; init_params, progress=false)
@@ -94,7 +96,7 @@ end
             @test size(result.draws) == (5, 10_000)
             @test length(result.pathfinder_results) == 4
             @test result.draws_transformed isa MCMCChains.Chains
-            @test sort(names(result.draws_transformed)) == expected_param_names
+            @test issetequal(names(result.draws_transformed), expected_param_names)
             @test all(>(0), result.draws_transformed[:σ])
             init_params = Vector(result.draws_transformed.value[1, :, 1])
             chns = sample(model, NUTS(), 10_000; init_params, progress=false)
