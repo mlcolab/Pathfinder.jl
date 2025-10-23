@@ -19,13 +19,13 @@ jobs:
         downgrade:
           - false
         include:
-          - version: '1.10'
+          - version: '1.11'
             package: DynamicHMC
             downgrade: true
-          - version: '1.10'
+          - version: '1.11'
             package: AdvancedHMC
             downgrade: true
-          - version: '1.10'
+          - version: '1.11'
             package: Turing
             downgrade: true
     steps:
