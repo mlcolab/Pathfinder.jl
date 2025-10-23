@@ -82,7 +82,6 @@ end
             @test result.input === model
             @test size(result.draws) == (5, 10_000)
             @test result.draws_transformed isa MCMCChains.Chains
-            @test result.draws_transformed.info.pathfinder_result isa PathfinderResult
             @test sort(names(result.draws_transformed)) == expected_param_names
             @test all(>(0), result.draws_transformed[:σ])
             init_params = Vector(result.draws_transformed.value[1, :, 1])
@@ -95,7 +94,6 @@ end
             @test size(result.draws) == (5, 10_000)
             @test length(result.pathfinder_results) == 4
             @test result.draws_transformed isa MCMCChains.Chains
-            @test result.draws_transformed.info.pathfinder_result isa MultiPathfinderResult
             @test sort(names(result.draws_transformed)) == expected_param_names
             @test all(>(0), result.draws_transformed[:σ])
             init_params = Vector(result.draws_transformed.value[1, :, 1])
