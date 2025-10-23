@@ -1,5 +1,6 @@
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+DynamicPPL = "366bfd00-2699-11ea-058f-f148b4cae6d8"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LogDensityProblems = "6fdf6af0-433a-55f7-b3ed-c6c6e0b8df7c"
 Pathfinder = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
@@ -10,3 +11,10 @@ Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
 [compat]
 ReverseDiff = "1.15"
+
+[sources.DynamicPPL]
+url = "https://github.com/TuringLang/DynamicPPL.jl"
+rev = "py/varinfos_to_chains"
+
+[sources.Pathfinder]
+path = "../../.."

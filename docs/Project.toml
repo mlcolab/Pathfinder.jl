@@ -29,3 +29,10 @@ StatsFuns = "1"
 StatsPlots = "0.15.2"
 TransformVariables = "0.6.2, 0.7, 0.8"
 TransformedLogDensities = "1.0.2"
+
+[sources.DynamicPPL]
+url = "https://github.com/TuringLang/DynamicPPL.jl"
+rev = "py/varinfos_to_chains"
+
+[sources.Pathfinder]
+path = ".."
