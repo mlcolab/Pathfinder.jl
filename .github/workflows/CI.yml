@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 jobs:
   test:
-    name: ${{ matrix.downgrade && 'Downgrade / ' || '' }}Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ matrix.num_threads }} threads - ${{ github.event_name }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ matrix.num_threads }} threads - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -30,14 +30,6 @@ jobs:
         num_threads:
           - 1
           - 2
-        downgrade:
-          - false
-        include:
-          - version: '1'
-            os: ubuntu-latest
-            arch: x64
-            num_threads: 2
-            downgrade: true
     steps:
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
@@ -45,11 +37,6 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
-      - uses: julia-actions/julia-downgrade-compat@v2
-        with:
-          skip: LinearAlgebra,Random,Statistics
-        if: ${{ matrix.downgrade }}
-        name: Downgrade dependencies to oldest supported versions
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
         env:
@@ -60,32 +47,21 @@ jobs:
           files: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
   docs:
-    name: ${{ matrix.downgrade && 'Downgrade / ' || '' }}Documentation - Julia ${{ matrix.version }}
+    name: Documentation - Julia ${{ matrix.version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         version: ['1']
-        downgrade: [false, true]
     steps:
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
-        id: setup-julia
         with:
           version: ${{ matrix.version }}
       - uses: julia-actions/cache@v2
-      - uses: julia-actions/julia-downgrade-compat@v2
-        with:
-          skip: LinearAlgebra,Pathfinder,Random,Statistics,Folds,Transducers
-          projects: ., docs
-          julia_version: ${{ steps['setup-julia'].outputs.julia-version }}
-        if: matrix.downgrade
-        name: Downgrade dependencies to oldest supported versions
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-docdeploy@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ matrix.version == '1' && secrets.DOCUMENTER_KEY || '' }}
           GKSwstype: "100" # https://discourse.julialang.org/t/generation-of-documentation-fails-qt-qpa-xcb-could-not-connect-to-display/60988
-          # don't deploy if it's a downgrade build
-          DEPLOY_DOCS: ${{ !matrix.downgrade }}
