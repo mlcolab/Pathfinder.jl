@@ -1,12 +1,18 @@
 using ADTypes
 using LinearAlgebra
 using Optim
+using Optimization
 using OptimizationNLopt
 using Pathfinder
 using ProgressLogging
 using ReverseDiff
 using SciMLBase
 using Test
+if isdefined(Optimization, :OptimizationState)
+    using Optimization: OptimizationState
+else
+    using OptimizationBase: OptimizationState
+end
 
 @testset "build_optim_function" begin
     n = 20
@@ -68,18 +74,11 @@ end
                 return g
             end
             should_fail =
-                cbfail || (
-                    fail_on_nonfinite && (
-                        isnan(fval) ||
-                        fval == Inf ||
-                        (isdefined(Optimization, :OptimizationState) && !isfinite(gval))
-                    )
-                )
+                cbfail ||
+                (fail_on_nonfinite && (isnan(fval) || fval == Inf || !isfinite(gval)))
 
             callback = (state, args...) -> cbfail
-            state = Optimization.OptimizationState(;
-                iter=0, u=x, objective=-fval, grad=-∇f(x)
-            )
+            state = OptimizationState(; iter=0, u=x, objective=(-fval), grad=(-∇f(x)))
             cb_args = (state, -fval)
 
             cb = Pathfinder.OptimizationCallback(

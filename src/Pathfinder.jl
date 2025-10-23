@@ -19,6 +19,12 @@ using Statistics: Statistics
 using StatsBase: StatsBase
 using Transducers: Transducers
 
+if isdefined(Optimization, :OptimizationState)
+    using Optimization: OptimizationState
+else
+    using OptimizationBase: OptimizationState
+end
+
 # Declare and export the public API
 export PathfinderResult, MultiPathfinderResult
 export pathfinder, multipathfinder
