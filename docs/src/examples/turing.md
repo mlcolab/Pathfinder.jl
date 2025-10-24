@@ -42,6 +42,10 @@ When passed a [`DynamicPPL.Model`](@extref), Pathfinder also gives access to the
 result_multi.draws_transformed
 ```
 
+```@example 1
+describe(result_multi.draws_transformed)
+```
+
 We can also use these posterior draws to initialize MCMC sampling.
 
 ```@example 1
@@ -56,6 +60,9 @@ initial_params = InitFromParams.(
 ```@example 1
 chns = sample(model, Turing.NUTS(), MCMCThreads(), 1_000, n_chains; initial_params, progress=false)
 ```
+
+```@example 1
+describe(chns)
 ```
 
 We can use Pathfinder's estimate of the metric and only perform enough warm-up to tune the step size.
@@ -79,6 +86,10 @@ chns = sample(
     initial_params,
     progress=false,
 )[n_adapts + 1:end, :, :]  # drop warm-up draws
+```
+
+```@example 1
+describe(chns)
 ```
 
 See [Initializing HMC with Pathfinder](@ref) for further examples.
