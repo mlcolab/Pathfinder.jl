@@ -5,7 +5,7 @@ This tutorial demonstrates how [Turing](https://turinglang.org/) can be used wit
 We'll demonstrate with a regression example.
 
 ```@example 1
-using AdvancedHMC, Pathfinder, Random, Turing
+using AdvancedHMC, DynamicPPL, Pathfinder, Random, Turing
 Random.seed!(39)
 
 @model function regress(x, y)
@@ -45,11 +45,17 @@ result_multi.draws_transformed
 We can also use these posterior draws to initialize MCMC sampling.
 
 ```@example 1
-init_params = collect.(eachrow(result_multi.draws_transformed.value[1:n_chains, :, 1]))
+initial_params = InitFromParams.(
+    DynamicPPL.from_chains(
+        OrderedDict{VarName,Any},
+        result_multi.draws_transformed[1:n_chains, :, :],
+    )
+)
 ```
 
 ```@example 1
-chns = sample(model, Turing.NUTS(), MCMCThreads(), 1_000, n_chains; init_params, progress=false)
+chns = sample(model, Turing.NUTS(), MCMCThreads(), 1_000, n_chains; initial_params, progress=false)
+```
 ```
 
 We can use Pathfinder's estimate of the metric and only perform enough warm-up to tune the step size.
@@ -70,7 +76,7 @@ chns = sample(
     n_draws + n_adapts,
     n_chains;
     n_adapts,
-    init_params,
+    initial_params,
     progress=false,
 )[n_adapts + 1:end, :, :]  # drop warm-up draws
 ```
