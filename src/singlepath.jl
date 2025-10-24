@@ -137,6 +137,8 @@ $(_ARGUMENT_DOCSTRING)
 - `fail_on_nonfinite::Bool=true`: If `true`, optimization fails if the log-density is a
     `NaN` or `Inf` or if the gradient is ever non-finite. If `nretries > 0`, then
     optimization will be retried after reinitialization.
+- `chain_type::Type=MCMCChains.Chains`: If `fun` is a [`DynamicPPL.Model`](@extref), the
+    type of the chains object to be stored in the `draws_transformed` field of the result.
 - `kwargs...` : Remaining keywords are forwarded to
     [`Optimization.solve`](@extref Optimization `CommonSolve.solve`).
 
