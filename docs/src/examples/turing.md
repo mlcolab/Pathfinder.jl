@@ -16,12 +16,10 @@ Random.seed!(39)
 end
 x = 0:0.1:10
 y = @. 2x + 1.5 + randn() * 0.2
-nothing # hide
-```
 
-```@example 1
 model = regress(collect(x), y)
 n_chains = 8
+nothing # hide
 ```
 
 For convenience, [`pathfinder`](@ref) and [`multipathfinder`](@ref) can take Turing models as inputs and produce [`MCMCChains.Chains`](@extref) objects as outputs.
@@ -39,29 +37,23 @@ Here, the Pareto shape diagnostic indicates that it is likely safe to use these 
 When passed a [`DynamicPPL.Model`](@extref), Pathfinder also gives access to the posterior draws in a familiar `Chains` object.
 
 ```@example 1
-result_multi.draws_transformed
-```
-
-```@example 1
 describe(result_multi.draws_transformed)
 ```
 
 We can also use these posterior draws to initialize MCMC sampling.
 
 ```@example 1
-initial_params = InitFromParams.(
+initial_params = InitFromParams.(vec(
     DynamicPPL.from_chains(
         OrderedDict{VarName,Any},
         result_multi.draws_transformed[1:n_chains, :, :],
     )
-)
+))
+nothing # hide
 ```
 
 ```@example 1
 chns = sample(model, Turing.NUTS(), MCMCThreads(), 1_000, n_chains; initial_params, progress=false)
-```
-
-```@example 1
 describe(chns)
 ```
 
@@ -86,9 +78,6 @@ chns = sample(
     initial_params,
     progress=false,
 )[n_adapts + 1:end, :, :]  # drop warm-up draws
-```
-
-```@example 1
 describe(chns)
 ```
 
