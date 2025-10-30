@@ -1,7 +1,13 @@
 using Pathfinder
+using AdvancedHMC  # load RankEuclideanMetric using Requires
 using Documenter
 using DocumenterCitations
 using DocumenterInterLinks
+using DynamicPPL # bring type names into scope for @docs signatures
+using Turing # load extension
+
+# Expose extension module in Main so @docs blocks can reference it
+const PathfinderTuringExt = Base.get_extension(Pathfinder, :PathfinderTuringExt)
 
 DocMeta.setdocmeta!(Pathfinder, :DocTestSetup, :(using Pathfinder); recursive=true)
 
@@ -37,7 +43,10 @@ links = InterLinks(
 )
 
 makedocs(;
-    modules=[Pathfinder],
+    modules=[
+        Pathfinder,
+        Base.get_extension(Pathfinder, :PathfinderTuringExt),
+    ],
     authors="Seth Axen <seth.axen@gmail.com> and contributors",
     repo=Remotes.GitHub("mlcolab", "Pathfinder.jl"),
     sitename="Pathfinder.jl",
@@ -57,6 +66,7 @@ makedocs(;
         "References" => "references.md",
     ],
     plugins=[bib, links],
+    warnonly=[:missing_docs],
 )
 
 if get(ENV, "DEPLOY_DOCS", "true") == "true"
