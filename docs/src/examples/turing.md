@@ -16,40 +16,47 @@ Random.seed!(39)
 end
 x = 0:0.1:10
 y = @. 2x + 1.5 + randn() * 0.2
+
+model = regress(collect(x), y)
+n_chains = 8
 nothing # hide
 ```
 
-```@example 1
-model = regress(collect(x), y)
-n_chains = 8
-```
-
-For convenience, [`pathfinder`](@ref) and [`multipathfinder`](@ref) can take Turing models as inputs and produce [`MCMCChains.Chains`](@extref) objects as outputs.
+For convenience, [`pathfinder`](@ref) and [`multipathfinder`](@ref) can take [Turing models](@extref `DynamicPPL.Model`) as inputs and produce [`MCMCChains.Chains`](@extref) objects as outputs.
+To access this, we run Pathfinder normally; the `Chains` representation of the draws is stored in `draws_transformed`.
 
 ```@example 1
 result_single = pathfinder(model; ndraws=1_000)
 ```
 
 ```@example 1
+result_single.draws_transformed
+```
+
+```@example 1
 result_multi = multipathfinder(model, 1_000; nruns=n_chains)
 ```
 
-Here, the Pareto shape diagnostic indicates that it is likely safe to use these draws to compute posterior estimates.
-
-When passed a [`DynamicPPL.Model`](@extref), Pathfinder also gives access to the posterior draws in a familiar `Chains` object.
+The Pareto shape diagnostic indicates that it is likely safe to use these draws to compute posterior estimates.
 
 ```@example 1
-result_multi.draws_transformed
+chns_pf = result_multi.draws_transformed
+describe(chns_pf)
 ```
 
-We can also use these posterior draws to initialize MCMC sampling.
+We can also use these draws to initialize MCMC sampling.
 
 ```@example 1
-init_params = collect.(eachrow(result_multi.draws_transformed.value[1:n_chains, :, 1]))
+var_names = names(chns_pf, :parameters)
+initial_params = [
+    InitFromParams(get(chns_pf[i, :, :], var_names; flatten=true)) for i in 1:n_chains
+]
+nothing # hide
 ```
 
 ```@example 1
-chns = sample(model, Turing.NUTS(), MCMCThreads(), 1_000, n_chains; init_params, progress=false)
+chns = sample(model, Turing.NUTS(), MCMCThreads(), 1_000, n_chains; initial_params, progress=false)
+describe(chns)
 ```
 
 We can use Pathfinder's estimate of the metric and only perform enough warm-up to tune the step size.
@@ -70,9 +77,10 @@ chns = sample(
     n_draws + n_adapts,
     n_chains;
     n_adapts,
-    init_params,
+    initial_params,
     progress=false,
 )[n_adapts + 1:end, :, :]  # drop warm-up draws
+describe(chns)
 ```
 
 See [Initializing HMC with Pathfinder](@ref) for further examples.
