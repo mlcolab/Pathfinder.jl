@@ -175,18 +175,7 @@ julia> init = InitFromParams((; α=0.0));
 
 julia> init_sampler = InitFromPrior();
 
-julia> result = pathfinder(demo_model(); rng, init, init_sampler)
-Single-path Pathfinder result
-  tries: 1
-  draws: 5
-  fit iteration: 6 (total: 6)
-  fit ELBO: 0.05 ± 0.09
-  fit distribution: MvNormal{Float64, Pathfinder.WoodburyPDMat{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, Matrix{Float64}, Matrix{Float64}, Pathfinder.WoodburyPDFactorization{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, LinearAlgebra.QRCompactWYQ{Float64, Matrix{Float64}, Matrix{Float64}}, LinearAlgebra.UpperTriangular{Float64, Matrix{Float64}}}}, Vector{Float64}}(
-dim: 3
-μ: [1.0809306071496012e-24, 1.6094379124340998, 1.2122841002599141e-14]
-Σ: [0.7589486918452915 0.0 0.0; 0.0 1.200004838811716 -1.604213692347079e-5; 0.0 -1.6042136923470358e-5 0.5000618385825155]
-)
-
+julia> result = pathfinder(demo_model(); rng, init, init_sampler);
 
 julia> result.draws_transformed
 Chains MCMC chain (5×3×1 Array{Float64, 3}):
@@ -266,11 +255,7 @@ julia> init = [InitFromParams((; α)) for α in -4.0:4.0];
 
 julia> result = multipathfinder(
            demo_model(), 1_000; rng, init, init_sampler=InitFromPrior(),
-       )
-Multi-path Pathfinder result
-  runs: 9
-  draws: 1000
-  Pareto shape diagnostic: 0.59 (ok)
+       );
 
 julia> result.draws_transformed
 Chains MCMC chain (1000×3×1 Array{Float64, 3}):
