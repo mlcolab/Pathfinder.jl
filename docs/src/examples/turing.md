@@ -47,11 +47,15 @@ describe(chns_pf)
 We can also use these draws to initialize MCMC sampling.
 
 ```@example 1
-init_params = collect.(eachrow(result_multi.draws_transformed.value[1:n_chains, :, 1]))
+var_names = names(chns_pf, :parameters)
+initial_params = [
+    InitFromParams(get(chns_pf[i, :, :], var_names; flatten=true)) for i in 1:n_chains
+]
+nothing # hide
 ```
 
 ```@example 1
-chns = sample(model, Turing.NUTS(), MCMCThreads(), 1_000, n_chains; init_params, progress=false)
+chns = sample(model, Turing.NUTS(), MCMCThreads(), 1_000, n_chains; initial_params, progress=false)
 describe(chns)
 ```
 
@@ -73,7 +77,7 @@ chns = sample(
     n_draws + n_adapts,
     n_chains;
     n_adapts,
-    init_params,
+    initial_params,
     progress=false,
 )[n_adapts + 1:end, :, :]  # drop warm-up draws
 describe(chns)
