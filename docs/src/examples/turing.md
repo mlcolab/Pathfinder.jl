@@ -8,7 +8,7 @@ We'll demonstrate with a regression example.
 using AdvancedHMC, Pathfinder, Random, Turing
 Random.seed!(39)
 
-@model function regress(x, y)
+@model function regress(x)
     α ~ Normal()
     β ~ Normal()
     σ ~ truncated(Normal(); lower=0)
@@ -16,9 +16,11 @@ Random.seed!(39)
     y ~ product_distribution(Normal.(μ, σ))
 end
 x = 0:0.1:10
-y = @. 2x + 1.5 + randn() * 0.2
+true_params = (; α=1.5, β=2, σ=2)
+# simulate data
+(; y) = rand(regress(x) | true_params)
 
-model = regress(collect(x), y)
+model = regress(x) | (; y)
 n_chains = 8
 nothing # hide
 ```
