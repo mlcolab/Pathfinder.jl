@@ -135,6 +135,72 @@ end
     return pairs(merge(values(kwargs), values(new_kwargs)))
 end
 
+"""
+    pathfinder(model::DynamicPPL.Model; kwargs...) -> PathfinderResult
+
+Run single-path Pathfinder on a Turing `model`.
+
+# Arguments
+- `model::`[`DynamicPPL.Model`](@extref): Turing/DynamicPPL model whose log-density will be
+    maximized.
+
+# Keywords
+- `init::`[`InitFromParams`](@extref DynamicPPL.InitFromParams): Initial model parameters.
+    If not provided, `init_sampler` is used.
+- `init_sampler::`[`AbstractInitStrategy`](@extref DynamicPPL.AbstractInitStrategy): A model
+    parameter initialization strategy. If not provided, a uniform sampler over the range
+    `[-init_scale, init_scale]` in unconstrained space is used.
+- `init_scale::Real=2`: Scale of the default initial point sampler (in unconstrained space).
+- Remaining keywords are forwarded to the base method [`pathfinder`](@ref Pathfinder.pathfinder).
+
+# Returns
+- [`PathfinderResult`](@ref Pathfinder.PathfinderResult) where `draws_transformed` is an
+    [`MCMCChains.Chains`](@extref) with constrained parameter values corresponding to the
+    unconstrained `draws`.
+
+# Example
+
+```jldoctest
+julia> using Pathfinder, Turing, StableRNGs
+
+julia> rng = StableRNG(42);
+
+julia> @model function demo_model()
+           α ~ Normal(0, 1)
+           β ~ Beta(5, 1)
+           σ ~ truncated(Normal(); lower=0)
+       end;
+
+julia> init = InitFromParams((; α=0.0));
+
+julia> init_sampler = InitFromPrior();
+
+julia> result = pathfinder(demo_model(); rng, init, init_sampler)
+Single-path Pathfinder result
+  tries: 1
+  draws: 5
+  fit iteration: 6 (total: 6)
+  fit ELBO: 0.05 ± 0.09
+  fit distribution: MvNormal{Float64, Pathfinder.WoodburyPDMat{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, Matrix{Float64}, Matrix{Float64}, Pathfinder.WoodburyPDFactorization{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, LinearAlgebra.QRCompactWYQ{Float64, Matrix{Float64}, Matrix{Float64}}, LinearAlgebra.UpperTriangular{Float64, Matrix{Float64}}}}, Vector{Float64}}(
+dim: 3
+μ: [1.0809306071496012e-24, 1.6094379124340998, 1.2122841002599141e-14]
+Σ: [0.7589486918452915 0.0 0.0; 0.0 1.200004838811716 -1.604213692347079e-5; 0.0 -1.6042136923470358e-5 0.5000618385825155]
+)
+
+
+julia> result.draws_transformed
+Chains MCMC chain (5×3×1 Array{Float64, 3}):
+
+Iterations        = 1:1:5
+Number of chains  = 1
+Samples per chain = 5
+parameters        = α, β, σ
+
+Use `describe(chains)` for summary statistics and quantiles.
+
+```
+"""
+Pathfinder.pathfinder(::DynamicPPL.Model; kwargs...)
 function Pathfinder.pathfinder(
     model::DynamicPPL.Model;
     adtype::ADTypes.AbstractADType=Pathfinder.default_ad(),
@@ -158,6 +224,67 @@ function Pathfinder.pathfinder(
     return result_new
 end
 
+"""
+    multipathfinder(model::DynamicPPL.Model, ndraws::Int; kwargs...) -> MultiPathfinderResult
+
+Run multi-path Pathfinder on a Turing `model`.
+
+# Arguments
+- `model::`[`DynamicPPL.Model`](@extref): Turing/DynamicPPL model whose log-density will be
+    maximized.
+- `ndraws::Int`: Number of draws to return after (optional) importance resampling.
+
+# Keywords
+- `init`: A length `nruns` vector of [`InitFromParams`](@extref DynamicPPL.InitFromParams)
+    containing initial model parameters. If not provided, `nruns` is required and
+    `init_sampler` is used.
+- `nruns::Int`: Number of runs of Pathfinder to perform. Ignored if `init` is provided.
+- Remaining keywords are forwarded to the base method
+    [`multipathfinder`](@ref Pathfinder.multipathfinder) and
+    [`pathfinder(model; kwargs...)`](@ref Pathfinder.pathfinder(::DynamicPPL.Model; kwargs...)).
+
+# Returns
+- [`MultiPathfinderResult`](@ref Pathfinder.MultiPathfinderResult) where `draws_transformed`
+    (and each single-path result's `draws_transformed`) is an
+    [`MCMCChains.Chains`](@extref) with constrained parameter values corresponding to the
+    unconstrained `draws`.
+
+# Example
+
+```jldoctest
+julia> using Pathfinder, Turing, StableRNGs
+
+julia> rng = StableRNG(42);
+
+julia> @model function demo_model()
+           α ~ Normal(0, 1)
+           β ~ Beta(5, 1)
+           σ ~ truncated(Normal(); lower=0)
+       end;
+
+julia> init = [InitFromParams((; α)) for α in -4.0:4.0];
+
+julia> result = multipathfinder(
+           demo_model(), 1_000; rng, init, init_sampler=InitFromPrior(),
+       )
+Multi-path Pathfinder result
+  runs: 9
+  draws: 1000
+  Pareto shape diagnostic: 0.59 (ok)
+
+julia> result.draws_transformed
+Chains MCMC chain (1000×3×1 Array{Float64, 3}):
+
+Iterations        = 1:1:1000
+Number of chains  = 1
+Samples per chain = 1000
+parameters        = α, β, σ
+
+Use `describe(chains)` for summary statistics and quantiles.
+
+```
+"""
+Pathfinder.multipathfinder(::DynamicPPL.Model, ::Int; kwargs...)
 function Pathfinder.multipathfinder(
     model::DynamicPPL.Model,
     ndraws::Int;
