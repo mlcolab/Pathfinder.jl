@@ -1,5 +1,12 @@
 using ADTypes,
-    LogDensityProblems, LinearAlgebra, Pathfinder, Random, ReverseDiff, Test, Turing
+    DynamicPPL,
+    LogDensityProblems,
+    LinearAlgebra,
+    Pathfinder,
+    Random,
+    ReverseDiff,
+    Test,
+    Turing
 using Turing.Bijectors
 
 PathfinderTuringExt = Base.get_extension(Pathfinder, :PathfinderTuringExt)
@@ -33,8 +40,7 @@ end
 @testset "Turing integration" begin
     @testset "create_log_density_problem" begin
         @testset for bijector in [elementwise(log), Bijectors.SimplexBijector()],
-            udist in [Normal(1, 2), Normal(3, 4)],
-            n in [1, 5],
+            udist in [Normal(1, 2), Normal(3, 4)], n in [1, 5],
             adtype in [ADTypes.AutoForwardDiff, ADTypes.AutoReverseDiff]
 
             binv = Bijectors.inverse(bijector)
@@ -110,8 +116,7 @@ end
 
     @testset "transformed IID normal solved exactly" begin
         @testset for bijector in [elementwise(log), Bijectors.SimplexBijector()],
-            udist in [Normal(1, 2), Normal(3, 4)],
-            n in [1, 5],
+            udist in [Normal(1, 2), Normal(3, 4)], n in [1, 5],
             adtype in [ADTypes.AutoForwardDiff, ADTypes.AutoReverseDiff]
 
             binv = Bijectors.inverse(bijector)
@@ -148,6 +153,109 @@ end
             @test all(0 .< chns[:, :lb, 1] .< 0.1)
             @test all(0.11 .< chns[:, :ub, 1] .< 0.2)
             @test all(chns[:, :lb, 1] .< chns[:, :x, 1] .< chns[:, :ub, 1])
+        end
+    end
+
+    if isdefined(DynamicPPL, :AbstractInitStrategy)  # DynamicPPL >= v"0.38"
+        @testset "AbstractInitStrategy integration" begin
+            x = 0:0.01:1
+            y = sin.(x) .+ randn.() .* 0.2 .+ x
+            X = [x x .^ 2 x .^ 3]
+            model = regression_model(X, y)
+
+            @testset "InitFromParams init supported" begin
+                @testset "single-path" begin
+                    @testset for α in rand(3)
+                        # by only specifying α, the rest of the params are randomly
+                        # initialized, so this tests that specifying the rng is enough to
+                        # enforce reproducibility
+                        init = InitFromParams((; α))
+                        result1 = pathfinder(model; init, rng=Xoshiro(42))
+                        @test α ∈ first(result1.optim_trace.points)
+                        result2 = pathfinder(model; init, rng=Xoshiro(42))
+                        @test result2.optim_trace.points == result1.optim_trace.points
+                        @test result2.draws == result1.draws
+                        result3 = pathfinder(model; init, rng=Xoshiro(98))
+                        @test result3.optim_trace != result1.optim_trace
+                    end
+                end
+
+                @testset "multi-path" begin
+                    @testset for nruns in [2, 4]
+                        # by only specifying α, the rest of the params are randomly
+                        # initialized, so this tests that specifying the rng is enough to
+                        # enforce reproducibility
+                        αs = randn(nruns)
+                        init = [InitFromParams((; α)) for α in αs]
+                        ndraws = 100
+                        result1 = multipathfinder(model, ndraws; init, rng=Xoshiro(42))
+                        @test length(result1.pathfinder_results) == nruns
+                        @test all(
+                            α in first(r.optim_trace.points) for
+                            (r, α) in zip(result1.pathfinder_results, αs)
+                        )
+                        result2 = multipathfinder(model, ndraws; init, rng=Xoshiro(42))
+                        @test all(
+                            r1.optim_trace.points == r2.optim_trace.points for (r1, r2) in
+                            zip(result1.pathfinder_results, result2.pathfinder_results)
+                        )
+                        @test result2.draws == result1.draws
+                        result3 = multipathfinder(model, ndraws; init, rng=Xoshiro(98))
+                        @test !any(
+                            r1.optim_trace.points == r2.optim_trace.points for (r1, r2) in
+                            zip(result1.pathfinder_results, result3.pathfinder_results)
+                        )
+                    end
+                end
+            end
+
+            @testset "AbstractInitStrategy init_sampler supported" begin
+                x = 0:0.01:1
+                y = sin.(x) .+ randn.() .* 0.2 .+ x
+                X = [x x .^ 2 x .^ 3]
+                model = regression_model(X, y)
+                init_samplers = [
+                    InitFromPrior(),
+                    InitFromUniform(-4.0, 4.0),
+                    Pathfinder.UniformSampler(2.0),
+                ]
+
+                @testset "$pf" for (pf, args, kwargs) in [
+                    (pathfinder, (), (;)), (multipathfinder, (100,), (; nruns=4))
+                ]
+                    @testset for init_sampler in init_samplers
+                        result1 = pf(
+                            model, args...; kwargs..., init_sampler, rng=Xoshiro(42)
+                        )
+                        result2 = pf(
+                            model, args...; kwargs..., init_sampler, rng=Xoshiro(42)
+                        )
+                        result3 = pf(
+                            model, args...; kwargs..., init_sampler, rng=Xoshiro(98)
+                        )
+                        @test result1.draws == result2.draws != result3.draws
+                    end
+
+                    @testset "default is UniformSampler(init_scale)" begin
+                        @testset for init_scale in [2.0, 4.0]
+                            result4 = pf(
+                                model, args...; kwargs..., init_scale, rng=Xoshiro(42)
+                            )
+                            @test result4.draws == pf(
+                                model,
+                                args...;
+                                kwargs...,
+                                init_sampler=Pathfinder.UniformSampler(init_scale),
+                                rng=Xoshiro(42),
+                            ).draws
+                            if init_scale == 2.0
+                                @test result4.draws ==
+                                    pf(model, args...; kwargs..., rng=Xoshiro(42)).draws
+                            end
+                        end
+                    end
+                end
+            end
         end
     end
 end
