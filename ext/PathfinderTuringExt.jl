@@ -40,33 +40,26 @@ function _adtype(prob::DynamicPPL.LogDensityFunction, adtype::ADTypes.AbstractAD
 end
 
 """
-    draws_to_chains(model::DynamicPPL.Model, draws) -> MCMCChains.Chains
+    draws_to_chains(chain_type, model::DynamicPPL.Model, draws) -> ::chain_type
 
 Convert a `(nparams, ndraws)` matrix of unconstrained `draws` to a
-[`MCMCChains.Chains`](@extref) object with corresponding constrained draws and names
+chains object with corresponding constrained draws and names
 according to `model`.
 """
-function draws_to_chains(model::DynamicPPL.Model, draws::AbstractMatrix)
+function draws_to_chains(chain_type, model::DynamicPPL.Model, draws::AbstractMatrix)
     varinfo = DynamicPPL.link(DynamicPPL.VarInfo(model), model)
-    draw_con_varinfos = map(eachcol(draws)) do draw
-        # this re-evaluates the model but allows supporting dynamic bijectors
-        # https://github.com/TuringLang/Turing.jl/issues/2195
+    params = map(eachcol(draws)) do draw
         draw_varinfo = DynamicPPL.unflatten(varinfo, draw)
-        unlinked_params = DynamicPPL.values_as_in_model(model, true, draw_varinfo)
-        iters = map(DynamicPPL.varname_and_value_leaves, keys(unlinked_params), values(unlinked_params))
-        return mapreduce(collect, vcat, iters)
+        return DynamicPPL.ParamsWithStats(draw_varinfo, model)
     end
-    param_con_names = map(first, first(draw_con_varinfos))
-    draws_con = reduce(
-        vcat, Iterators.map(transpose ∘ Base.Fix1(map, last), draw_con_varinfos)
-    )
-    chns = MCMCChains.Chains(draws_con, param_con_names)
+    chns = DynamicPPL.to_chains(chain_type, params)
     return chns
 end
 
 function Pathfinder.pathfinder(
     model::DynamicPPL.Model;
     adtype::ADTypes.AbstractADType=Pathfinder.default_ad(),
+    chain_type=MCMCChains.Chains,
     kwargs...,
 )
     log_density_problem = create_log_density_problem(model, adtype)
@@ -76,8 +69,7 @@ function Pathfinder.pathfinder(
     )
 
     # add transformed draws as Chains
-    chains_info = (; pathfinder_result=result)
-    chains = Accessors.@set draws_to_chains(model, result.draws).info = chains_info
+    chains = draws_to_chains(chain_type, model, result.draws)
     result_new = Accessors.@set result.draws_transformed = chains
     return result_new
 end
@@ -86,6 +78,7 @@ function Pathfinder.multipathfinder(
     model::DynamicPPL.Model,
     ndraws::Int;
     adtype::ADTypes.AbstractADType=Pathfinder.default_ad(),
+    chain_type=MCMCChains.Chains,
     kwargs...,
 )
     log_density_problem = create_log_density_problem(model, adtype)
@@ -95,20 +88,17 @@ function Pathfinder.multipathfinder(
     )
 
     # add transformed draws as Chains
-    chains_info = (; pathfinder_result=result)
-    chains = Accessors.@set draws_to_chains(model, result.draws).info = chains_info
+    chains = draws_to_chains(chain_type, model, result.draws)
 
     # add transformed draws as Chains for each individual path
     single_path_results_new = map(result.pathfinder_results) do r
-        single_chains_info = (; pathfinder_result=r)
-        single_chains = Accessors.@set draws_to_chains(model, r.draws).info =
-            single_chains_info
+        single_chains = draws_to_chains(chain_type, model, r.draws)
         r_new = Accessors.@set r.draws_transformed = single_chains
         return r_new
     end
 
-    result_new = Accessors.@set (Accessors.@set result.draws_transformed =
-        chains).pathfinder_results = single_path_results_new
+    result_new = Accessors.@set (Accessors.@set result.draws_transformed = chains).pathfinder_results =
+        single_path_results_new
     return result_new
 end
 
