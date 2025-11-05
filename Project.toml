@@ -1,7 +1,7 @@
 name = "Pathfinder"
 uuid = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
-version = "0.9.26"
 authors = ["Seth Axen <seth.axen@gmail.com> and contributors"]
+version = "0.9.27"
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
@@ -26,6 +26,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Transducers = "28d57a85-8fef-5791-bfe6-a80928e7c999"
 
 [weakdeps]
+AbstractMCMC = "80f14c24-f653-4e6a-9b94-39d6b0f70001"
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
 DynamicHMC = "bbc10e6e-7c05-544b-b16e-64fede858acb"
 DynamicPPL = "366bfd00-2699-11ea-058f-f148b4cae6d8"
@@ -34,14 +35,15 @@ Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
 [extensions]
 PathfinderDynamicHMCExt = "DynamicHMC"
-PathfinderTuringExt = ["Accessors", "DynamicPPL", "MCMCChains", "Turing"]
+PathfinderTuringExt = ["AbstractMCMC", "Accessors", "DynamicPPL", "MCMCChains", "Turing"]
 
 [compat]
+AbstractMCMC = "5.10"
 ADTypes = "0.2.5, 1"
 Accessors = "0.1.12"
 Distributions = "0.25.87"
 DynamicHMC = "3.4.0"
-DynamicPPL = "0.25.2, 0.27, 0.28, 0.29, 0.30, 0.31, 0.32, 0.33, 0.34, 0.35, 0.36, 0.37, 0.38"
+DynamicPPL = "0.38.8"
 Folds = "0.2.9"
 ForwardDiff = "0.10.26, 1"
 IrrationalConstants = "0.1.1, 0.2"

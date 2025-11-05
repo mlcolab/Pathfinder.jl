@@ -53,10 +53,8 @@ describe(chns_pf)
 We can also use these draws to initialize MCMC sampling with [`InitFromParams`](@extref `DynamicPPL.InitFromParams`).
 
 ```@example 1
-var_names = names(chns_pf, :parameters)
-initial_params = [
-    InitFromParams(get(chns_pf[i, :, :], var_names; flatten=true)) for i in 1:n_chains
-]
+params = AbstractMCMC.to_samples(DynamicPPL.ParamsWithStats, chns_pf)
+initial_params = [InitFromParams(p.params) for p in params[1:n_chains, 1]]
 nothing # hide
 ```
 

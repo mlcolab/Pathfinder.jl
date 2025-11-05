@@ -1,6 +1,7 @@
 module PathfinderTuringExt
 
 using Accessors: Accessors
+using AbstractMCMC: AbstractMCMC
 using ADTypes: ADTypes
 using DynamicPPL: DynamicPPL
 using MCMCChains: MCMCChains
@@ -49,24 +50,13 @@ according to `model`.
 """
 function draws_to_chains(model::DynamicPPL.Model, draws::AbstractMatrix)
     varinfo = DynamicPPL.link(DynamicPPL.VarInfo(model), model)
-    draw_con_varinfos = map(eachcol(draws)) do draw
+    draw_con_params = map(eachcol(draws)) do draw
+        draw_varinfo = DynamicPPL.unflatten(varinfo, draw)
         # this re-evaluates the model but allows supporting dynamic bijectors
         # https://github.com/TuringLang/Turing.jl/issues/2195
-        draw_varinfo = DynamicPPL.unflatten(varinfo, draw)
-        unlinked_params = DynamicPPL.values_as_in_model(model, true, draw_varinfo)
-        iters = map(
-            DynamicPPL.varname_and_value_leaves,
-            keys(unlinked_params),
-            values(unlinked_params),
-        )
-        return mapreduce(collect, vcat, iters)
+        return DynamicPPL.ParamsWithStats(draw_varinfo, model; include_log_probs=false)
     end
-    param_con_names = map(first, first(draw_con_varinfos))
-    draws_con = reduce(
-        vcat, Iterators.map(transpose ∘ Base.Fix1(map, last), draw_con_varinfos)
-    )
-    chns = MCMCChains.Chains(draws_con, param_con_names)
-    return chns
+    return AbstractMCMC.from_samples(MCMCChains.Chains, hcat(draw_con_params))
 end
 
 @static if isdefined(DynamicPPL, :AbstractInitStrategy)
@@ -207,8 +197,9 @@ function Pathfinder.pathfinder(
     )
 
     # add transformed draws as Chains
-    chains_info = (; pathfinder_result=result)
-    chains = Accessors.@set draws_to_chains(model, result.draws).info = chains_info
+    chains = draws_to_chains(model, result.draws)
+    chains_info = merge(chains.info, (; pathfinder_result=result))
+    chains = Accessors.@set chains.info = chains_info
     result_new = Accessors.@set result.draws_transformed = chains
     return result_new
 end
@@ -289,8 +280,9 @@ function Pathfinder.multipathfinder(
     )
 
     # add transformed draws as Chains
-    chains_info = (; pathfinder_result=result)
-    chains = Accessors.@set draws_to_chains(model, result.draws).info = chains_info
+    chains = draws_to_chains(model, result.draws)
+    chains_info = merge(chains.info, (; pathfinder_result=result))
+    chains = Accessors.@set chains.info = chains_info
 
     # add transformed draws as Chains for each individual path
     single_path_results_new = map(result.pathfinder_results) do r
