@@ -43,10 +43,7 @@ links = InterLinks(
 )
 
 makedocs(;
-    modules=[
-        Pathfinder,
-        Base.get_extension(Pathfinder, :PathfinderTuringExt),
-    ],
+    modules=[Pathfinder, PathfinderTuringExt],
     authors="Seth Axen <seth.axen@gmail.com> and contributors",
     repo=Remotes.GitHub("mlcolab", "Pathfinder.jl"),
     sitename="Pathfinder.jl",
