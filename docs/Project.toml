@@ -1,5 +1,6 @@
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+AbstractMCMC = "80f14c24-f653-4e6a-9b94-39d6b0f70001"
 AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
@@ -35,7 +36,3 @@ StatsFuns = "1"
 StatsPlots = "0.15.2"
 TransformVariables = "0.6.2, 0.7, 0.8"
 TransformedLogDensities = "1.0.2"
-
-[sources.DynamicPPL]
-url = "https://github.com/TuringLang/DynamicPPL.jl"
-rev = "py/varinfos_to_chains"

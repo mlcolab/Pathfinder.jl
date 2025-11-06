@@ -1,5 +1,6 @@
 module PathfinderTuringExt
 
+using AbstractMCMC: AbstractMCMC
 using Accessors: Accessors
 using ADTypes: ADTypes
 using DynamicPPL: DynamicPPL
@@ -53,8 +54,7 @@ function draws_to_chains(chain_type, model::DynamicPPL.Model, draws::AbstractMat
         draw_varinfo = DynamicPPL.unflatten(varinfo, draw)
         return DynamicPPL.ParamsWithStats(draw_varinfo, model)
     end
-    chns = DynamicPPL.to_chains(chain_type, params)
-    return chns
+    return AbstractMCMC.from_samples(chain_type, hcat(params))
 end
 
 @static if isdefined(DynamicPPL, :AbstractInitStrategy)

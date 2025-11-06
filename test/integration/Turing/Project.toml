@@ -14,7 +14,3 @@ Pathfinder = {path = "../../.."}
 
 [compat]
 ReverseDiff = "1.15"
-
-[sources.DynamicPPL]
-url = "https://github.com/TuringLang/DynamicPPL.jl"
-rev = "py/varinfos_to_chains"

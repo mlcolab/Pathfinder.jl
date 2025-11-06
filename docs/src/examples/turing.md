@@ -5,7 +5,7 @@ This tutorial demonstrates how [Turing](https://turinglang.org/) can be used wit
 We'll demonstrate with a regression example.
 
 ```@example 1
-using AdvancedHMC, DynamicPPL, Pathfinder, Random, Turing
+using AbstractMCMC, AdvancedHMC, DynamicPPL, Pathfinder, Random, Turing
 Random.seed!(39)
 
 @model function regress(x)
@@ -53,12 +53,8 @@ describe(chns_pf)
 We can also use these draws to initialize MCMC sampling with [`InitFromParams`](@extref `DynamicPPL.InitFromParams`).
 
 ```@example 1
-initial_params = InitFromParams.(vec(
-    DynamicPPL.from_chains(
-        OrderedDict{VarName,Any},
-        chns_pf[1:n_chains, :, :],
-    )
-))
+params = AbstractMCMC.to_samples(DynamicPPL.ParamsWithStats, chns_pf[1:n_chains, :, :])
+initial_params = [InitFromParams(p.params) for p in vec(params)]
 nothing # hide
 ```
 
