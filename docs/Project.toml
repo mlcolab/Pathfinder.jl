@@ -39,6 +39,3 @@ TransformedLogDensities = "1.0.2"
 [sources.DynamicPPL]
 url = "https://github.com/TuringLang/DynamicPPL.jl"
 rev = "py/varinfos_to_chains"
-
-[sources.Pathfinder]
-path = ".."
