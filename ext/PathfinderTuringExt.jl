@@ -166,12 +166,13 @@ julia> init_sampler = InitFromPrior();
 julia> result = pathfinder(demo_model(); rng, init, init_sampler);
 
 julia> result.draws_transformed
-Chains MCMC chain (5×3×1 Array{Float64, 3}):
+Chains MCMC chain (5×6×1 Array{Float64, 3}):
 
 Iterations        = 1:1:5
 Number of chains  = 1
 Samples per chain = 5
 parameters        = α, β, σ
+internals         = logprior, loglikelihood, lp
 
 Use `describe(chains)` for summary statistics and quantiles.
 
@@ -246,12 +247,13 @@ julia> result = multipathfinder(
        );
 
 julia> result.draws_transformed
-Chains MCMC chain (1000×3×1 Array{Float64, 3}):
+Chains MCMC chain (1000×6×1 Array{Float64, 3}):
 
 Iterations        = 1:1:1000
 Number of chains  = 1
 Samples per chain = 1000
 parameters        = α, β, σ
+internals         = logprior, loglikelihood, lp
 
 Use `describe(chains)` for summary statistics and quantiles.
 
