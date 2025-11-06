@@ -8,45 +8,55 @@ We'll demonstrate with a regression example.
 using AdvancedHMC, DynamicPPL, Pathfinder, Random, Turing
 Random.seed!(39)
 
-@model function regress(x, y)
+@model function regress(x)
     α ~ Normal()
     β ~ Normal()
     σ ~ truncated(Normal(); lower=0)
-    y ~ product_distribution(Normal.(α .+ β .* x, σ))
+    μ = α .+ β .* x
+    y ~ product_distribution(Normal.(μ, σ))
 end
 x = 0:0.1:10
-y = @. 2x + 1.5 + randn() * 0.2
+true_params = (; α=1.5, β=2, σ=2)
+# simulate data
+(; y) = rand(regress(x) | true_params)
 
-model = regress(collect(x), y)
+model = regress(x) | (; y)
 n_chains = 8
 nothing # hide
 ```
 
-For convenience, [`pathfinder`](@ref) and [`multipathfinder`](@ref) can take Turing models as inputs and produce [`MCMCChains.Chains`](@extref) objects as outputs.
+For convenience, [`pathfinder`](@ref) and [`multipathfinder`](@ref) can take [Turing models](@extref `DynamicPPL.Model`) as inputs and produce [`MCMCChains.Chains`](@extref) objects as outputs.
+To access this, we run Pathfinder normally; the `Chains` representation of the draws is stored in `draws_transformed`.
 
 ```@example 1
 result_single = pathfinder(model; ndraws=1_000)
 ```
 
 ```@example 1
-result_multi = multipathfinder(model, 1_000; nruns=n_chains)
+result_single.draws_transformed
 ```
 
-Here, the Pareto shape diagnostic indicates that it is likely safe to use these draws to compute posterior estimates.
-
-When passed a [`DynamicPPL.Model`](@extref), Pathfinder also gives access to the posterior draws in a familiar `Chains` object.
+Note that while Turing's `sample` methods default to initializing parameters from the prior with [`InitFromPrior`](@extref `DynamicPPL.InitFromPrior`), Pathfinder defaults to uniformly sampling them in the range `[-2, 2]` in unconstrained space (equivalent to Turing's [`InitFromUniform(-2, 2)`](@extref `DynamicPPL.InitFromUniform`)).
+To use Turing's default in Pathfinder, specify `init_sampler=InitFromPrior()`.
 
 ```@example 1
-describe(result_multi.draws_transformed)
+result_multi = multipathfinder(model, 1_000; nruns=n_chains, init_sampler=InitFromPrior())
 ```
 
-We can also use these posterior draws to initialize MCMC sampling.
+The Pareto shape diagnostic indicates that it is likely safe to use these draws to compute posterior estimates.
+
+```@example 1
+chns_pf = result_multi.draws_transformed
+describe(chns_pf)
+```
+
+We can also use these draws to initialize MCMC sampling with [`InitFromParams`](@extref `DynamicPPL.InitFromParams`).
 
 ```@example 1
 initial_params = InitFromParams.(vec(
     DynamicPPL.from_chains(
         OrderedDict{VarName,Any},
-        result_multi.draws_transformed[1:n_chains, :, :],
+        chns_pf[1:n_chains, :, :],
     )
 ))
 nothing # hide

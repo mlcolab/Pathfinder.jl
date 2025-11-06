@@ -11,8 +11,6 @@ const _ARGUMENT_DOCSTRING = """
     - [`SciMLBase.OptimizationProblem`](@extref): an optimization problem containing a
         function with the same properties as the above `OptimizationFunction`, as well as an
         initial point. If provided, `init` and `dim` are ignored.
-    - [`DynamicPPL.Model`](@extref): a Turing model. If provided, `init` and `dim` are
-        ignored.
 """
 
 """
