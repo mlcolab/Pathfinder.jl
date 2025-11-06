@@ -69,9 +69,7 @@ end
         copyto!(point, varinfo_linked[:])
     end
 
-    function _maybe_add_sampler_to_kwargs(
-        model::DynamicPPL.Model; kwargs...
-    )
+    function _maybe_add_sampler_to_kwargs(model::DynamicPPL.Model; kwargs...)
         # TODO: Change to `InitFromPrior()` (breaking)
         haskey(kwargs, :init_sampler) || return kwargs
         init_sampler = kwargs[:init_sampler]
