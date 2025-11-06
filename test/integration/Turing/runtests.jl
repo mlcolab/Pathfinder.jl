@@ -1,5 +1,6 @@
 using ADTypes,
     DynamicPPL,
+    FlexiChains,
     LogDensityProblems,
     LinearAlgebra,
     Pathfinder,
@@ -66,13 +67,28 @@ end
     @testset "draws_to_chains" begin
         draws = randn(3, 100)
         model = dynamic_const_model()
-        chns = PathfinderTuringExt.draws_to_chains(MCMCChains.Chains, model, draws)
-        @test chns isa MCMCChains.Chains
-        @test size(chns) == (100, 6, 1)
-        @test issetequal(names(chns), [:lb, :ub, :x, :logprior, :loglikelihood, :lp])
-        @test all(0 .< chns[:, :lb, 1] .< 0.1)
-        @test all(0.11 .< chns[:, :ub, 1] .< 0.2)
-        @test all(chns[:, :lb, 1] .< chns[:, :x, 1] .< chns[:, :ub, 1])
+        @testset "MCMCChains.Chains" begin
+            chns = PathfinderTuringExt.draws_to_chains(MCMCChains.Chains, model, draws)
+            @test chns isa MCMCChains.Chains
+            @test size(chns) == (100, 6, 1)
+            @test issetequal(names(chns), [:lb, :ub, :x, :logprior, :loglikelihood, :lp])
+            @test all(0 .< chns[:, :lb, 1] .< 0.1)
+            @test all(0.11 .< chns[:, :ub, 1] .< 0.2)
+            @test all(chns[:, :lb, 1] .< chns[:, :x, 1] .< chns[:, :ub, 1])
+        end
+
+        @testset "FlexiChains.VNChain" begin
+            chns = PathfinderTuringExt.draws_to_chains(FlexiChains.VNChain, model, draws)
+            @test chns isa FlexiChains.VNChain
+            @test size(chns) == (100, 1)
+            @test issetequal(Symbol.(FlexiChains.parameters(chns)), [:lb, :ub, :x])
+            @test issetequal(
+                [e.name for e in FlexiChains.extras(chns)], [:logprior, :loglikelihood, :lp]
+            )
+            @test all(0 .< chns[@varname(lb)] .< 0.1)
+            @test all(0.11 .< chns[@varname(ub)] .< 0.2)
+            @test all(chns[@varname(lb)] .< chns[@varname(x)] .< chns[@varname(ub)])
+        end
     end
 
     @testset "integration tests" begin
