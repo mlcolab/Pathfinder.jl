@@ -110,8 +110,6 @@ $(_ARGUMENT_DOCSTRING)
     parallelize PRNG calls, defaulting to
     [`Transducers.SequentialEx()`](@extref `Transducers.SequentialEx`). See
     [`pathfinder`](@ref) for further description.
-- `chain_type::Type=MCMCChains.Chains`: If `fun` is a [`DynamicPPL.Model`](@extref), the
-    type of the chains object to be stored in the `draws_transformed` field of the result.
 - `kwargs...` : Remaining keywords are forwarded to [`pathfinder`](@ref).
 
 # Returns
