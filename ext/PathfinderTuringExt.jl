@@ -138,6 +138,11 @@ Run single-path Pathfinder on a Turing `model`.
     `[-init_scale, init_scale]` in unconstrained space is used.
 - `init_scale::Real=2`: Scale of the default initial point sampler (in unconstrained space).
 - Remaining keywords are forwarded to the base method [`pathfinder`](@ref Pathfinder.pathfinder).
+- `chain_type::Type=MCMCChains.Chains`: The type of chain to return. Can be
+    [`MCMCChains.Chains`](@extref), [`FlexiChains.VNChain`](@extref FlexiChains.FlexiChain),
+    or any other type for which a method [`AbstractMCMC.from_samples`](@extref) converting
+    from a matrix of [`DynamicPPL.ParamsWithStats`](@extref DynamicPPL.ParamsWithStats) is
+    defined.
 
 # Returns
 - [`PathfinderResult`](@ref Pathfinder.PathfinderResult) where `draws_transformed` is an

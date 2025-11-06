@@ -14,6 +14,7 @@ DocMeta.setdocmeta!(Pathfinder, :DocTestSetup, :(using Pathfinder); recursive=tr
 bib = CitationBibliography(joinpath(@__DIR__, "src", "references.bib"); style=:numeric)
 
 links = InterLinks(
+    "AbstractMCMC" => "https://turinglang.org/AbstractMCMC.jl/stable/",
     "AdvancedHMC" => "https://turinglang.org/AdvancedHMC.jl/stable/",
     "ADTypes" => "https://sciml.github.io/ADTypes.jl/stable/",
     "Distributions" => (
@@ -27,6 +28,7 @@ links = InterLinks(
         joinpath(@__DIR__, "inventories", "DynamicHMC.toml"),
     ),
     "DynamicPPL" => "https://turinglang.org/DynamicPPL.jl/stable/",
+    "FlexiChains" => "https://pysm.dev/FlexiChains.jl/stable/",
     "LogDensityProblems" => "https://www.tamaspapp.eu/LogDensityProblems.jl/stable/",
     "MCMCChains" => (
         "https://turinglang.org/MCMCChains.jl/stable/",
