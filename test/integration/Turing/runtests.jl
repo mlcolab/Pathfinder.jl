@@ -1,4 +1,5 @@
 using ADTypes,
+    AbstractMCMC,
     DynamicPPL,
     FlexiChains,
     LogDensityProblems,
@@ -108,8 +109,12 @@ end
             @test result.draws_transformed isa MCMCChains.Chains
             @test issetequal(names(result.draws_transformed), expected_param_names)
             @test all(>(0), result.draws_transformed[:σ])
-            init_params = Vector(result.draws_transformed.value[1, :, 1])
-            chns = sample(model, NUTS(), 10_000; init_params, progress=false)
+            initial_params = InitFromParams(
+                AbstractMCMC.to_samples(
+                    DynamicPPL.ParamsWithStats, result.draws_transformed
+                )[1].params,
+            )
+            chns = sample(model, NUTS(), 10_000; initial_params, progress=false)
             @test mean(chns).nt.mean ≈ mean(result.draws_transformed).nt.mean rtol = 0.1
 
             result = multipathfinder(model, 10_000; nruns=4)
@@ -120,8 +125,12 @@ end
             @test result.draws_transformed isa MCMCChains.Chains
             @test issetequal(names(result.draws_transformed), expected_param_names)
             @test all(>(0), result.draws_transformed[:σ])
-            init_params = Vector(result.draws_transformed.value[1, :, 1])
-            chns = sample(model, NUTS(), 10_000; init_params, progress=false)
+            initial_params = InitFromParams(
+                AbstractMCMC.to_samples(
+                    DynamicPPL.ParamsWithStats, result.draws_transformed
+                )[1].params,
+            )
+            chns = sample(model, NUTS(), 10_000; initial_params, progress=false)
             @test mean(chns).nt.mean ≈ mean(result.draws_transformed).nt.mean rtol = 0.1
 
             for r in result.pathfinder_results
