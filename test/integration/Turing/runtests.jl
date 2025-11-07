@@ -1,5 +1,7 @@
 using ADTypes,
+    AbstractMCMC,
     DynamicPPL,
+    FlexiChains,
     LogDensityProblems,
     LinearAlgebra,
     Pathfinder,
@@ -66,13 +68,28 @@ end
     @testset "draws_to_chains" begin
         draws = randn(3, 100)
         model = dynamic_const_model()
-        chns = PathfinderTuringExt.draws_to_chains(model, draws)
-        @test chns isa MCMCChains.Chains
-        @test size(chns) == (100, 3, 1)
-        @test names(chns) == [:lb, :ub, :x]
-        @test all(0 .< chns[:, :lb, 1] .< 0.1)
-        @test all(0.11 .< chns[:, :ub, 1] .< 0.2)
-        @test all(chns[:, :lb, 1] .< chns[:, :x, 1] .< chns[:, :ub, 1])
+        @testset "MCMCChains.Chains" begin
+            chns = PathfinderTuringExt.draws_to_chains(MCMCChains.Chains, model, draws)
+            @test chns isa MCMCChains.Chains
+            @test size(chns) == (100, 6, 1)
+            @test issetequal(names(chns), [:lb, :ub, :x, :logprior, :loglikelihood, :lp])
+            @test all(0 .< chns[:, :lb, 1] .< 0.1)
+            @test all(0.11 .< chns[:, :ub, 1] .< 0.2)
+            @test all(chns[:, :lb, 1] .< chns[:, :x, 1] .< chns[:, :ub, 1])
+        end
+
+        @testset "FlexiChains.VNChain" begin
+            chns = PathfinderTuringExt.draws_to_chains(FlexiChains.VNChain, model, draws)
+            @test chns isa FlexiChains.VNChain
+            @test size(chns) == (100, 1)
+            @test issetequal(Symbol.(FlexiChains.parameters(chns)), [:lb, :ub, :x])
+            @test issetequal(
+                [e.name for e in FlexiChains.extras(chns)], [:logprior, :loglikelihood, :lp]
+            )
+            @test all(0 .< chns[@varname(lb)] .< 0.1)
+            @test all(0.11 .< chns[@varname(ub)] .< 0.2)
+            @test all(chns[@varname(lb)] .< chns[@varname(x)] .< chns[@varname(ub)])
+        end
     end
 
     @testset "integration tests" begin
@@ -81,18 +98,23 @@ end
             y = sin.(x) .+ randn.() .* 0.2 .+ x
             X = [x x .^ 2 x .^ 3]
             model = regression_model(X, y)
-            expected_param_names = Symbol.(["α", "β[1]", "β[2]", "β[3]", "σ"])
+            expected_param_names = Symbol.([
+                "α", "β[1]", "β[2]", "β[3]", "σ", "loglikelihood", "logprior", "lp"
+            ])
 
             result = pathfinder(model; ndraws=10_000)
             @test result isa PathfinderResult
             @test result.input === model
             @test size(result.draws) == (5, 10_000)
             @test result.draws_transformed isa MCMCChains.Chains
-            @test result.draws_transformed.info.pathfinder_result isa PathfinderResult
-            @test sort(names(result.draws_transformed)) == expected_param_names
+            @test issetequal(names(result.draws_transformed), expected_param_names)
             @test all(>(0), result.draws_transformed[:σ])
-            init_params = Vector(result.draws_transformed.value[1, :, 1])
-            chns = sample(model, NUTS(), 10_000; init_params, progress=false)
+            initial_params = InitFromParams(
+                AbstractMCMC.to_samples(
+                    DynamicPPL.ParamsWithStats, result.draws_transformed
+                )[1].params,
+            )
+            chns = sample(model, NUTS(), 10_000; initial_params, progress=false)
             @test mean(chns).nt.mean ≈ mean(result.draws_transformed).nt.mean rtol = 0.1
 
             result = multipathfinder(model, 10_000; nruns=4)
@@ -101,11 +123,14 @@ end
             @test size(result.draws) == (5, 10_000)
             @test length(result.pathfinder_results) == 4
             @test result.draws_transformed isa MCMCChains.Chains
-            @test result.draws_transformed.info.pathfinder_result isa MultiPathfinderResult
-            @test sort(names(result.draws_transformed)) == expected_param_names
+            @test issetequal(names(result.draws_transformed), expected_param_names)
             @test all(>(0), result.draws_transformed[:σ])
-            init_params = Vector(result.draws_transformed.value[1, :, 1])
-            chns = sample(model, NUTS(), 10_000; init_params, progress=false)
+            initial_params = InitFromParams(
+                AbstractMCMC.to_samples(
+                    DynamicPPL.ParamsWithStats, result.draws_transformed
+                )[1].params,
+            )
+            chns = sample(model, NUTS(), 10_000; initial_params, progress=false)
             @test mean(chns).nt.mean ≈ mean(result.draws_transformed).nt.mean rtol = 0.1
 
             for r in result.pathfinder_results

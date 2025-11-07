@@ -5,7 +5,7 @@ This tutorial demonstrates how [Turing](https://turinglang.org/) can be used wit
 We'll demonstrate with a regression example.
 
 ```@example 1
-using AdvancedHMC, Pathfinder, Random, Turing
+using AbstractMCMC, AdvancedHMC, DynamicPPL, FlexiChains, Pathfinder, Random, Turing
 Random.seed!(39)
 
 @model function regress(x)
@@ -25,8 +25,8 @@ n_chains = 8
 nothing # hide
 ```
 
-For convenience, [`pathfinder`](@ref) and [`multipathfinder`](@ref) can take [Turing models](@extref `DynamicPPL.Model`) as inputs and produce [`MCMCChains.Chains`](@extref) objects as outputs.
-To access this, we run Pathfinder normally; the `Chains` representation of the draws is stored in `draws_transformed`.
+For convenience, [`pathfinder`](@ref) and [`multipathfinder`](@ref) can take [Turing models](@extref `DynamicPPL.Model`) as inputs and produce [`MCMCChains.Chains`](@extref) or [`FlexiChains.VNChain`](@extref `FlexiChains.FlexiChain`) objects as outputs.
+To access this, we run Pathfinder normally; the chains representation of the draws (defaulting to `Chains`) is stored in `draws_transformed`.
 
 ```@example 1
 result_single = pathfinder(model; ndraws=1_000)
@@ -34,6 +34,12 @@ result_single = pathfinder(model; ndraws=1_000)
 
 ```@example 1
 result_single.draws_transformed
+```
+
+To request a different chain type (e.g. `VNChain`), we can specify the `chain_type` directly.
+
+```@example 1
+pathfinder(model; ndraws=1_000, chain_type=VNChain).draws_transformed
 ```
 
 Note that while Turing's `sample` methods default to initializing parameters from the prior with [`InitFromPrior`](@extref `DynamicPPL.InitFromPrior`), Pathfinder defaults to uniformly sampling them in the range `[-2, 2]` in unconstrained space (equivalent to Turing's [`InitFromUniform(-2, 2)`](@extref `DynamicPPL.InitFromUniform`)).
@@ -53,10 +59,8 @@ describe(chns_pf)
 We can also use these draws to initialize MCMC sampling with [`InitFromParams`](@extref `DynamicPPL.InitFromParams`).
 
 ```@example 1
-var_names = names(chns_pf, :parameters)
-initial_params = [
-    InitFromParams(get(chns_pf[i, :, :], var_names; flatten=true)) for i in 1:n_chains
-]
+params = AbstractMCMC.to_samples(DynamicPPL.ParamsWithStats, chns_pf[1:n_chains, :, :])
+initial_params = [InitFromParams(p.params) for p in vec(params)]
 nothing # hide
 ```
 

@@ -1,5 +1,6 @@
 module PathfinderTuringExt
 
+using AbstractMCMC: AbstractMCMC
 using Accessors: Accessors
 using ADTypes: ADTypes
 using DynamicPPL: DynamicPPL
@@ -41,32 +42,19 @@ function _adtype(prob::DynamicPPL.LogDensityFunction, adtype::ADTypes.AbstractAD
 end
 
 """
-    draws_to_chains(model::DynamicPPL.Model, draws) -> MCMCChains.Chains
+    draws_to_chains(chain_type, model::DynamicPPL.Model, draws) -> ::chain_type
 
 Convert a `(nparams, ndraws)` matrix of unconstrained `draws` to a
-[`MCMCChains.Chains`](@extref) object with corresponding constrained draws and names
+chains object with corresponding constrained draws and names
 according to `model`.
 """
-function draws_to_chains(model::DynamicPPL.Model, draws::AbstractMatrix)
+function draws_to_chains(chain_type, model::DynamicPPL.Model, draws::AbstractMatrix)
     varinfo = DynamicPPL.link(DynamicPPL.VarInfo(model), model)
-    draw_con_varinfos = map(eachcol(draws)) do draw
-        # this re-evaluates the model but allows supporting dynamic bijectors
-        # https://github.com/TuringLang/Turing.jl/issues/2195
+    params = map(eachcol(draws)) do draw
         draw_varinfo = DynamicPPL.unflatten(varinfo, draw)
-        unlinked_params = DynamicPPL.values_as_in_model(model, true, draw_varinfo)
-        iters = map(
-            DynamicPPL.varname_and_value_leaves,
-            keys(unlinked_params),
-            values(unlinked_params),
-        )
-        return mapreduce(collect, vcat, iters)
+        return DynamicPPL.ParamsWithStats(draw_varinfo, model)
     end
-    param_con_names = map(first, first(draw_con_varinfos))
-    draws_con = reduce(
-        vcat, Iterators.map(transpose ∘ Base.Fix1(map, last), draw_con_varinfos)
-    )
-    chns = MCMCChains.Chains(draws_con, param_con_names)
-    return chns
+    return AbstractMCMC.from_samples(chain_type, hcat(params))
 end
 
 @static if isdefined(DynamicPPL, :AbstractInitStrategy)
@@ -81,9 +69,7 @@ end
         copyto!(point, varinfo_linked[:])
     end
 
-    function _maybe_add_sampler_to_kwargs(
-        model::DynamicPPL.Model; kwargs...
-    )
+    function _maybe_add_sampler_to_kwargs(model::DynamicPPL.Model; kwargs...)
         # TODO: Change to `InitFromPrior()` (breaking)
         haskey(kwargs, :init_sampler) || return kwargs
         init_sampler = kwargs[:init_sampler]
@@ -152,6 +138,11 @@ Run single-path Pathfinder on a Turing `model`.
     `[-init_scale, init_scale]` in unconstrained space is used.
 - `init_scale::Real=2`: Scale of the default initial point sampler (in unconstrained space).
 - Remaining keywords are forwarded to the base method [`pathfinder`](@ref Pathfinder.pathfinder).
+- `chain_type::Type=MCMCChains.Chains`: The type of chain to return. Can be
+    [`MCMCChains.Chains`](@extref), [`FlexiChains.VNChain`](@extref FlexiChains.FlexiChain),
+    or any other type for which a method [`AbstractMCMC.from_samples`](@extref) converting
+    from a matrix of [`DynamicPPL.ParamsWithStats`](@extref DynamicPPL.ParamsWithStats) is
+    defined.
 
 # Returns
 - [`PathfinderResult`](@ref Pathfinder.PathfinderResult) where `draws_transformed` is an
@@ -178,12 +169,13 @@ julia> init_sampler = InitFromPrior();
 julia> result = pathfinder(demo_model(); rng, init, init_sampler);
 
 julia> result.draws_transformed
-Chains MCMC chain (5×3×1 Array{Float64, 3}):
+Chains MCMC chain (5×6×1 Array{Float64, 3}):
 
 Iterations        = 1:1:5
 Number of chains  = 1
 Samples per chain = 5
 parameters        = α, β, σ
+internals         = logprior, loglikelihood, lp
 
 Use `describe(chains)` for summary statistics and quantiles.
 
@@ -193,6 +185,7 @@ Pathfinder.pathfinder(::DynamicPPL.Model; kwargs...)
 function Pathfinder.pathfinder(
     model::DynamicPPL.Model;
     adtype::ADTypes.AbstractADType=Pathfinder.default_ad(),
+    chain_type=MCMCChains.Chains,
     rng::Random.AbstractRNG=Random.default_rng(),
     kwargs...,
 )
@@ -207,8 +200,7 @@ function Pathfinder.pathfinder(
     )
 
     # add transformed draws as Chains
-    chains_info = (; pathfinder_result=result)
-    chains = Accessors.@set draws_to_chains(model, result.draws).info = chains_info
+    chains = draws_to_chains(chain_type, model, result.draws)
     result_new = Accessors.@set result.draws_transformed = chains
     return result_new
 end
@@ -258,12 +250,13 @@ julia> result = multipathfinder(
        );
 
 julia> result.draws_transformed
-Chains MCMC chain (1000×3×1 Array{Float64, 3}):
+Chains MCMC chain (1000×6×1 Array{Float64, 3}):
 
 Iterations        = 1:1:1000
 Number of chains  = 1
 Samples per chain = 1000
 parameters        = α, β, σ
+internals         = logprior, loglikelihood, lp
 
 Use `describe(chains)` for summary statistics and quantiles.
 
@@ -274,6 +267,7 @@ function Pathfinder.multipathfinder(
     model::DynamicPPL.Model,
     ndraws::Int;
     adtype::ADTypes.AbstractADType=Pathfinder.default_ad(),
+    chain_type=MCMCChains.Chains,
     rng::Random.AbstractRNG=Random.default_rng(),
     kwargs...,
 )
@@ -289,14 +283,11 @@ function Pathfinder.multipathfinder(
     )
 
     # add transformed draws as Chains
-    chains_info = (; pathfinder_result=result)
-    chains = Accessors.@set draws_to_chains(model, result.draws).info = chains_info
+    chains = draws_to_chains(chain_type, model, result.draws)
 
     # add transformed draws as Chains for each individual path
     single_path_results_new = map(result.pathfinder_results) do r
-        single_chains_info = (; pathfinder_result=r)
-        single_chains = Accessors.@set draws_to_chains(model, r.draws).info =
-            single_chains_info
+        single_chains = draws_to_chains(chain_type, model, r.draws)
         r_new = Accessors.@set r.draws_transformed = single_chains
         return r_new
     end
