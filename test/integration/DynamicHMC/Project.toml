@@ -14,6 +14,11 @@ TransformVariables = "84d833dd-6860-57f9-a1a7-6da5db126cff"
 TransformedLogDensities = "f9bc47f6-f3f8-4f3b-ab21-f8bc73906f26"
 
 [compat]
+Pathfinder = "0.9.27"
+DynamicHMC = "3.5.1"
+LogDensityProblems = "2.2.0"
+Optim = "1.13.2"
+Statistics = "1.11.1"
 LogDensityProblemsAD = "1.7"
 MCMCDiagnosticTools = "0.3"
 StatsFuns = "1"
