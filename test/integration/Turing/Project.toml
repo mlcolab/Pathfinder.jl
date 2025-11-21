@@ -15,5 +15,11 @@ Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 Pathfinder = {path = "../../.."}
 
 [compat]
+Pathfinder = "0.9.27"
+DynamicPPL = "0.38.9"
+Turing = "0.41.1"
+AbstractMCMC = "5.10.0"
+ADTypes = "1.19.0"
+LogDensityProblems = "2.2.0"
 FlexiChains = "0.1.5"
 ReverseDiff = "1.15"
