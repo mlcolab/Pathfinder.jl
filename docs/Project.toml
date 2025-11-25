@@ -26,7 +26,6 @@ Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 Pathfinder = {path = ".."}
 
 [compat]
-FlexiChains = "0.1.6"
 ADTypes = "0.2.5, 1"
 AbstractMCMC = "5.10"
 AdvancedHMC = "0.6, 0.7, 0.8"
@@ -35,6 +34,7 @@ DocumenterCitations = "1.2.1"
 DocumenterInterLinks = "1"
 DynamicHMC = "3.4.0"
 DynamicPPL = "0.38.8"
+FlexiChains = "0.1.5"
 ForwardDiff = "0.10.26, 1"
 LinearAlgebra = "1"
 LogDensityProblems = "2.1.0"
