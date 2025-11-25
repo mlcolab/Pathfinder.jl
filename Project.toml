@@ -53,14 +53,12 @@ MCMCChains = "6.0.2, 7"
 Optim = "1.7.2"
 Optimization = "3.22, 4, 5"
 OptimizationBase = "0.0.5, 1, 2, 3, 4"
-OptimizationNLopt = "0.2, 0.3"
 OptimizationOptimJL = "0.2.1, 0.3, 0.4"
 PDMats = "0.11.35"
 PSIS = "0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9"
 ProgressLogging = "0.1.4"
 Random = "1"
 Requires = "1.1.3"
-ReverseDiff = "1.15"
 SciMLBase = "2.30"
 Statistics = "1"
 StatsBase = "0.33.17, 0.34"
@@ -68,10 +66,3 @@ Transducers = "0.4.81"
 Turing = "0.41"
 julia = "1.10"
 
-[extras]
-OptimizationNLopt = "4e6fcdb7-1186-4e1f-a706-475e75c168bb"
-ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[targets]
-test = ["OptimizationNLopt", "ReverseDiff", "Test"]
