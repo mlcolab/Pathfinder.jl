@@ -10,6 +10,7 @@ updates:
     directories: # Location of Julia projects
       - "/"
       - "/docs"
+      - "/test"
       - "/test/integration/AdvancedHMC"
       - "/test/integration/DynamicHMC"
       - "/test/integration/Turing"

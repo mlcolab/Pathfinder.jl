@@ -13,7 +13,8 @@ jobs:
       - name: CompatHelper.main()
         run: |
           using CompatHelper
-          CompatHelper.main()
+          subdirs = [".", "docs", "test", "test/integration/AdvancedHMC", "test/integration/DynamicHMC", "test/integration/Turing"]
+          CompatHelper.main(; subdirs)
         shell: julia --color=yes {0}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
