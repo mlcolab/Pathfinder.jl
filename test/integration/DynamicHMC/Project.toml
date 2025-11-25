@@ -17,8 +17,15 @@ TransformedLogDensities = "f9bc47f6-f3f8-4f3b-ab21-f8bc73906f26"
 Pathfinder = {path = "../../.."}
 
 [compat]
+DynamicHMC = "3.4.0"
+LinearAlgebra = "1"
+LogDensityProblems = "2.1.0"
 LogDensityProblemsAD = "1.7"
 MCMCDiagnosticTools = "0.3"
+Optim = "1.7.2"
+Random = "1"
+Statistics = "1"
 StatsFuns = "1"
+Test = "1"
 TransformVariables = "0.6.2, 0.7, 0.8"
 TransformedLogDensities = "1.0.2"

@@ -20,8 +20,16 @@ Pathfinder = {path = "../../.."}
 
 [compat]
 AdvancedHMC = "0.6, 0.7, 0.8"
+Distributions = "0.25.87"
+ForwardDiff = "0.10.26, 1"
+LinearAlgebra = "1"
+LogDensityProblems = "2.1.0"
 LogDensityProblemsAD = "1.7"
 MCMCDiagnosticTools = "0.3"
+Optim = "1.7.2"
+Random = "1"
+Statistics = "1"
 StatsFuns = "1"
+Test = "1"
 TransformVariables = "0.6.2, 0.7, 0.8"
 TransformedLogDensities = "1.0.2"
