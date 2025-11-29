@@ -22,8 +22,8 @@ TransformVariables = "84d833dd-6860-57f9-a1a7-6da5db126cff"
 TransformedLogDensities = "f9bc47f6-f3f8-4f3b-ab21-f8bc73906f26"
 Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
-[sources]
-Pathfinder = {path = ".."}
+[sources.Pathfinder]
+path = ".."
 
 [compat]
 ADTypes = "0.2.5, 1"
@@ -34,7 +34,7 @@ DocumenterCitations = "1.2.1"
 DocumenterInterLinks = "1"
 DynamicHMC = "3.4.0"
 DynamicPPL = "0.38.8"
-FlexiChains = "0.1.5"
+FlexiChains = "0.1.5, 0.2"
 ForwardDiff = "0.10.26, 1"
 LinearAlgebra = "1"
 LogDensityProblems = "2.1.0"
