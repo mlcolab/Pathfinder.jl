@@ -17,8 +17,8 @@ Pathfinder = {path = "../../.."}
 [compat]
 ADTypes = "0.2.5, 1"
 AbstractMCMC = "5.10"
-DynamicPPL = "0.38.8"
-FlexiChains = "0.1.5"
+DynamicPPL = "0.38.8, 0.39"
+FlexiChains = "0.1.5, 0.2"
 LinearAlgebra = "1"
 LogDensityProblems = "2.1.0"
 Pathfinder = "0.9.27"
