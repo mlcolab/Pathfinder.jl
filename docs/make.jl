@@ -68,8 +68,4 @@ makedocs(;
     warnonly=[:missing_docs],
 )
 
-if get(ENV, "DEPLOY_DOCS", "true") == "true"
-    deploydocs(;
-        repo="github.com/mlcolab/Pathfinder.jl", devbranch="main", push_preview=true
-    )
-end
+deploydocs(; repo="github.com/mlcolab/Pathfinder.jl", devbranch="main", push_preview=true)
