@@ -3,6 +3,9 @@ uuid = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
 version = "0.9.27"
 authors = ["Seth Axen <seth.axen@gmail.com> and contributors"]
 
+[workspace]
+projects = ["test"]
+
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -43,7 +46,7 @@ AbstractMCMC = "5.10"
 Accessors = "0.1.12"
 Distributions = "0.25.87"
 DynamicHMC = "3.4.0"
-DynamicPPL = "0.38.8"
+DynamicPPL = "0.38.8, 0.39"
 Folds = "0.2.9"
 ForwardDiff = "0.10.26, 1"
 IrrationalConstants = "0.1.1, 0.2"
@@ -65,6 +68,3 @@ StatsBase = "0.33.17, 0.34"
 Transducers = "0.4.81"
 Turing = "0.41"
 julia = "1.10"
-
-[workspace]
-projects = ["test"]
