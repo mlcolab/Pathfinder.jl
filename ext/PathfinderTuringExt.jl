@@ -175,7 +175,7 @@ Iterations        = 1:1:5
 Number of chains  = 1
 Samples per chain = 5
 parameters        = α, β, σ
-internals         = logprior, loglikelihood, lp
+internals         = logprior, loglikelihood, logjoint
 
 Use `describe(chains)` for summary statistics and quantiles.
 
@@ -256,7 +256,7 @@ Iterations        = 1:1:1000
 Number of chains  = 1
 Samples per chain = 1000
 parameters        = α, β, σ
-internals         = logprior, loglikelihood, lp
+internals         = logprior, loglikelihood, logjoint
 
 Use `describe(chains)` for summary statistics and quantiles.
 
