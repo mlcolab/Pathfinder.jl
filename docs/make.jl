@@ -6,6 +6,11 @@ using DocumenterInterLinks
 using DynamicPPL # bring type names into scope for @docs signatures
 using Turing # load extension
 
+# has necessary secrets for deploying docs to GitHub Pages
+const HAS_GH_DEPLOY_SECRETS = all(
+    !isempty, (get(ENV, "GITHUB_TOKEN", ""), get(ENV, "DOCUMENTER_KEY", ""))
+)
+
 # Expose extension module in Main so @docs blocks can reference it
 const PathfinderTuringExt = Base.get_extension(Pathfinder, :PathfinderTuringExt)
 
@@ -68,8 +73,8 @@ makedocs(;
     warnonly=[:missing_docs],
 )
 
-if get(ENV, "DEPLOY_DOCS", "true") == "true"
-    deploydocs(;
-        repo="github.com/mlcolab/Pathfinder.jl", devbranch="main", push_preview=true
-    )
-end
+deploydocs(;
+    repo="github.com/mlcolab/Pathfinder.jl",
+    devbranch="main",
+    push_preview=HAS_GH_DEPLOY_SECRETS,
+)
