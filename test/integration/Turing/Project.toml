@@ -11,8 +11,8 @@ ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
-[sources]
-Pathfinder = {path = "../../.."}
+[sources.Pathfinder]
+path = "../../.."
 
 [compat]
 ADTypes = "0.2.5, 1"
