@@ -13,6 +13,8 @@ using Turing.Bijectors
 
 PathfinderTuringExt = Base.get_extension(Pathfinder, :PathfinderTuringExt)
 
+const LOG_JOINT_NAME = pkgversion(DynamicPPL) < v"0.39" ? :lp : :logjoint
+
 Random.seed!(0)
 
 #! format: off
@@ -72,7 +74,9 @@ end
             chns = PathfinderTuringExt.draws_to_chains(MCMCChains.Chains, model, draws)
             @test chns isa MCMCChains.Chains
             @test size(chns) == (100, 6, 1)
-            @test issetequal(names(chns), [:lb, :ub, :x, :logprior, :loglikelihood, :lp])
+            @test issetequal(
+                names(chns), [:lb, :ub, :x, :logprior, :loglikelihood, LOG_JOINT_NAME]
+            )
             @test all(0 .< chns[:, :lb, 1] .< 0.1)
             @test all(0.11 .< chns[:, :ub, 1] .< 0.2)
             @test all(chns[:, :lb, 1] .< chns[:, :x, 1] .< chns[:, :ub, 1])
@@ -84,7 +88,8 @@ end
             @test size(chns) == (100, 1)
             @test issetequal(Symbol.(FlexiChains.parameters(chns)), [:lb, :ub, :x])
             @test issetequal(
-                [e.name for e in FlexiChains.extras(chns)], [:logprior, :loglikelihood, :lp]
+                [e.name for e in FlexiChains.extras(chns)],
+                [:logprior, :loglikelihood, LOG_JOINT_NAME],
             )
             @test all(0 .< chns[@varname(lb)] .< 0.1)
             @test all(0.11 .< chns[@varname(ub)] .< 0.2)
@@ -99,7 +104,14 @@ end
             X = [x x .^ 2 x .^ 3]
             model = regression_model(X, y)
             expected_param_names = Symbol.([
-                "α", "β[1]", "β[2]", "β[3]", "σ", "loglikelihood", "logprior", "lp"
+                "α",
+                "β[1]",
+                "β[2]",
+                "β[3]",
+                "σ",
+                "loglikelihood",
+                "logprior",
+                string(LOG_JOINT_NAME),
             ])
 
             result = pathfinder(model; ndraws=10_000)
