@@ -18,6 +18,9 @@ SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Transducers = "28d57a85-8fef-5791-bfe6-a80928e7c999"
 
+[sources.Pathfinder]
+path = ".."
+
 [compat]
 ADTypes = "0.2.5, 1"
 Distributions = "0.25.87"
@@ -26,7 +29,7 @@ LinearAlgebra = "1"
 LogDensityProblems = "2.1.0"
 Optim = "1.7.2"
 Optimization = "3.22, 4, 5"
-OptimizationBase = "0.0.5, 1, 2, 3, 4"
+OptimizationBase = "0.0.5, 1, 2, 3, 4, 5"
 OptimizationNLopt = "0.2, 0.3"
 PDMats = "0.11.35"
 PSIS = "0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9"
@@ -37,6 +40,3 @@ ReverseDiff = "1.15"
 SciMLBase = "2.30"
 Test = "1"
 Transducers = "0.4.81"
-
-[sources]
-Pathfinder = {path = ".."}
