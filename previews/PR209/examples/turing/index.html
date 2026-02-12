@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Turing usage · Pathfinder.jl</title><meta name="title" content="Turing usage · Pathfinder.jl"/><meta property="og:title" content="Turing usage · Pathfinder.jl"/><meta property="twitter:title" content="Turing usage · Pathfinder.jl"/><meta name="description" content="Documentation for Pathfinder.jl."/><meta property="og:description" content="Documentation for Pathfinder.jl."/><meta property="twitter:description" content="Documentation for Pathfinder.jl."/><meta property="og:url" content="https://mlcolab.github.io/Pathfinder.jl/examples/turing/"/><meta property="twitter:url" content="https://mlcolab.github.io/Pathfinder.jl/examples/turing/"/><link rel="canonical" href="https://mlcolab.github.io/Pathfinder.jl/examples/turing/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Pathfinder.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../../lib/public/">Public</a></li><li><a class="tocitem" href="../../lib/internals/">Internals</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../quickstart/">Quickstart</a></li><li><a class="tocitem" href="../initializing-hmc/">Initializing HMC</a></li><li class="is-active"><a class="tocitem" href>Turing usage</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Turing usage</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Turing usage</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/mlcolab/Pathfinder.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/mlcolab/Pathfinder.jl/blob/main/docs/src/examples/turing.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Running-Pathfinder-on-Turing.jl-models"><a class="docs-heading-anchor" href="#Running-Pathfinder-on-Turing.jl-models">Running Pathfinder on Turing.jl models</a><a id="Running-Pathfinder-on-Turing.jl-models-1"></a><a class="docs-heading-anchor-permalink" href="#Running-Pathfinder-on-Turing.jl-models" title="Permalink"></a></h1><p>This tutorial demonstrates how <a href="https://turing.ml/stable/">Turing</a> can be used with Pathfinder.</p><p>We&#39;ll demonstrate with a regression example.</p><pre><code class="language-julia hljs">using AdvancedHMC, Pathfinder, Random, Turing
+Random.seed!(39)
+
+@model function regress(x, y)
+    α ~ Normal()
+    β ~ Normal()
+    σ ~ truncated(Normal(); lower=0)
+    y .~ Normal.(α .+ β .* x, σ)
+end
+x = 0:0.1:10
+y = @. 2x + 1.5 + randn() * 0.2</code></pre><pre><code class="language-julia hljs">model = regress(collect(x), y)
+n_chains = 8</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">8</code></pre><p>For convenience, <a href="../../lib/public/#Pathfinder.pathfinder"><code>pathfinder</code></a> and <a href="../../lib/public/#Pathfinder.multipathfinder"><code>multipathfinder</code></a> can take Turing models as inputs and produce <code>MCMCChains.Chains</code> objects as outputs.</p><pre><code class="language-julia hljs">result_single = pathfinder(model; ndraws=1_000)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Single-path Pathfinder result
+  tries: 1
+  draws: 1000
+  fit iteration: 22 (total: 26)
+  fit ELBO: -1.95 ± 0.03
+  fit distribution: Distributions.MvNormal{Float64, Pathfinder.WoodburyPDMat{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, Matrix{Float64}, Matrix{Float64}, Pathfinder.WoodburyPDFactorization{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, LinearAlgebra.QRCompactWYQ{Float64, Matrix{Float64}, Matrix{Float64}}, LinearAlgebra.UpperTriangular{Float64, Matrix{Float64}}}}, Vector{Float64}}(
+dim: 3
+μ: [1.4759842060455182, 2.0060275818274436, -1.5479825354725543]
+Σ: [0.0018296810848421195 -0.0002589735319675424 -0.000618345292003903; -0.0002589735319675424 5.0682815503249e-5 5.534978328717582e-5; -0.000618345292003903 5.534978328717582e-5 0.0064256358711586746]
+)
+</code></pre><pre><code class="language-julia hljs">result_multi = multipathfinder(model, 1_000; nruns=n_chains)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Multi-path Pathfinder result
+  runs: 8
+  draws: 1000
+  Pareto shape diagnostic: 0.49 (good)</code></pre><p>Here, the Pareto shape diagnostic indicates that it is likely safe to use these draws to compute posterior estimates.</p><p>When passed a <code>Model</code>, Pathfinder also gives access to the posterior draws in a familiar <code>MCMCChains.Chains</code> object.</p><pre><code class="language-julia hljs">result_multi.draws_transformed</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Chains MCMC chain (1000×3×1 Array{Float64, 3}):
+
+Iterations        = 1:1:1000
+Number of chains  = 1
+Samples per chain = 1000
+parameters        = α, β, σ
+
+Summary Statistics
+ <span class="sgr1"> parameters </span> <span class="sgr1">    mean </span> <span class="sgr1">     std </span> <span class="sgr1">    mcse </span> <span class="sgr1">  ess_bulk </span> <span class="sgr1"> ess_tail </span> <span class="sgr1">    rhat </span> <span class="sgr1"> </span> ⋯
+ <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90">  Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> </span> ⋯
+
+           α    1.4748    0.0465    0.0015    931.3334   809.2502    1.0020    ⋯
+           β    2.0061    0.0076    0.0002    959.7284   825.6883    0.9999    ⋯
+           σ    0.2177    0.0151    0.0005   1008.8839   856.3196    0.9997    ⋯
+<span class="sgr36">                                                                1 column omitted</span>
+
+Quantiles
+ <span class="sgr1"> parameters </span> <span class="sgr1">    2.5% </span> <span class="sgr1">   25.0% </span> <span class="sgr1">   50.0% </span> <span class="sgr1">   75.0% </span> <span class="sgr1">   97.5% </span>
+ <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span>
+
+           α    1.3843    1.4443    1.4736    1.5070    1.5785
+           β    1.9906    2.0010    2.0064    2.0113    2.0214
+           σ    0.1867    0.2071    0.2175    0.2283    0.2487
+</code></pre><p>We can also use these posterior draws to initialize MCMC sampling.</p><pre><code class="language-julia hljs">init_params = collect.(eachrow(result_multi.draws_transformed.value[1:n_chains, :, 1]))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">8-element Vector{Vector{Float64}}:
+ [1.4385712947204663, 2.0124531815275466, 0.22904948833216876]
+ [1.4310600350829619, 2.0147325585717835, 0.21996283990803556]
+ [1.5002556397980622, 2.003403475861116, 0.22333298780409003]
+ [1.4294167790341619, 2.01261352543737, 0.19601159618654096]
+ [1.4589565127911095, 2.0110309527354775, 0.20341109008509684]
+ [1.4852487222683175, 2.002876073142997, 0.23306041711870143]
+ [1.4594382602969214, 2.002946535777802, 0.21961434030119226]
+ [1.5219652756468702, 2.001773415039179, 0.19921379658345859]</code></pre><pre><code class="language-julia hljs">chns = sample(model, Turing.NUTS(), MCMCThreads(), 1_000, n_chains; init_params, progress=false)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Chains MCMC chain (1000×15×8 Array{Float64, 3}):
+
+Iterations        = 501:1:1500
+Number of chains  = 8
+Samples per chain = 1000
+Wall duration     = 7.88 seconds
+Compute duration  = 6.2 seconds
+parameters        = α, β, σ
+internals         = lp, n_steps, is_accept, acceptance_rate, log_density, hamiltonian_energy, hamiltonian_energy_error, max_hamiltonian_energy_error, tree_depth, numerical_error, step_size, nom_step_size
+
+Summary Statistics
+ <span class="sgr1"> parameters </span> <span class="sgr1">    mean </span> <span class="sgr1">     std </span> <span class="sgr1">    mcse </span> <span class="sgr1">  ess_bulk </span> <span class="sgr1">  ess_tail </span> <span class="sgr1">    rhat </span>  ⋯
+ <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90"> Float64 </span>  ⋯
+
+           α    1.4767    0.0435    0.0008   3242.8022   3099.0731    1.0021   ⋯
+           β    2.0059    0.0075    0.0001   3463.0034   3814.4803    1.0016   ⋯
+           σ    0.2166    0.0157    0.0002   5169.4255   4494.8310    1.0025   ⋯
+<span class="sgr36">                                                                1 column omitted</span>
+
+Quantiles
+ <span class="sgr1"> parameters </span> <span class="sgr1">    2.5% </span> <span class="sgr1">   25.0% </span> <span class="sgr1">   50.0% </span> <span class="sgr1">   75.0% </span> <span class="sgr1">   97.5% </span>
+ <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span>
+
+           α    1.3918    1.4476    1.4769    1.5057    1.5627
+           β    1.9913    2.0009    2.0059    2.0110    2.0204
+           σ    0.1882    0.2055    0.2157    0.2267    0.2503
+</code></pre><p>We can use Pathfinder&#39;s estimate of the metric and only perform enough warm-up to tune the step size.</p><pre><code class="language-julia hljs">inv_metric = result_multi.pathfinder_results[1].fit_distribution.Σ
+metric = Pathfinder.RankUpdateEuclideanMetric(inv_metric)
+kernel = HMCKernel(Trajectory{MultinomialTS}(Leapfrog(0.0), GeneralisedNoUTurn()))
+adaptor = StepSizeAdaptor(0.8, 1.0)  # adapt only the step size
+nuts = AdvancedHMC.HMCSampler(kernel, metric, adaptor)
+
+n_adapts = 50
+n_draws = 1_000
+chns = sample(
+    model,
+    externalsampler(nuts),
+    MCMCThreads(),
+    n_draws + n_adapts,
+    n_chains;
+    n_adapts,
+    init_params,
+    progress=false,
+)[n_adapts + 1:end, :, :]  # drop warm-up draws</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Chains MCMC chain (1000×16×8 Array{Float64, 3}):
+
+Iterations        = 51:1:1050
+Number of chains  = 8
+Samples per chain = 1000
+Wall duration     = 2.76 seconds
+Compute duration  = 2.36 seconds
+parameters        = α, β, σ
+internals         = lp, n_steps, is_accept, acceptance_rate, log_density, hamiltonian_energy, hamiltonian_energy_error, max_hamiltonian_energy_error, tree_depth, numerical_error, step_size, nom_step_size, is_adapt
+
+Summary Statistics
+ <span class="sgr1"> parameters </span> <span class="sgr1">    mean </span> <span class="sgr1">     std </span> <span class="sgr1">    mcse </span> <span class="sgr1">  ess_bulk </span> <span class="sgr1">  ess_tail </span> <span class="sgr1">    rhat </span>  ⋯
+ <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90"> Float64 </span>  ⋯
+
+           α    1.4750    0.0424    0.0005   7523.8083   6310.0739    1.0004   ⋯
+           β    2.0060    0.0074    0.0001   6840.6333   5656.1131    1.0008   ⋯
+           σ    0.2168    0.0157    0.0002   6722.9557   5627.0576    1.0003   ⋯
+<span class="sgr36">                                                                1 column omitted</span>
+
+Quantiles
+ <span class="sgr1"> parameters </span> <span class="sgr1">    2.5% </span> <span class="sgr1">   25.0% </span> <span class="sgr1">   50.0% </span> <span class="sgr1">   75.0% </span> <span class="sgr1">   97.5% </span>
+ <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span>
+
+           α    1.3916    1.4468    1.4750    1.5028    1.5585
+           β    1.9914    2.0011    2.0061    2.0110    2.0205
+           σ    0.1890    0.2057    0.2160    0.2267    0.2501
+</code></pre><p>See <a href="../initializing-hmc/#Initializing-HMC-with-Pathfinder">Initializing HMC with Pathfinder</a> for further examples.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../initializing-hmc/">« Initializing HMC</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Friday 25 October 2024 19:25">Friday 25 October 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
