@@ -153,9 +153,12 @@ end
         end
         @test logs[1].kwargs[:progress] === nothing
         @test logs[1].message == "Optimizing"
-        @test logs[2].kwargs[:progress] == 0.0
+        # First callback progress depends on backend iteration numbering
+        # (0-indexed in Optim v1, 1-indexed in Optim v2)
+        @test logs[2].kwargs[:progress] isa Number
+        @test 0.0 <= logs[2].kwargs[:progress] <= 0.001
         @test logs[2].message == "Optimizing"
-        @test logs[3].kwargs[:progress] == 0.001
+        @test logs[3].kwargs[:progress] > logs[2].kwargs[:progress]
         @test logs[end].kwargs[:progress] == "done"
     end
 end
