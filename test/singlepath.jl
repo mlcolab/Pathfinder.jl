@@ -121,7 +121,7 @@ using Transducers
             nfail = 20
             logp(x) = i ≤ nfail ? NaN : -sum(abs2, x) / 2
             ℓ = build_logdensityproblem(logp, dim, 2)
-            callback = (args...,) -> (i += 1; true)
+            callback = (args...,) -> (i += 1; false)
             i = 1
             result = pathfinder(ℓ; callback)
             @test result.fit_distribution.μ ≈ zeros(dim) atol = 1e-6
