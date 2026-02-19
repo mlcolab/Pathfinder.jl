@@ -30,15 +30,15 @@ export PathfinderResult, MultiPathfinderResult
 export pathfinder, multipathfinder
 
 const DEFAULT_HISTORY_LENGTH = 6
-const DEFAULT_LINE_SEARCH = LineSearches.HagerZhang()
-const DEFAULT_LINE_SEARCH_INIT = LineSearches.InitialHagerZhang()
+const DEFAULT_LINE_SEARCH_CONSTRUCTOR = LineSearches.HagerZhang
+const DEFAULT_LINE_SEARCH_INIT_CONSTRUCTOR = LineSearches.InitialHagerZhang
 const DEFAULT_NDRAWS_ELBO = 5
 
 function default_optimizer(history_length)
     return Optim.LBFGS(;
         m=history_length,
-        linesearch=DEFAULT_LINE_SEARCH,
-        alphaguess=DEFAULT_LINE_SEARCH_INIT,
+        linesearch=DEFAULT_LINE_SEARCH_CONSTRUCTOR(),
+        alphaguess=DEFAULT_LINE_SEARCH_INIT_CONSTRUCTOR(),
     )
 end
 
