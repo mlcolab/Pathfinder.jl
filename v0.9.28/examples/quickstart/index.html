@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Quickstart · Pathfinder.jl</title><meta name="title" content="Quickstart · Pathfinder.jl"/><meta property="og:title" content="Quickstart · Pathfinder.jl"/><meta property="twitter:title" content="Quickstart · Pathfinder.jl"/><meta name="description" content="Documentation for Pathfinder.jl."/><meta property="og:description" content="Documentation for Pathfinder.jl."/><meta property="twitter:description" content="Documentation for Pathfinder.jl."/><meta property="og:url" content="https://mlcolab.github.io/Pathfinder.jl/examples/quickstart/"/><meta property="twitter:url" content="https://mlcolab.github.io/Pathfinder.jl/examples/quickstart/"/><link rel="canonical" href="https://mlcolab.github.io/Pathfinder.jl/examples/quickstart/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/citations.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Pathfinder.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../../lib/public/">Public</a></li><li><a class="tocitem" href="../../lib/internals/">Internals</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li class="is-active"><a class="tocitem" href>Quickstart</a><ul class="internal"><li><a class="tocitem" href="#A-5-dimensional-multivariate-normal"><span>A 5-dimensional multivariate normal</span></a></li><li><a class="tocitem" href="#A-banana-shaped-distribution"><span>A banana-shaped distribution</span></a></li><li><a class="tocitem" href="#A-100-dimensional-funnel"><span>A 100-dimensional funnel</span></a></li></ul></li><li><a class="tocitem" href="../initializing-hmc/">Initializing HMC</a></li><li><a class="tocitem" href="../turing/">Turing usage</a></li></ul></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Quickstart</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Quickstart</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/mlcolab/Pathfinder.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/mlcolab/Pathfinder.jl/blob/main/docs/src/examples/quickstart.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Quickstart"><a class="docs-heading-anchor" href="#Quickstart">Quickstart</a><a id="Quickstart-1"></a><a class="docs-heading-anchor-permalink" href="#Quickstart" title="Permalink"></a></h1><p>This page introduces basic Pathfinder usage with examples.</p><h2 id="A-5-dimensional-multivariate-normal"><a class="docs-heading-anchor" href="#A-5-dimensional-multivariate-normal">A 5-dimensional multivariate normal</a><a id="A-5-dimensional-multivariate-normal-1"></a><a class="docs-heading-anchor-permalink" href="#A-5-dimensional-multivariate-normal" title="Permalink"></a></h2><p>For a simple example, we&#39;ll run Pathfinder on a multivariate normal distribution with a dense covariance matrix. Pathfinder can take a log-density function. By default, the gradient of the log-density function is computed using ForwardDiff.</p><pre><code class="language-julia hljs">using ADTypes, ForwardDiff, LinearAlgebra, LogDensityProblems,
+      Pathfinder, Printf, ReverseDiff, StatsPlots, Random
+Random.seed!(42)
+
+struct MvNormalProblem{T,S}
+    μ::T  # mean
+    P::S  # precision matrix
+end
+function (prob::MvNormalProblem)(x)
+    z = x - prob.μ
+    return -dot(z, prob.P, z) / 2
+end
+
+Σ = [
+    2.71   0.5    0.19   0.07   1.04
+    0.5    1.11  -0.08  -0.17  -0.08
+    0.19  -0.08   0.26   0.07  -0.7
+    0.07  -0.17   0.07   0.11  -0.21
+    1.04  -0.08  -0.7   -0.21   8.65
+]
+μ = [-0.55, 0.49, -0.76, 0.25, 0.94]
+P = inv(Symmetric(Σ))
+prob_mvnormal = MvNormalProblem(μ, P)</code></pre><p>Now we run <a href="../../lib/public/#Pathfinder.pathfinder"><code>pathfinder</code></a>.</p><pre><code class="language-julia hljs">result = pathfinder(prob_mvnormal; dim=5, init_scale=4)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Single-path Pathfinder result
+  tries: 1
+  draws: 5
+  fit iteration: 5 (total: 5)
+  fit ELBO: 3.84 ± 0.0
+  fit distribution: MvNormal{Float64, Pathfinder.WoodburyPDMat{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, Matrix{Float64}, Matrix{Float64}, Pathfinder.WoodburyPDFactorization{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, LinearAlgebra.QRCompactWYQ{Float64, Matrix{Float64}, Matrix{Float64}}, LinearAlgebra.UpperTriangular{Float64, Matrix{Float64}}}}, Vector{Float64}}(
+dim: 5
+μ: [-0.55, 0.49, -0.76, 0.25, 0.94]
+Σ: [2.709999999999999 0.5000000000000014 … 0.07000000000000028 1.0399999999999996; 0.4999999999999997 1.1099999999999994 … -0.1700000000000003 -0.07999999999999963; … ; 0.07000000000000028 -0.17000000000000035 … 0.11000000000000121 -0.20999999999999996; 1.0399999999999994 -0.07999999999999974 … -0.20999999999999996 8.649999999999995]
+)
+</code></pre><p><code>result</code> is a <a href="../../lib/public/#Pathfinder.PathfinderResult"><code>PathfinderResult</code></a>. See its docstring for a description of its fields.</p><p>The L-BFGS optimizer constructs an approximation to the inverse Hessian of the negative log density using the limited history of previous points and gradients. For each iteration, Pathfinder uses this estimate as an approximation to the covariance matrix of a multivariate normal that approximates the target distribution. The distribution that maximizes the evidence lower bound (ELBO) is stored in <code>result.fit_distribution</code>. Its mean and covariance are quite close to our target distribution&#39;s.</p><pre><code class="language-julia hljs">result.fit_distribution.μ</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{Float64}:
+ -0.55
+  0.49
+ -0.76
+  0.25
+  0.94</code></pre><pre><code class="language-julia hljs">result.fit_distribution.Σ</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5×5 Pathfinder.WoodburyPDMat{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, Matrix{Float64}, Matrix{Float64}, Pathfinder.WoodburyPDFactorization{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, LinearAlgebra.QRCompactWYQ{Float64, Matrix{Float64}, Matrix{Float64}}, LinearAlgebra.UpperTriangular{Float64, Matrix{Float64}}}}:
+ 2.71   0.5    0.19   0.07   1.04
+ 0.5    1.11  -0.08  -0.17  -0.08
+ 0.19  -0.08   0.26   0.07  -0.7
+ 0.07  -0.17   0.07   0.11  -0.21
+ 1.04  -0.08  -0.7   -0.21   8.65</code></pre><p><code>result.draws</code> is a <code>Matrix</code> whose columns are the requested draws from <code>result.fit_distribution</code>:</p><pre><code class="language-julia hljs">result.draws</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5×5 Matrix{Float64}:
+ -0.275857  -1.38317   -0.584716    0.600188  -2.56678
+  0.558877  -0.471967   1.22294     1.48115    0.478595
+ -0.537484  -0.140841  -1.03717    -0.958389  -1.33453
+  0.433044   0.414753   0.0817292   0.184138  -0.31791
+ -2.98036    5.16025   -1.42753    -0.30277    3.03684</code></pre><p>We can visualize Pathfinder&#39;s sequence of multivariate-normal approximations with the following function:</p><pre><code class="language-julia hljs">function plot_pathfinder_trace(
+    result, logp_marginal, xrange, yrange, maxiters;
+    show_elbo=false, flipxy=false, kwargs...,
+)
+    iterations = min(length(result.optim_trace) - 1, maxiters)
+    trace_points = result.optim_trace.points
+    trace_dists = result.fit_distributions
+    anim = @animate for i in 1:iterations
+        contour(xrange, yrange, exp ∘ logp_marginal ∘ Base.vect; label=&quot;&quot;)
+        trace = trace_points[1:(i + 1)]
+        dist = trace_dists[i + 1]
+        plot!(
+            first.(trace), getindex.(trace, 2);
+            seriestype=:scatterpath, color=:black, msw=0, label=&quot;trace&quot;,
+        )
+        covellipse!(
+            dist.μ[1:2], dist.Σ[1:2, 1:2];
+            n_std=2.45, alpha=0.7, color=1, linecolor=1, label=&quot;MvNormal 95% ellipsoid&quot;,
+        )
+        title = &quot;Iteration $i&quot;
+        if show_elbo
+            est = result.elbo_estimates[i]
+            title *= &quot;  ELBO estimate: &quot; * @sprintf(&quot;%.1f&quot;, est.value)
+        end
+        plot!(; xlims=extrema(xrange), ylims=extrema(yrange), title, kwargs...)
+    end
+    return anim
+end;</code></pre><pre><code class="language-julia hljs">xrange = -5:0.1:5
+yrange = -5:0.1:5
+
+μ_marginal = μ[1:2]
+P_marginal = inv(Σ[1:2,1:2])
+logp_mvnormal_marginal(x) = -dot(x - μ_marginal, P_marginal, x - μ_marginal) / 2
+
+anim = plot_pathfinder_trace(
+    result, logp_mvnormal_marginal, xrange, yrange, 20;
+    xlabel=&quot;x₁&quot;, ylabel=&quot;x₂&quot;,
+)
+gif(anim; fps=5)</code></pre><img src="b4bf48a7.gif" alt="Example block output"/><h2 id="A-banana-shaped-distribution"><a class="docs-heading-anchor" href="#A-banana-shaped-distribution">A banana-shaped distribution</a><a id="A-banana-shaped-distribution-1"></a><a class="docs-heading-anchor-permalink" href="#A-banana-shaped-distribution" title="Permalink"></a></h2><p>Now we will run Pathfinder on the following banana-shaped distribution with density</p><p class="math-container">\[\pi(x_1, x_2) = e^{-x_1^2 / 2} e^{-5 (x_2 - x_1^2)^2 / 2}.\]</p><p>Pathfinder can also take any object that implements the <a href="https://www.tamaspapp.eu/LogDensityProblems.jl/stable/#log-density-api">LogDensityProblems interface</a> interface. This can also be used to manually define the gradient of the log-density function.</p><p>First we define the log density problem:</p><pre><code class="language-julia hljs">Random.seed!(23)
+
+struct BananaProblem end
+function LogDensityProblems.capabilities(::Type{&lt;:BananaProblem})
+    return LogDensityProblems.LogDensityOrder{1}()
+end
+LogDensityProblems.dimension(::BananaProblem) = 2
+function LogDensityProblems.logdensity(::BananaProblem, x)
+    return -(x[1]^2 + 5(x[2] - x[1]^2)^2) / 2
+end
+function LogDensityProblems.logdensity_and_gradient(::BananaProblem, x)
+    a = (x[2] - x[1]^2)
+    lp = -(x[1]^2 + 5a^2) / 2
+    grad_lp = [(10a - 1) * x[1], -5a]
+    return lp, grad_lp
+end
+
+prob_banana = BananaProblem()</code></pre><p>and then visualise it:</p><pre><code class="language-julia hljs">xrange = -3.5:0.05:3.5
+yrange = -3:0.05:7
+logp_banana(x) = LogDensityProblems.logdensity(prob_banana, x)
+contour(xrange, yrange, exp ∘ logp_banana ∘ Base.vect; xlabel=&quot;x₁&quot;, ylabel=&quot;x₂&quot;)</code></pre><img src="4274830d.svg" alt="Example block output"/><p>Now we run <a href="../../lib/public/#Pathfinder.pathfinder"><code>pathfinder</code></a>.</p><pre><code class="language-julia hljs">result = pathfinder(prob_banana; init_scale=10)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Single-path Pathfinder result
+  tries: 1
+  draws: 5
+  fit iteration: 10 (total: 17)
+  fit ELBO: 0.77 ± 0.12
+  fit distribution: MvNormal{Float64, Pathfinder.WoodburyPDMat{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, Matrix{Float64}, Matrix{Float64}, Pathfinder.WoodburyPDFactorization{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, LinearAlgebra.QRCompactWYQ{Float64, Matrix{Float64}, Matrix{Float64}}, LinearAlgebra.UpperTriangular{Float64, Matrix{Float64}}}}, Vector{Float64}}(
+dim: 2
+μ: [0.08620518601715449, -0.12005910142708787]
+Σ: [0.7477323503101028 0.6844011151001732; 0.6844011151001741 0.8382052638654086]
+)
+</code></pre><p>As before we can visualise each iteration of the algorithm.</p><pre><code class="language-julia hljs">anim = plot_pathfinder_trace(
+    result, logp_banana, xrange, yrange, 20;
+    xlabel=&quot;x₁&quot;, ylabel=&quot;x₂&quot;,
+)
+gif(anim; fps=5)</code></pre><img src="d04c4e45.gif" alt="Example block output"/><p>Since the distribution is far from normal, Pathfinder is unable to fit the distribution well. Especially for such complicated target distributions, it&#39;s always a good idea to run <a href="../../lib/public/#Pathfinder.multipathfinder"><code>multipathfinder</code></a>, which runs single-path Pathfinder multiple times.</p><pre><code class="language-julia hljs">ndraws = 1_000
+result = multipathfinder(prob_banana, ndraws; nruns=20, init_scale=10)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Multi-path Pathfinder result
+  runs: 20
+  draws: 1000
+  Pareto shape diagnostic: 0.5 (ok)</code></pre><p><code>result</code> is a <a href="../../lib/public/#Pathfinder.MultiPathfinderResult"><code>MultiPathfinderResult</code></a>. See its docstring for a description of its fields.</p><p><code>result.fit_distribution</code> is a uniformly-weighted <a href="https://juliastats.org/Distributions.jl/stable/mixture/#Distributions.MixtureModel"><code>Distributions.MixtureModel</code></a>. Each component is the result of a single Pathfinder run. It&#39;s possible that some runs fit the target distribution much better than others, so instead of just drawing samples from <code>result.fit_distribution</code>, <code>multipathfinder</code> draws many samples from each component and then uses Pareto-smoothed importance resampling (using <a href="https://julia.arviz.org/PSIS/stable/#PSIS">PSIS.jl</a>) from these draws to better target <code>prob_banana</code>.</p><p>The Pareto shape diagnostic informs us on the quality of these draws. Here the Pareto shape <span>$k$</span> diagnostic is bad (<span>$k &gt; 0.7$</span>), which tells us that these draws are unsuitable for computing posterior estimates, so we should definitely run MCMC to get better draws. Still, visualizing the draws can still be useful.</p><pre><code class="language-julia hljs">x₁_approx = result.draws[1, :]
+x₂_approx = result.draws[2, :]
+
+contour(xrange, yrange, exp ∘ logp_banana ∘ Base.vect)
+scatter!(x₁_approx, x₂_approx; msw=0, ms=2, alpha=0.5, color=1)
+plot!(xlims=extrema(xrange), ylims=extrema(yrange), xlabel=&quot;x₁&quot;, ylabel=&quot;x₂&quot;, legend=false)</code></pre><img src="b77feac0.svg" alt="Example block output"/><p>While the draws do a poor job of covering the tails of the distribution, they are still useful for identifying the nonlinear correlation between these two parameters.</p><h2 id="A-100-dimensional-funnel"><a class="docs-heading-anchor" href="#A-100-dimensional-funnel">A 100-dimensional funnel</a><a id="A-100-dimensional-funnel-1"></a><a class="docs-heading-anchor-permalink" href="#A-100-dimensional-funnel" title="Permalink"></a></h2><p>As we have seen above, running multi-path Pathfinder is much more useful for target distributions that are far from normal. One particularly difficult distribution to sample is Neal&#39;s funnel:</p><p class="math-container">\[\begin{aligned}
+\tau &amp;\sim \mathrm{Normal}(\mu=0, \sigma=3)\\
+\beta_i &amp;\sim \mathrm{Normal}(\mu=0, \sigma=e^{\tau/2})
+\end{aligned}\]</p><p>Such funnel geometries appear in other models (e.g. many hierarchical models) and typically frustrate MCMC sampling. Multi-path Pathfinder can&#39;t sample the funnel well, but it can quickly give us draws that can help us diagnose that we have a funnel.</p><p>In this example, we draw from a 100-dimensional funnel and visualize 2 dimensions.</p><pre><code class="language-julia hljs">using ReverseDiff, ADTypes
+
+Random.seed!(68)
+
+function logp_funnel(x)
+    n = length(x)
+    τ = x[1]
+    β = view(x, 2:n)
+    return ((τ / 3)^2 + (n - 1) * τ + sum(b -&gt; abs2(b * exp(-τ / 2)), β)) / -2
+end</code></pre><p>First, let&#39;s fit this posterior with single-path Pathfinder. For high-dimensional problems, it&#39;s better to use reverse-mode automatic differentiation. Here, we&#39;ll use <a href="https://sciml.github.io/ADTypes.jl/stable/#ADTypes.AutoReverseDiff"><code>ADTypes.AutoReverseDiff</code></a> to specify that <a href="https://github.com/JuliaDiff/ReverseDiff.jl">ReverseDiff.jl</a> should be used.</p><pre><code class="language-julia hljs">result_single = pathfinder(logp_funnel; dim=100, init_scale=10, adtype=AutoReverseDiff())</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Single-path Pathfinder result
+  tries: 1
+  draws: 5
+  fit iteration: 11 (total: 820)
+  fit ELBO: 86.83 ± 1.68
+  fit distribution: MvNormal{Float64, Pathfinder.WoodburyPDMat{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, Matrix{Float64}, Matrix{Float64}, Pathfinder.WoodburyPDFactorization{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, LinearAlgebra.QRCompactWYQ{Float64, Matrix{Float64}, Matrix{Float64}}, LinearAlgebra.UpperTriangular{Float64, Matrix{Float64}}}}, Vector{Float64}}(
+dim: 100
+μ: [-0.9264005866387869, 0.07440420104538821, 0.3463222620020974, 0.1744876663432293, -0.36311345688024765, 0.29524861072520275, 0.056618694713401876, 0.3492313184188715, 0.12947288324963313, 0.16483909485180306  …  -0.10556400229650764, -0.024869129620949795, -0.11003557294663188, -0.1565057244546378, 0.33271287862572607, -0.04300991530903499, 0.0036211670995282908, 0.10988664138021828, -0.11817685635919295, -0.035731556478309494]
+Σ: [0.01367138121749176 -0.0010832703878637905 … 0.0017205473272006236 0.0005202283664656566; -0.0010832703878637905 0.4421982187095132 … 0.0001734883811431616 4.539664260241275e-5; … ; 0.0017205473272006375 0.00017348838114314598 … 0.447939864191428 -7.951274026909375e-5; 0.0005202283664656523 4.539664260240928e-5 … -7.95127402691163e-5 0.4392274346299829]
+)
+</code></pre><p>Let&#39;s visualize this sequence of multivariate normals for the first two dimensions.</p><pre><code class="language-julia hljs">β₁_range = -5:0.01:5
+τ_range = -15:0.01:5
+
+anim = plot_pathfinder_trace(
+    result_single, logp_funnel, τ_range, β₁_range, 15;
+    show_elbo=true, xlabel=&quot;τ&quot;, ylabel=&quot;β₁&quot;,
+)
+gif(anim; fps=2)</code></pre><img src="61903888.gif" alt="Example block output"/><p>For this challenging posterior, we can again see that most of the approximations are not great, because this distribution is not normal. Also, this distribution has a pole instead of a mode, so there is no MAP estimate, and no Laplace approximation exists. As optimization proceeds, the approximation goes from very bad to less bad and finally extremely bad. The ELBO-maximizing distribution is at the neck of the funnel, which would be a good location to initialize MCMC.</p><p>Now we run <a href="../../lib/public/#Pathfinder.multipathfinder"><code>multipathfinder</code></a>.</p><pre><code class="language-julia hljs">ndraws = 1_000
+result = multipathfinder(logp_funnel, ndraws; dim=100, nruns=20, init_scale=10, adtype=AutoReverseDiff())</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Multi-path Pathfinder result
+  runs: 20
+  draws: 1000
+  Pareto shape diagnostic: 1.07 (very bad)</code></pre><p>Again, the poor Pareto shape diagnostic indicates we should run MCMC to get draws suitable for computing posterior estimates.</p><p>We can see that the bulk of Pathfinder&#39;s draws come from the neck of the funnel, where the fit from the single path we examined was located.</p><pre><code class="language-julia hljs">τ_approx = result.draws[1, :]
+β₁_approx = result.draws[2, :]
+
+contour(τ_range, β₁_range, exp ∘ logp_funnel ∘ Base.vect)
+scatter!(τ_approx, β₁_approx; msw=0, ms=2, alpha=0.5, color=1)
+plot!(; xlims=extrema(τ_range), ylims=extrema(β₁_range), xlabel=&quot;τ&quot;, ylabel=&quot;β₁&quot;, legend=false)</code></pre><img src="d3120290.svg" alt="Example block output"/></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../lib/internals/">« Internals</a><a class="docs-footer-nextpage" href="../initializing-hmc/">Initializing HMC »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Thursday 4 December 2025 22:45">Thursday 4 December 2025</span>. Using Julia version 1.12.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
