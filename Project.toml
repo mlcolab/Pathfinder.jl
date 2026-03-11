@@ -1,6 +1,6 @@
 name = "Pathfinder"
 uuid = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
-version = "0.9.30"
+version = "0.9.31"
 authors = ["Seth Axen <seth.axen@gmail.com> and contributors"]
 
 [workspace]
@@ -42,11 +42,11 @@ PathfinderTuringExt = ["AbstractMCMC", "Accessors", "DynamicPPL", "MCMCChains", 
 
 [compat]
 ADTypes = "0.2.5, 1"
-AbstractMCMC = "5.10"
+AbstractMCMC = "5.14"
 Accessors = "0.1.12"
 Distributions = "0.25.87"
 DynamicHMC = "3.4.0"
-DynamicPPL = "0.38.8, 0.39"
+DynamicPPL = "0.40.6"
 Folds = "0.2.9"
 ForwardDiff = "0.10.26, 1"
 IrrationalConstants = "0.1.1, 0.2"
@@ -66,5 +66,5 @@ SciMLBase = "2.30"
 Statistics = "1"
 StatsBase = "0.33.17, 0.34"
 Transducers = "0.4.81"
-Turing = "0.41, 0.42"
+Turing = "0.43"
 julia = "1.10"

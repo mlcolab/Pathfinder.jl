@@ -10,30 +10,21 @@ using Random: Random
 using Turing: Turing
 
 """
-    create_log_density_problem(model::DynamicPPL.Model, adtype::ADTypes.AbstractADType)
+    create_log_density_function(model::DynamicPPL.Model, adtype::ADTypes.AbstractADType)
 
-Create a log density problem from a `model`.
+Create a log density function from a `model`.
 
 The return value is an object implementing the LogDensityProblems API whose log-density is
 that of the `model` transformed to unconstrained space with the appropriate log-density
 adjustment due to change of variables.
 """
-function create_log_density_problem(model::DynamicPPL.Model, adtype::ADTypes.AbstractADType)
-    # create an unconstrained VarInfo
-    varinfo = DynamicPPL.link(DynamicPPL.VarInfo(model), model)
-    # DefaultContext ensures that the log-density adjustment is computed
-    @static if pkgversion(DynamicPPL) < v"0.35.0"
-        prob = DynamicPPL.LogDensityFunction(model, varinfo, DynamicPPL.DefaultContext())
-    elseif pkgversion(DynamicPPL) < v"0.37.0"
-        prob = DynamicPPL.LogDensityFunction(
-            model, varinfo, DynamicPPL.DefaultContext(); adtype
-        )
-    else
-        prob = DynamicPPL.LogDensityFunction(
-            model, DynamicPPL.getlogjoint_internal, varinfo; adtype
-        )
-    end
-    return prob
+function create_log_density_function(
+    model::DynamicPPL.Model, adtype::ADTypes.AbstractADType
+)
+    ldf = DynamicPPL.LogDensityFunction(
+        model, DynamicPPL.getlogjoint_internal, DynamicPPL.LinkAll(); adtype
+    )
+    return ldf
 end
 
 function _adtype(prob::DynamicPPL.LogDensityFunction, adtype::ADTypes.AbstractADType)
@@ -42,64 +33,56 @@ function _adtype(prob::DynamicPPL.LogDensityFunction, adtype::ADTypes.AbstractAD
 end
 
 """
-    draws_to_chains(chain_type, model::DynamicPPL.Model, draws) -> ::chain_type
+    draws_to_chains(chain_type, ldf::DynamicPPL.LogDensityFunction, draws) -> ::chain_type
 
 Convert a `(nparams, ndraws)` matrix of unconstrained `draws` to a
 chains object with corresponding constrained draws and names
-according to `model`.
+according to `ldf`.
 """
-function draws_to_chains(chain_type, model::DynamicPPL.Model, draws::AbstractMatrix)
-    varinfo = DynamicPPL.link(DynamicPPL.VarInfo(model), model)
-    params = map(eachcol(draws)) do draw
-        draw_varinfo = DynamicPPL.unflatten(varinfo, draw)
-        return DynamicPPL.ParamsWithStats(draw_varinfo, model)
-    end
+function draws_to_chains(
+    chain_type, ldf::DynamicPPL.LogDensityFunction, draws::AbstractMatrix
+)
+    params = map(Base.Fix2(DynamicPPL.ParamsWithStats, ldf), eachcol(draws))
     return AbstractMCMC.from_samples(chain_type, hcat(params))
 end
 
-@static if isdefined(DynamicPPL, :AbstractInitStrategy)
-    struct InitStrategySampler{M<:DynamicPPL.Model,S<:DynamicPPL.AbstractInitStrategy}
-        model::M
-        strategy::S
-    end
-    function (spl::InitStrategySampler)(rng::Random.AbstractRNG, point::AbstractVector)
-        (; model, strategy) = spl
-        varinfo = DynamicPPL.VarInfo(rng, model, strategy)
-        varinfo_linked = DynamicPPL.link(varinfo, model)
-        copyto!(point, varinfo_linked[:])
-    end
+struct InitStrategySampler{M<:DynamicPPL.Model,S<:DynamicPPL.AbstractInitStrategy}
+    model::M
+    strategy::S
+end
+function (spl::InitStrategySampler)(rng::Random.AbstractRNG, point::AbstractVector)
+    (; model, strategy) = spl
+    varinfo = DynamicPPL.VarInfo(rng, model, strategy)
+    varinfo_linked = DynamicPPL.link(varinfo, model)
+    copyto!(point, varinfo_linked[:])
+end
 
-    function _maybe_add_sampler_to_kwargs(model::DynamicPPL.Model; kwargs...)
-        # TODO: Change to `InitFromPrior()` (breaking)
-        haskey(kwargs, :init_sampler) || return kwargs
-        init_sampler = kwargs[:init_sampler]
-        if init_sampler isa DynamicPPL.AbstractInitStrategy
-            return _merge_keywords(
-                kwargs; init_sampler=InitStrategySampler(model, init_sampler)
-            )
-        else
-            return _merge_keywords(kwargs; init_sampler)
-        end
+function _maybe_add_sampler_to_kwargs(model::DynamicPPL.Model; kwargs...)
+    # TODO: Change to `InitFromPrior()` (breaking)
+    haskey(kwargs, :init_sampler) || return kwargs
+    init_sampler = kwargs[:init_sampler]
+    if init_sampler isa DynamicPPL.AbstractInitStrategy
+        return _merge_keywords(
+            kwargs; init_sampler=InitStrategySampler(model, init_sampler)
+        )
+    else
+        return _merge_keywords(kwargs; init_sampler)
     end
+end
 
-    function _format_init(
-        rng::Random.AbstractRNG,
-        model::DynamicPPL.Model,
-        init::DynamicPPL.AbstractInitStrategy,
-    )
-        varinfo = DynamicPPL.VarInfo(rng, model, init)
-        varinfo_linked = DynamicPPL.link(varinfo, model)
-        return varinfo_linked[:]
-    end
-    function _format_init(
-        rng::Random.AbstractRNG,
-        model::DynamicPPL.Model,
-        init::AbstractVector{<:DynamicPPL.AbstractInitStrategy},
-    )
-        return map(x -> _format_init(rng, model, x), init)
-    end
-else
-    _maybe_add_sampler_to_kwargs(model::DynamicPPL.Model; kwargs...) = kwargs
+function _format_init(
+    rng::Random.AbstractRNG, model::DynamicPPL.Model, init::DynamicPPL.AbstractInitStrategy
+)
+    varinfo = DynamicPPL.VarInfo(rng, model, init)
+    varinfo_linked = DynamicPPL.link(varinfo, model)
+    return varinfo_linked[:]
+end
+function _format_init(
+    rng::Random.AbstractRNG,
+    model::DynamicPPL.Model,
+    init::AbstractVector{<:DynamicPPL.AbstractInitStrategy},
+)
+    return map(x -> _format_init(rng, model, x), init)
 end
 
 _format_init(rng::Random.AbstractRNG, model::DynamicPPL.Model, init) = init
@@ -189,18 +172,14 @@ function Pathfinder.pathfinder(
     rng::Random.AbstractRNG=Random.default_rng(),
     kwargs...,
 )
-    log_density_problem = create_log_density_problem(model, adtype)
-    new_adtype = _adtype(log_density_problem, adtype)
+    ldf = create_log_density_function(model, adtype)
+    new_adtype = _adtype(ldf, adtype)
     result = Pathfinder.pathfinder(
-        log_density_problem;
-        input=model,
-        adtype=new_adtype,
-        rng,
-        _update_kwargs(rng, model; kwargs...)...,
+        ldf; input=model, adtype=new_adtype, rng, _update_kwargs(rng, model; kwargs...)...
     )
 
     # add transformed draws as Chains
-    chains = draws_to_chains(chain_type, model, result.draws)
+    chains = draws_to_chains(chain_type, ldf, result.draws)
     result_new = Accessors.@set result.draws_transformed = chains
     return result_new
 end
@@ -271,10 +250,10 @@ function Pathfinder.multipathfinder(
     rng::Random.AbstractRNG=Random.default_rng(),
     kwargs...,
 )
-    log_density_problem = create_log_density_problem(model, adtype)
-    new_adtype = _adtype(log_density_problem, adtype)
+    ldf = create_log_density_function(model, adtype)
+    new_adtype = _adtype(ldf, adtype)
     result = Pathfinder.multipathfinder(
-        log_density_problem,
+        ldf,
         ndraws;
         input=model,
         adtype=new_adtype,
@@ -283,11 +262,11 @@ function Pathfinder.multipathfinder(
     )
 
     # add transformed draws as Chains
-    chains = draws_to_chains(chain_type, model, result.draws)
+    chains = draws_to_chains(chain_type, ldf, result.draws)
 
     # add transformed draws as Chains for each individual path
     single_path_results_new = map(result.pathfinder_results) do r
-        single_chains = draws_to_chains(chain_type, model, r.draws)
+        single_chains = draws_to_chains(chain_type, ldf, r.draws)
         r_new = Accessors.@set r.draws_transformed = single_chains
         return r_new
     end
