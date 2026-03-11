@@ -42,16 +42,7 @@ according to `ldf`.
 function draws_to_chains(
     chain_type, ldf::DynamicPPL.LogDensityFunction, draws::AbstractMatrix
 )
-    accs = DynamicPPL.OnlyAccsVarInfo(
-        DynamicPPL.RawValueAccumulator(true),
-        DynamicPPL.LogPriorAccumulator(),
-        DynamicPPL.LogLikelihoodAccumulator(),
-    )
-    params = map(eachcol(draws)) do draw
-        init_strategy = DynamicPPL.InitFromVector(draw, ldf)
-        _, _accs = DynamicPPL.init!!(ldf.model, accs, init_strategy, ldf.transform_strategy)
-        return DynamicPPL.ParamsWithStats(_accs)
-    end
+    params = map(Base.Fix2(DynamicPPL.ParamsWithStats, ldf), eachcol(draws))
     return AbstractMCMC.from_samples(chain_type, hcat(params))
 end
 
