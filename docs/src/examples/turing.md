@@ -18,7 +18,7 @@ end
 x = 0:0.1:10
 true_params = (; α=1.5, β=2, σ=2)
 # simulate data
-(; y) = rand(regress(x) | true_params)
+y = rand(regress(x) | true_params)[@varname(y)]
 
 model = regress(x) | (; y)
 n_chains = 8
