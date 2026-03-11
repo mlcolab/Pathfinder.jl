@@ -39,7 +39,7 @@ end
 #! format: on
 
 @testset "Turing integration" begin
-    @testset "create_log_density_problem" begin
+    @testset "create_log_density_function" begin
         @testset for dist_type in [LogNormal, Dirichlet],
             n in [1, 5],
             adtype in [ADTypes.AutoForwardDiff, ADTypes.AutoReverseDiff]
@@ -50,23 +50,26 @@ end
                 dist = Dirichlet(ones(n + 1))
             end
             model = distribution_model(dist)
-            prob = PathfinderTuringExt.create_log_density_problem(model, adtype())
-            @test LogDensityProblems.capabilities(prob) isa
+            ldf = PathfinderTuringExt.create_log_density_function(model, adtype())
+            @test LogDensityProblems.capabilities(ldf) isa
                 LogDensityProblems.LogDensityOrder{1}
-            @test typeof(prob.adtype) <: adtype
+            @test typeof(ldf.adtype) <: adtype
             x = rand(n, 10)
             # after applying the Jacobian correction, the log-density of the model should
             # be the same as the log-density of the distribution in unconstrained space
             logpdf_trans = logpdf.(Ref(Bijectors.transformed(dist)), eachcol(x))
-            @test LogDensityProblems.logdensity.(Ref(prob), eachcol(x)) ≈ logpdf_trans
+            @test LogDensityProblems.logdensity.(Ref(ldf), eachcol(x)) ≈ logpdf_trans
         end
     end
 
     @testset "draws_to_chains" begin
         draws = randn(3, 100)
         model = dynamic_const_model()
+        ldf = PathfinderTuringExt.create_log_density_function(
+            model, ADTypes.AutoForwardDiff()
+        )
         @testset "MCMCChains.Chains" begin
-            chns = PathfinderTuringExt.draws_to_chains(MCMCChains.Chains, model, draws)
+            chns = PathfinderTuringExt.draws_to_chains(MCMCChains.Chains, ldf, draws)
             @test chns isa MCMCChains.Chains
             @test size(chns) == (100, 6, 1)
             @test issetequal(
@@ -78,7 +81,7 @@ end
         end
 
         @testset "FlexiChains.VNChain" begin
-            chns = PathfinderTuringExt.draws_to_chains(FlexiChains.VNChain, model, draws)
+            chns = PathfinderTuringExt.draws_to_chains(FlexiChains.VNChain, ldf, draws)
             @test chns isa FlexiChains.VNChain
             @test size(chns) == (100, 1)
             @test issetequal(Symbol.(FlexiChains.parameters(chns)), [:lb, :ub, :x])
