@@ -13,8 +13,6 @@ using Turing.Bijectors
 
 PathfinderTuringExt = Base.get_extension(Pathfinder, :PathfinderTuringExt)
 
-const LOG_JOINT_NAME = pkgversion(DynamicPPL) < v"0.39" ? :lp : :logjoint
-
 Random.seed!(0)
 
 #! format: off
@@ -53,14 +51,9 @@ end
             end
             model = distribution_model(dist)
             prob = PathfinderTuringExt.create_log_density_problem(model, adtype())
-            if hasfield(typeof(prob), :adtype)
-                @test LogDensityProblems.capabilities(prob) isa
-                    LogDensityProblems.LogDensityOrder{1}
-                @test typeof(prob.adtype) <: adtype
-            else  # DynamicPPL < 0.35.0
-                @test LogDensityProblems.capabilities(prob) isa
-                    LogDensityProblems.LogDensityOrder{0}
-            end
+            @test LogDensityProblems.capabilities(prob) isa
+                LogDensityProblems.LogDensityOrder{1}
+            @test typeof(prob.adtype) <: adtype
             x = rand(n, 10)
             # after applying the Jacobian correction, the log-density of the model should
             # be the same as the log-density of the distribution in unconstrained space
@@ -77,7 +70,7 @@ end
             @test chns isa MCMCChains.Chains
             @test size(chns) == (100, 6, 1)
             @test issetequal(
-                names(chns), [:lb, :ub, :x, :logprior, :loglikelihood, LOG_JOINT_NAME]
+                names(chns), [:lb, :ub, :x, :logprior, :loglikelihood, :logjoint]
             )
             @test all(0 .< chns[:, :lb, 1] .< 0.1)
             @test all(0.11 .< chns[:, :ub, 1] .< 0.2)
@@ -91,7 +84,7 @@ end
             @test issetequal(Symbol.(FlexiChains.parameters(chns)), [:lb, :ub, :x])
             @test issetequal(
                 [e.name for e in FlexiChains.extras(chns)],
-                [:logprior, :loglikelihood, LOG_JOINT_NAME],
+                [:logprior, :loglikelihood, :logjoint],
             )
             @test all(0 .< chns[@varname(lb)] .< 0.1)
             @test all(0.11 .< chns[@varname(ub)] .< 0.2)
@@ -113,7 +106,7 @@ end
                 "σ",
                 "loglikelihood",
                 "logprior",
-                string(LOG_JOINT_NAME),
+                string(:logjoint),
             ])
 
             result = pathfinder(model; ndraws=10_000)
@@ -196,102 +189,90 @@ end
         end
     end
 
-    if isdefined(DynamicPPL, :AbstractInitStrategy)  # DynamicPPL >= v"0.38"
-        @testset "AbstractInitStrategy integration" begin
+    @testset "AbstractInitStrategy integration" begin
+        x = 0:0.01:1
+        y = sin.(x) .+ randn.() .* 0.2 .+ x
+        X = [x x .^ 2 x .^ 3]
+        model = regression_model(X, y)
+
+        @testset "InitFromParams init supported" begin
+            @testset "single-path" begin
+                @testset for α in rand(3)
+                    # by only specifying α, the rest of the params are randomly
+                    # initialized, so this tests that specifying the rng is enough to
+                    # enforce reproducibility
+                    init = InitFromParams((; α))
+                    result1 = pathfinder(model; init, rng=Xoshiro(42))
+                    @test α ∈ first(result1.optim_trace.points)
+                    result2 = pathfinder(model; init, rng=Xoshiro(42))
+                    @test result2.optim_trace.points == result1.optim_trace.points
+                    @test result2.draws == result1.draws
+                    result3 = pathfinder(model; init, rng=Xoshiro(98))
+                    @test result3.optim_trace != result1.optim_trace
+                end
+            end
+
+            @testset "multi-path" begin
+                @testset for nruns in [2, 4]
+                    # by only specifying α, the rest of the params are randomly
+                    # initialized, so this tests that specifying the rng is enough to
+                    # enforce reproducibility
+                    αs = randn(nruns)
+                    init = [InitFromParams((; α)) for α in αs]
+                    ndraws = 100
+                    result1 = multipathfinder(model, ndraws; init, rng=Xoshiro(42))
+                    @test length(result1.pathfinder_results) == nruns
+                    @test all(
+                        α in first(r.optim_trace.points) for
+                        (r, α) in zip(result1.pathfinder_results, αs)
+                    )
+                    result2 = multipathfinder(model, ndraws; init, rng=Xoshiro(42))
+                    @test all(
+                        r1.optim_trace.points == r2.optim_trace.points for (r1, r2) in
+                        zip(result1.pathfinder_results, result2.pathfinder_results)
+                    )
+                    @test result2.draws == result1.draws
+                    result3 = multipathfinder(model, ndraws; init, rng=Xoshiro(98))
+                    @test !any(
+                        r1.optim_trace.points == r2.optim_trace.points for (r1, r2) in
+                        zip(result1.pathfinder_results, result3.pathfinder_results)
+                    )
+                end
+            end
+        end
+
+        @testset "AbstractInitStrategy init_sampler supported" begin
             x = 0:0.01:1
             y = sin.(x) .+ randn.() .* 0.2 .+ x
             X = [x x .^ 2 x .^ 3]
             model = regression_model(X, y)
+            init_samplers = [
+                InitFromPrior(), InitFromUniform(-4.0, 4.0), Pathfinder.UniformSampler(2.0)
+            ]
 
-            @testset "InitFromParams init supported" begin
-                @testset "single-path" begin
-                    @testset for α in rand(3)
-                        # by only specifying α, the rest of the params are randomly
-                        # initialized, so this tests that specifying the rng is enough to
-                        # enforce reproducibility
-                        init = InitFromParams((; α))
-                        result1 = pathfinder(model; init, rng=Xoshiro(42))
-                        @test α ∈ first(result1.optim_trace.points)
-                        result2 = pathfinder(model; init, rng=Xoshiro(42))
-                        @test result2.optim_trace.points == result1.optim_trace.points
-                        @test result2.draws == result1.draws
-                        result3 = pathfinder(model; init, rng=Xoshiro(98))
-                        @test result3.optim_trace != result1.optim_trace
-                    end
+            @testset "$pf" for (pf, args, kwargs) in [
+                (pathfinder, (), (;)), (multipathfinder, (100,), (; nruns=4))
+            ]
+                @testset for init_sampler in init_samplers
+                    result1 = pf(model, args...; kwargs..., init_sampler, rng=Xoshiro(42))
+                    result2 = pf(model, args...; kwargs..., init_sampler, rng=Xoshiro(42))
+                    result3 = pf(model, args...; kwargs..., init_sampler, rng=Xoshiro(98))
+                    @test result1.draws == result2.draws != result3.draws
                 end
 
-                @testset "multi-path" begin
-                    @testset for nruns in [2, 4]
-                        # by only specifying α, the rest of the params are randomly
-                        # initialized, so this tests that specifying the rng is enough to
-                        # enforce reproducibility
-                        αs = randn(nruns)
-                        init = [InitFromParams((; α)) for α in αs]
-                        ndraws = 100
-                        result1 = multipathfinder(model, ndraws; init, rng=Xoshiro(42))
-                        @test length(result1.pathfinder_results) == nruns
-                        @test all(
-                            α in first(r.optim_trace.points) for
-                            (r, α) in zip(result1.pathfinder_results, αs)
-                        )
-                        result2 = multipathfinder(model, ndraws; init, rng=Xoshiro(42))
-                        @test all(
-                            r1.optim_trace.points == r2.optim_trace.points for (r1, r2) in
-                            zip(result1.pathfinder_results, result2.pathfinder_results)
-                        )
-                        @test result2.draws == result1.draws
-                        result3 = multipathfinder(model, ndraws; init, rng=Xoshiro(98))
-                        @test !any(
-                            r1.optim_trace.points == r2.optim_trace.points for (r1, r2) in
-                            zip(result1.pathfinder_results, result3.pathfinder_results)
-                        )
-                    end
-                end
-            end
-
-            @testset "AbstractInitStrategy init_sampler supported" begin
-                x = 0:0.01:1
-                y = sin.(x) .+ randn.() .* 0.2 .+ x
-                X = [x x .^ 2 x .^ 3]
-                model = regression_model(X, y)
-                init_samplers = [
-                    InitFromPrior(),
-                    InitFromUniform(-4.0, 4.0),
-                    Pathfinder.UniformSampler(2.0),
-                ]
-
-                @testset "$pf" for (pf, args, kwargs) in [
-                    (pathfinder, (), (;)), (multipathfinder, (100,), (; nruns=4))
-                ]
-                    @testset for init_sampler in init_samplers
-                        result1 = pf(
-                            model, args...; kwargs..., init_sampler, rng=Xoshiro(42)
-                        )
-                        result2 = pf(
-                            model, args...; kwargs..., init_sampler, rng=Xoshiro(42)
-                        )
-                        result3 = pf(
-                            model, args...; kwargs..., init_sampler, rng=Xoshiro(98)
-                        )
-                        @test result1.draws == result2.draws != result3.draws
-                    end
-
-                    @testset "default is UniformSampler(init_scale)" begin
-                        @testset for init_scale in [2.0, 4.0]
-                            result4 = pf(
-                                model, args...; kwargs..., init_scale, rng=Xoshiro(42)
-                            )
-                            @test result4.draws == pf(
-                                model,
-                                args...;
-                                kwargs...,
-                                init_sampler=Pathfinder.UniformSampler(init_scale),
-                                rng=Xoshiro(42),
-                            ).draws
-                            if init_scale == 2.0
-                                @test result4.draws ==
-                                    pf(model, args...; kwargs..., rng=Xoshiro(42)).draws
-                            end
+                @testset "default is UniformSampler(init_scale)" begin
+                    @testset for init_scale in [2.0, 4.0]
+                        result4 = pf(model, args...; kwargs..., init_scale, rng=Xoshiro(42))
+                        @test result4.draws == pf(
+                            model,
+                            args...;
+                            kwargs...,
+                            init_sampler=Pathfinder.UniformSampler(init_scale),
+                            rng=Xoshiro(42),
+                        ).draws
+                        if init_scale == 2.0
+                            @test result4.draws ==
+                                pf(model, args...; kwargs..., rng=Xoshiro(42)).draws
                         end
                     end
                 end

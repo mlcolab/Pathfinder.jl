@@ -22,17 +22,9 @@ function create_log_density_problem(model::DynamicPPL.Model, adtype::ADTypes.Abs
     # create an unconstrained VarInfo
     varinfo = DynamicPPL.link(DynamicPPL.VarInfo(model), model)
     # DefaultContext ensures that the log-density adjustment is computed
-    @static if pkgversion(DynamicPPL) < v"0.35.0"
-        prob = DynamicPPL.LogDensityFunction(model, varinfo, DynamicPPL.DefaultContext())
-    elseif pkgversion(DynamicPPL) < v"0.37.0"
-        prob = DynamicPPL.LogDensityFunction(
-            model, varinfo, DynamicPPL.DefaultContext(); adtype
-        )
-    else
-        prob = DynamicPPL.LogDensityFunction(
-            model, DynamicPPL.getlogjoint_internal, varinfo; adtype
-        )
-    end
+    prob = DynamicPPL.LogDensityFunction(
+        model, DynamicPPL.getlogjoint_internal, varinfo; adtype
+    )
     return prob
 end
 
@@ -57,49 +49,43 @@ function draws_to_chains(chain_type, model::DynamicPPL.Model, draws::AbstractMat
     return AbstractMCMC.from_samples(chain_type, hcat(params))
 end
 
-@static if isdefined(DynamicPPL, :AbstractInitStrategy)
-    struct InitStrategySampler{M<:DynamicPPL.Model,S<:DynamicPPL.AbstractInitStrategy}
-        model::M
-        strategy::S
-    end
-    function (spl::InitStrategySampler)(rng::Random.AbstractRNG, point::AbstractVector)
-        (; model, strategy) = spl
-        varinfo = DynamicPPL.VarInfo(rng, model, strategy)
-        varinfo_linked = DynamicPPL.link(varinfo, model)
-        copyto!(point, varinfo_linked[:])
-    end
+struct InitStrategySampler{M<:DynamicPPL.Model,S<:DynamicPPL.AbstractInitStrategy}
+    model::M
+    strategy::S
+end
+function (spl::InitStrategySampler)(rng::Random.AbstractRNG, point::AbstractVector)
+    (; model, strategy) = spl
+    varinfo = DynamicPPL.VarInfo(rng, model, strategy)
+    varinfo_linked = DynamicPPL.link(varinfo, model)
+    copyto!(point, varinfo_linked[:])
+end
 
-    function _maybe_add_sampler_to_kwargs(model::DynamicPPL.Model; kwargs...)
-        # TODO: Change to `InitFromPrior()` (breaking)
-        haskey(kwargs, :init_sampler) || return kwargs
-        init_sampler = kwargs[:init_sampler]
-        if init_sampler isa DynamicPPL.AbstractInitStrategy
-            return _merge_keywords(
-                kwargs; init_sampler=InitStrategySampler(model, init_sampler)
-            )
-        else
-            return _merge_keywords(kwargs; init_sampler)
-        end
+function _maybe_add_sampler_to_kwargs(model::DynamicPPL.Model; kwargs...)
+    # TODO: Change to `InitFromPrior()` (breaking)
+    haskey(kwargs, :init_sampler) || return kwargs
+    init_sampler = kwargs[:init_sampler]
+    if init_sampler isa DynamicPPL.AbstractInitStrategy
+        return _merge_keywords(
+            kwargs; init_sampler=InitStrategySampler(model, init_sampler)
+        )
+    else
+        return _merge_keywords(kwargs; init_sampler)
     end
+end
 
-    function _format_init(
-        rng::Random.AbstractRNG,
-        model::DynamicPPL.Model,
-        init::DynamicPPL.AbstractInitStrategy,
-    )
-        varinfo = DynamicPPL.VarInfo(rng, model, init)
-        varinfo_linked = DynamicPPL.link(varinfo, model)
-        return varinfo_linked[:]
-    end
-    function _format_init(
-        rng::Random.AbstractRNG,
-        model::DynamicPPL.Model,
-        init::AbstractVector{<:DynamicPPL.AbstractInitStrategy},
-    )
-        return map(x -> _format_init(rng, model, x), init)
-    end
-else
-    _maybe_add_sampler_to_kwargs(model::DynamicPPL.Model; kwargs...) = kwargs
+function _format_init(
+    rng::Random.AbstractRNG, model::DynamicPPL.Model, init::DynamicPPL.AbstractInitStrategy
+)
+    varinfo = DynamicPPL.VarInfo(rng, model, init)
+    varinfo_linked = DynamicPPL.link(varinfo, model)
+    return varinfo_linked[:]
+end
+function _format_init(
+    rng::Random.AbstractRNG,
+    model::DynamicPPL.Model,
+    init::AbstractVector{<:DynamicPPL.AbstractInitStrategy},
+)
+    return map(x -> _format_init(rng, model, x), init)
 end
 
 _format_init(rng::Random.AbstractRNG, model::DynamicPPL.Model, init) = init
