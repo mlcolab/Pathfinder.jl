@@ -125,7 +125,7 @@ end
             @test all(>(0), result.draws_transformed[:σ])
             initial_params = InitFromParams(
                 AbstractMCMC.to_samples(
-                    DynamicPPL.ParamsWithStats, result.draws_transformed
+                    DynamicPPL.ParamsWithStats, result.draws_transformed, model
                 )[1].params,
             )
             chns = sample(model, NUTS(), 10_000; initial_params, progress=false)
@@ -141,7 +141,7 @@ end
             @test all(>(0), result.draws_transformed[:σ])
             initial_params = InitFromParams(
                 AbstractMCMC.to_samples(
-                    DynamicPPL.ParamsWithStats, result.draws_transformed
+                    DynamicPPL.ParamsWithStats, result.draws_transformed, model
                 )[1].params,
             )
             chns = sample(model, NUTS(), 10_000; initial_params, progress=false)
