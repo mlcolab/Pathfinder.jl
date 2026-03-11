@@ -9,6 +9,12 @@ using Pathfinder: Pathfinder
 using Random: Random
 using Turing: Turing
 
+if isdefined(DynamicPPL, :unflatten!!)
+    using DynamicPPL: unflatten!!
+else
+    using DynamicPPL: unflatten as unflatten!!
+end
+
 """
     create_log_density_problem(model::DynamicPPL.Model, adtype::ADTypes.AbstractADType)
 
@@ -51,7 +57,7 @@ according to `model`.
 function draws_to_chains(chain_type, model::DynamicPPL.Model, draws::AbstractMatrix)
     varinfo = DynamicPPL.link(DynamicPPL.VarInfo(model), model)
     params = map(eachcol(draws)) do draw
-        draw_varinfo = DynamicPPL.unflatten(varinfo, draw)
+        draw_varinfo = unflatten!!(varinfo, draw)
         return DynamicPPL.ParamsWithStats(draw_varinfo, model)
     end
     return AbstractMCMC.from_samples(chain_type, hcat(params))
