@@ -3,7 +3,6 @@ using Distributions
 using ForwardDiff
 using LinearAlgebra
 using Optim
-using Optimization
 using Pathfinder
 using Random
 using ReverseDiff

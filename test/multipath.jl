@@ -2,7 +2,6 @@ using ADTypes
 using Distributions
 using ForwardDiff
 using LinearAlgebra
-using Optimization
 using Pathfinder
 using PSIS
 using ReverseDiff

@@ -1,18 +1,14 @@
 using ADTypes
 using LinearAlgebra
 using Optim
-using Optimization
 using OptimizationNLopt
 using Pathfinder
 using ProgressLogging
 using ReverseDiff
 using SciMLBase
 using Test
-if isdefined(Optimization, :OptimizationState)
-    using Optimization: OptimizationState
-else
-    using OptimizationBase: OptimizationState
-end
+
+using OptimizationBase: OptimizationState
 
 @testset "build_optim_function" begin
     n = 20

@@ -7,7 +7,7 @@ using LinearAlgebra
 using LogDensityProblems: LogDensityProblems
 using OhMyThreads: OhMyThreads
 using Optim: Optim, LineSearches
-using Optimization: Optimization
+using OptimizationBase: OptimizationBase, OptimizationState
 using OptimizationOptimJL: OptimizationOptimJL
 using PDMats: PDMats
 using ProgressLogging: ProgressLogging
@@ -17,12 +17,6 @@ using Requires: Requires
 using SciMLBase: SciMLBase
 using Statistics: Statistics
 using StatsBase: StatsBase
-
-if isdefined(Optimization, :OptimizationState)
-    using Optimization: OptimizationState
-else
-    using OptimizationBase: OptimizationState
-end
 
 # Declare and export the public API
 export PathfinderResult, MultiPathfinderResult
