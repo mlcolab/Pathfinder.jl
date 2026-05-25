@@ -16,7 +16,6 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-Transducers = "28d57a85-8fef-5791-bfe6-a80928e7c999"
 
 [compat]
 ADTypes = "0.2.5, 1"
@@ -30,13 +29,12 @@ OptimizationBase = "0.0.5, 1, 2, 3, 4, 5.0"
 OptimizationNLopt = "0.2, 0.3"
 PDMats = "0.11.35"
 PSIS = "0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9"
-Pathfinder = "0.9.27"
+Pathfinder = "0.10"
 ProgressLogging = "0.1.4"
 Random = "1"
 ReverseDiff = "1.15"
 SciMLBase = "2.30"
 Test = "1"
-Transducers = "0.4.81"
 
 [sources]
 Pathfinder = {path = ".."}

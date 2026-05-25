@@ -6,7 +6,7 @@ Random.seed!(0)
 
 @testset "Pathfinder.jl" begin
     include("test_utils.jl")
-    include("transducers.jl")
+    include("utils.jl")
     include("woodbury.jl")
     include("optimize.jl")
     include("inverse_hessian.jl")
