@@ -18,12 +18,12 @@ model = regress(x) | (; y)
 n_chains = 8</code></pre><p>For convenience, <a href="../../lib/public/#Pathfinder.pathfinder"><code>pathfinder</code></a> and <a href="../../lib/public/#Pathfinder.multipathfinder"><code>multipathfinder</code></a> can take <a href="https://turinglang.org/DynamicPPL.jl/stable/api/#DynamicPPL.Model-Tuple%7B%7D">Turing models</a> as inputs and produce <a href="https://turinglang.org/MCMCChains.jl/stable/chains/#MCMCChains.Chains-Tuple%7BChains%2C%20Union%7BAbstractString%2C%20Symbol%7D%7D"><code>MCMCChains.Chains</code></a> or <a href="https://pysm.dev/FlexiChains.jl/stable/api/#FlexiChains.FlexiChain"><code>FlexiChains.VNChain</code></a> objects as outputs. To access this, we run Pathfinder normally; the chains representation of the draws (defaulting to <code>Chains</code>) is stored in <code>draws_transformed</code>.</p><pre><code class="language-julia hljs">result_single = pathfinder(model; ndraws=1_000)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Single-path Pathfinder result
   tries: 1
   draws: 1000
-  fit iteration: 14 (total: 31)
-  fit ELBO: -213.66 ± 0.09
+  fit iteration: 26 (total: 26)
+  fit ELBO: -213.33 ± 0.06
   fit distribution: MvNormal{Float64, Pathfinder.WoodburyPDMat{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, Matrix{Float64}, Matrix{Float64}, Pathfinder.WoodburyPDFactorization{Float64, LinearAlgebra.Diagonal{Float64, Vector{Float64}}, LinearAlgebra.QRCompactWYQ{Float64, Matrix{Float64}, Matrix{Float64}}, LinearAlgebra.UpperTriangular{Float64, Matrix{Float64}}}}, Vector{Float64}}(
 dim: 3
-μ: [1.6508971085750308, 1.931175392110714, 0.5801261338729234]
-Σ: [0.11087807059884007 -0.016527210635551376 -0.0014208270275037059; -0.016527210635551362 0.003407129539093107 0.00019433382234491372; -0.0014208270275036642 0.0001943338223449172 0.004718300040323309]
+μ: [1.6508971085470592, 1.9311753921149317, 0.5801261338911265]
+Σ: [0.12833559665737235 -0.024925831081334386 -0.003747748546056793; -0.024925831081334372 0.007926736754357806 0.000559861078137877; -0.0037477485460567896 0.0005598610781378777 0.00621065939801297]
 )
 </code></pre><pre><code class="language-julia hljs">result_single.draws_transformed</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Chains MCMC chain (1000×6×1 Array{Float64, 3}):
 
@@ -43,7 +43,7 @@ Use `describe(chains)` for summary statistics and quantiles.
 </code></pre><p>Note that while Turing&#39;s <code>sample</code> methods default to initializing parameters from the prior with <a href="https://turinglang.org/DynamicPPL.jl/stable/init/#DynamicPPL.InitFromPrior"><code>InitFromPrior</code></a>, Pathfinder defaults to uniformly sampling them in the range <code>[-2, 2]</code> in unconstrained space (equivalent to Turing&#39;s <a href="https://turinglang.org/DynamicPPL.jl/stable/init/#DynamicPPL.InitFromUniform"><code>InitFromUniform(-2, 2)</code></a>). To use Turing&#39;s default in Pathfinder, specify <code>init_sampler=InitFromPrior()</code>.</p><pre><code class="language-julia hljs">result_multi = multipathfinder(model, 1_000; nruns=n_chains, init_sampler=InitFromPrior())</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Multi-path Pathfinder result
   runs: 8
   draws: 1000
-  Pareto shape diagnostic: 0.6 (ok)</code></pre><p>The Pareto shape diagnostic indicates that it is likely safe to use these draws to compute posterior estimates.</p><pre><code class="language-julia hljs">chns_pf = result_multi.draws_transformed
+  Pareto shape diagnostic: 0.24 (good)</code></pre><p>The Pareto shape diagnostic indicates that it is likely safe to use these draws to compute posterior estimates.</p><pre><code class="language-julia hljs">chns_pf = result_multi.draws_transformed
 describe(chns_pf)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Chains MCMC chain (1000×6×1 Array{Float64, 3}):
 
 Iterations        = 1:1:1000
@@ -57,9 +57,9 @@ Summary Statistics
  <span class="sgr1"> parameters </span> <span class="sgr1">    mean </span> <span class="sgr1">     std </span> <span class="sgr1">    mcse </span> <span class="sgr1">  ess_bulk </span> <span class="sgr1"> ess_tail </span> <span class="sgr1">    rhat </span> <span class="sgr1"> ess_per_sec </span>
  <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90">  Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90">     Missing </span>
 
-           α    1.6483    0.3239    0.0100   1036.2052   985.9256    0.9994       missing
-           β    1.9310    0.0569    0.0017   1052.8473   897.7043    1.0001       missing
-           σ    1.8126    0.1278    0.0042    946.9734   875.5169    0.9995       missing
+           α    1.6607    0.3475    0.0113    956.5274   959.1012    1.0010       missing
+           β    1.9308    0.0611    0.0019   1034.2238   849.1882    1.0002       missing
+           σ    1.8105    0.1258    0.0038   1094.3827   975.6785    1.0022       missing
 
 
 Quantiles
@@ -67,35 +67,35 @@ Quantiles
  <span class="sgr1"> parameters </span> <span class="sgr1">    2.5% </span> <span class="sgr1">   25.0% </span> <span class="sgr1">   50.0% </span> <span class="sgr1">   75.0% </span> <span class="sgr1">   97.5% </span>
  <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span>
 
-           α    1.0366    1.4308    1.6288    1.8641    2.3226
-           β    1.8202    1.8934    1.9294    1.9714    2.0297
-           σ    1.5856    1.7235    1.8013    1.9033    2.0599</code></pre><p>We can also use these draws to initialize MCMC sampling with <a href="https://turinglang.org/DynamicPPL.jl/stable/init/#DynamicPPL.InitFromParams-Tuple%7BParamsWithStats%2C%20Union%7BNothing%2C%20AbstractInitStrategy%7D%7D"><code>InitFromParams</code></a>.</p><pre><code class="language-julia hljs">params = AbstractMCMC.to_samples(DynamicPPL.ParamsWithStats, chns_pf[1:n_chains, :, :], model)
+           α    0.9588    1.4459    1.6765    1.8979    2.3181
+           β    1.8089    1.8904    1.9341    1.9729    2.0396
+           σ    1.5999    1.7236    1.7967    1.8956    2.0963</code></pre><p>We can also use these draws to initialize MCMC sampling with <a href="https://turinglang.org/DynamicPPL.jl/stable/init/#DynamicPPL.InitFromParams-Tuple%7BParamsWithStats%2C%20Union%7BNothing%2C%20AbstractInitStrategy%7D%7D"><code>InitFromParams</code></a>.</p><pre><code class="language-julia hljs">params = AbstractMCMC.to_samples(DynamicPPL.ParamsWithStats, chns_pf[1:n_chains, :, :], model)
 initial_params = [InitFromParams(p.params) for p in vec(params)]</code></pre><pre><code class="language-julia hljs">chns = sample(model, Turing.NUTS(), MCMCThreads(), 1_000, n_chains; initial_params, progress=false)
 describe(chns)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Only a single thread available: MCMC chains are not sampled in parallel
 <span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ AbstractMCMC ~/.julia/packages/AbstractMCMC/C1aKp/src/sample.jl:544</span>
 <span class="sgr36"><span class="sgr1">┌ Info: </span></span>Found initial step size
+<span class="sgr36"><span class="sgr1">└ </span></span>  ϵ = 0.025
+<span class="sgr36"><span class="sgr1">┌ Info: </span></span>Found initial step size
+<span class="sgr36"><span class="sgr1">└ </span></span>  ϵ = 0.05
+<span class="sgr36"><span class="sgr1">┌ Info: </span></span>Found initial step size
+<span class="sgr36"><span class="sgr1">└ </span></span>  ϵ = 0.05
+<span class="sgr36"><span class="sgr1">┌ Info: </span></span>Found initial step size
+<span class="sgr36"><span class="sgr1">└ </span></span>  ϵ = 0.05
+<span class="sgr36"><span class="sgr1">┌ Info: </span></span>Found initial step size
+<span class="sgr36"><span class="sgr1">└ </span></span>  ϵ = 0.05
+<span class="sgr36"><span class="sgr1">┌ Info: </span></span>Found initial step size
 <span class="sgr36"><span class="sgr1">└ </span></span>  ϵ = 0.05
 <span class="sgr36"><span class="sgr1">┌ Info: </span></span>Found initial step size
 <span class="sgr36"><span class="sgr1">└ </span></span>  ϵ = 0.2
 <span class="sgr36"><span class="sgr1">┌ Info: </span></span>Found initial step size
 <span class="sgr36"><span class="sgr1">└ </span></span>  ϵ = 0.05
-<span class="sgr36"><span class="sgr1">┌ Info: </span></span>Found initial step size
-<span class="sgr36"><span class="sgr1">└ </span></span>  ϵ = 0.043750000000000004
-<span class="sgr36"><span class="sgr1">┌ Info: </span></span>Found initial step size
-<span class="sgr36"><span class="sgr1">└ </span></span>  ϵ = 0.05
-<span class="sgr36"><span class="sgr1">┌ Info: </span></span>Found initial step size
-<span class="sgr36"><span class="sgr1">└ </span></span>  ϵ = 0.2
-<span class="sgr36"><span class="sgr1">┌ Info: </span></span>Found initial step size
-<span class="sgr36"><span class="sgr1">└ </span></span>  ϵ = 0.2
-<span class="sgr36"><span class="sgr1">┌ Info: </span></span>Found initial step size
-<span class="sgr36"><span class="sgr1">└ </span></span>  ϵ = 0.043750000000000004
 Chains MCMC chain (1000×17×8 Array{Float64, 3}):
 
 Iterations        = 501:1:1500
 Number of chains  = 8
 Samples per chain = 1000
-Wall duration     = 4.23 seconds
-Compute duration  = 3.08 seconds
+Wall duration     = 5.3 seconds
+Compute duration  = 3.81 seconds
 parameters        = α, β, σ
 internals         = n_steps, is_accept, acceptance_rate, log_density, hamiltonian_energy, hamiltonian_energy_error, max_hamiltonian_energy_error, tree_depth, numerical_error, step_size, nom_step_size, logprior, loglikelihood, logjoint
 
@@ -104,9 +104,9 @@ Summary Statistics
  <span class="sgr1"> parameters </span> <span class="sgr1">    mean </span> <span class="sgr1">     std </span> <span class="sgr1">    mcse </span> <span class="sgr1">  ess_bulk </span> <span class="sgr1">  ess_tail </span> <span class="sgr1">    rhat </span> <span class="sgr1"> ess_per_sec </span>
  <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90">     Float64 </span>
 
-           α    1.6423    0.3429    0.0061   3247.7012   3290.8930    1.0006     1055.1336
-           β    1.9319    0.0603    0.0011   3313.5727   3806.1370    1.0012     1076.5343
-           σ    1.8181    0.1263    0.0019   4744.5782   4466.9178    1.0006     1541.4484
+           α    1.6337    0.3380    0.0053   4066.3455   4375.1240    1.0018     1066.4426
+           β    1.9333    0.0585    0.0009   4078.0293   4357.4593    1.0032     1069.5068
+           σ    1.8139    0.1256    0.0018   4862.9435   4499.6669    1.0013     1275.3589
 
 
 Quantiles
@@ -114,9 +114,9 @@ Quantiles
  <span class="sgr1"> parameters </span> <span class="sgr1">    2.5% </span> <span class="sgr1">   25.0% </span> <span class="sgr1">   50.0% </span> <span class="sgr1">   75.0% </span> <span class="sgr1">   97.5% </span>
  <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span>
 
-           α    0.9717    1.4127    1.6444    1.8704    2.3072
-           β    1.8106    1.8925    1.9322    1.9708    2.0507
-           σ    1.5897    1.7301    1.8111    1.8989    2.0814</code></pre><p>We can use Pathfinder&#39;s estimate of the metric and only perform enough warm-up to tune the step size.</p><pre><code class="language-julia hljs">inv_metric = result_multi.pathfinder_results[1].fit_distribution.Σ
+           α    0.9499    1.4102    1.6362    1.8596    2.2992
+           β    1.8210    1.8935    1.9333    1.9719    2.0487
+           σ    1.5820    1.7279    1.8076    1.8949    2.0826</code></pre><p>We can use Pathfinder&#39;s estimate of the metric and only perform enough warm-up to tune the step size.</p><pre><code class="language-julia hljs">inv_metric = result_multi.pathfinder_results[1].fit_distribution.Σ
 metric = Pathfinder.RankUpdateEuclideanMetric(inv_metric)
 kernel = HMCKernel(Trajectory{MultinomialTS}(Leapfrog(0.0), GeneralisedNoUTurn()))
 adaptor = StepSizeAdaptor(0.8, 1.0)  # adapt only the step size
@@ -136,32 +136,32 @@ chns = sample(
 )[n_adapts + 1:end, :, :]  # drop warm-up draws
 describe(chns)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr33"><span class="sgr1">┌ Warning: </span></span>Only a single thread available: MCMC chains are not sampled in parallel
 <span class="sgr33"><span class="sgr1">└ </span></span><span class="sgr90">@ AbstractMCMC ~/.julia/packages/AbstractMCMC/C1aKp/src/sample.jl:544</span>
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Found initial step size 3.2
 <span class="sgr36"><span class="sgr1">[ Info: </span></span>Found initial step size 1.6
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Found initial step size 3.2
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Found initial step size 3.2
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Found initial step size 1.6
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Found initial step size 1.6
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Found initial step size 2.4000000000000004
-<span class="sgr36"><span class="sgr1">[ Info: </span></span>Found initial step size 3.2
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Found initial step size 0.8500000000000001
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Found initial step size 0.8500000000000001
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Found initial step size 1.5875000000000001
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Found initial step size 0.8
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Found initial step size 0.8500000000000001
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Found initial step size 0.8
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Found initial step size 0.8
 Chains MCMC chain (1000×17×8 Array{Float64, 3}):
 
 Iterations        = 51:1:1050
 Number of chains  = 8
 Samples per chain = 1000
-Wall duration     = 1.21 seconds
-Compute duration  = 1.09 seconds
+Wall duration     = 1.72 seconds
+Compute duration  = 1.56 seconds
 parameters        = α, β, σ
 internals         = n_steps, is_accept, acceptance_rate, log_density, hamiltonian_energy, hamiltonian_energy_error, max_hamiltonian_energy_error, tree_depth, numerical_error, step_size, nom_step_size, logprior, loglikelihood, logjoint
 
 Summary Statistics
 
- <span class="sgr1"> parameters </span> <span class="sgr1">    mean </span> <span class="sgr1">     std </span> <span class="sgr1">    mcse </span> <span class="sgr1">   ess_bulk </span> <span class="sgr1">  ess_tail </span> <span class="sgr1">    rhat </span> <span class="sgr1"> ess_per_sec </span>
- <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90">    Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90">     Float64 </span>
+ <span class="sgr1"> parameters </span> <span class="sgr1">    mean </span> <span class="sgr1">     std </span> <span class="sgr1">    mcse </span> <span class="sgr1">  ess_bulk </span> <span class="sgr1">  ess_tail </span> <span class="sgr1">    rhat </span> <span class="sgr1"> ess_per_sec </span>
+ <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90">   Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90">     Float64 </span>
 
-           α    1.6452    0.3426    0.0034   10168.1336   6266.0881    1.0012     9328.5630
-           β    1.9317    0.0594    0.0006    8721.0425   6252.7244    1.0018     8000.9565
-           σ    1.8136    0.1255    0.0012   10362.8508   6596.8938    1.0018     9507.2026
+           α    1.6425    0.3367    0.0048   4825.3650   5368.6923    1.0017     3097.1534
+           β    1.9321    0.0590    0.0010   3719.0372   3770.6644    1.0026     2387.0585
+           σ    1.8145    0.1288    0.0021   3934.3622   3788.2042    1.0018     2525.2646
 
 
 Quantiles
@@ -169,6 +169,6 @@ Quantiles
  <span class="sgr1"> parameters </span> <span class="sgr1">    2.5% </span> <span class="sgr1">   25.0% </span> <span class="sgr1">   50.0% </span> <span class="sgr1">   75.0% </span> <span class="sgr1">   97.5% </span>
  <span class="sgr90">     Symbol </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span> <span class="sgr90"> Float64 </span>
 
-           α    0.9662    1.4157    1.6469    1.8692    2.3299
-           β    1.8155    1.8924    1.9311    1.9718    2.0472
-           σ    1.5897    1.7271    1.8070    1.8933    2.0793</code></pre><p>See <a href="../initializing-hmc/#Initializing-HMC-with-Pathfinder">Initializing HMC with Pathfinder</a> for further examples.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../initializing-hmc/">« Initializing HMC</a><a class="docs-footer-nextpage" href="../../references/">References »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Thursday 4 June 2026 00:53">Thursday 4 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+           α    0.9708    1.4216    1.6487    1.8658    2.2983
+           β    1.8190    1.8925    1.9312    1.9711    2.0501
+           σ    1.5832    1.7248    1.8048    1.8962    2.0895</code></pre><p>See <a href="../initializing-hmc/#Initializing-HMC-with-Pathfinder">Initializing HMC with Pathfinder</a> for further examples.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../initializing-hmc/">« Initializing HMC</a><a class="docs-footer-nextpage" href="../../references/">References »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Friday 5 June 2026 00:48">Friday 5 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
