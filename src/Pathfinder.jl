@@ -2,12 +2,12 @@ module Pathfinder
 
 using ADTypes: ADTypes
 using Distributions: Distributions
-using Folds: Folds
 using IrrationalConstants: log2π
 using LinearAlgebra
 using LogDensityProblems: LogDensityProblems
+using OhMyThreads: OhMyThreads
 using Optim: Optim, LineSearches
-using Optimization: Optimization
+using OptimizationBase: OptimizationBase, OptimizationState
 using OptimizationOptimJL: OptimizationOptimJL
 using PDMats: PDMats
 using ProgressLogging: ProgressLogging
@@ -17,13 +17,6 @@ using Requires: Requires
 using SciMLBase: SciMLBase
 using Statistics: Statistics
 using StatsBase: StatsBase
-using Transducers: Transducers
-
-if isdefined(Optimization, :OptimizationState)
-    using Optimization: OptimizationState
-else
-    using OptimizationBase: OptimizationState
-end
 
 # Declare and export the public API
 export PathfinderResult, MultiPathfinderResult
@@ -45,7 +38,7 @@ end
 # We depend on Optim, and Optim depends on ForwardDiff, so we can offer it as a default.
 default_ad() = ADTypes.AutoForwardDiff()
 
-include("transducers.jl")
+include("utils.jl")
 include("woodbury.jl")
 include("optimize.jl")
 include("inverse_hessian.jl")

@@ -101,15 +101,13 @@ $(_ARGUMENT_DOCSTRING)
 - `importance::Bool=true`: Perform Pareto smoothed importance resampling of draws.
 - `rng::AbstractRNG=Random.default_rng()`: Pseudorandom number generator. It is recommended to
     use a parallelization-friendly PRNG like the default PRNG on Julia 1.7 and up.
-- `executor::Transducers.Executor`: Transducers.jl executor that determines if and how to
-    run the single-path runs in parallel, defaulting to
-    [`Transducers.SequentialEx()`](@extref `Transducers.SequentialEx`). If a transducer for
-    multi-threaded computation is selected, you must first verify that `rng` and the log
-    density function are thread-safe.
-- `executor_per_run::Transducers.Executor`: Transducers.jl executor used within each run to
-    parallelize PRNG calls, defaulting to
-    [`Transducers.SequentialEx()`](@extref `Transducers.SequentialEx`). See
-    [`pathfinder`](@ref) for further description.
+- `ntasks::Int=1`: maximum number of parallel tasks used to run the single-path
+    Pathfinder runs and to evaluate the target log density across draws. The default
+    `ntasks = 1` runs sequentially; larger values parallelize across runs and across
+    importance-resampling log-density evaluations, in which case the log-density function
+    must be thread-safe. Results are reproducible regardless of `ntasks`.
+- `ntasks_per_run::Int=1`: same as `ntasks`, but applied within each single-path run for
+    parallelizing the ELBO evaluation. See [`pathfinder`](@ref) for details.
 - `kwargs...` : Remaining keywords are forwarded to [`pathfinder`](@ref).
 
 # Returns
@@ -141,64 +139,142 @@ function multipathfinder(
     rng::Random.AbstractRNG=Random.default_rng(),
     history_length::Int=DEFAULT_HISTORY_LENGTH,
     optimizer=default_optimizer(history_length),
-    executor::Transducers.Executor=Transducers.SequentialEx(),
-    executor_per_run=Transducers.SequentialEx(),
+    ntasks::Int=1,
+    ntasks_per_run::Int=1,
     importance::Bool=true,
     kwargs...,
 )
-    if init === nothing
+    _init = if init === nothing
         nruns > 0 || throw(
             ArgumentError("A positive `nruns` must be set or `init` must be provided.")
         )
-        _init = fill(init, nruns)
+        fill(init, nruns)
     else
-        _init = init
+        init
     end
+    nruns = length(_init)
     if ndraws > ndraws_per_run * nruns
         @warn "More draws requested than total number of draws across replicas. Draws will not be unique."
     end
     logp(x) = -optim_fun.f(x, nothing)
 
     # run pathfinder independently from each starting point
-    trans = Transducers.Map() do (init_i, optimizer_i)
-        return pathfinder(
-            optim_fun;
-            rng,
-            history_length,
-            optimizer=optimizer_i,
-            ndraws=ndraws_per_run,
-            init=init_i,
-            executor=executor_per_run,
-            ndraws_elbo,
-            kwargs...,
-        )
+    run_seeds = rand!(rng, similar(_init, UInt64))
+    copy_rng = copy(rng)
+    nchunks = min(nruns, ntasks)
+    threaded = nchunks > 1 && Threads.nthreads() > 1
+
+    pathfinder_results = ProgressLogging.@withprogress name = "Multi-path Pathfinder" begin
+        progress_taskref = Ref{Task}()
+        progress_channel = Channel{Bool}(
+            min(nruns, 1_000); spawn=true, taskref=progress_taskref
+        ) do ch            
+            # Throttle progress logs as generally the logging system is not super performant:
+            # - At most 1 progress log every 0.1 seconds
+            # - At most 1 progress log every 0.5% progress
+            progress_step = max(1, cld(nruns, 200))
+            next_logged = progress_step
+            next_time = time() + 0.1
+
+            completed = 0
+            while take!(ch)
+                completed += 1
+                now = time()
+                if completed >= next_logged && now >= next_time
+                    ProgressLogging.@logprogress completed / nruns
+                    next_logged = completed + progress_step
+                    next_time = now + 0.1
+                end
+            end
+        end
+
+        try
+            if threaded
+                rng_pool = Channel{typeof(copy_rng)}(nchunks)
+                put!(rng_pool, copy_rng)
+                for _ in 2:nchunks
+                    put!(rng_pool, copy(rng))
+                end
+                OhMyThreads.tmapreduce(
+                    vcat,
+                    OhMyThreads.chunks(eachindex(_init, run_seeds); n=nchunks);
+                    chunking=false,
+                ) do chunk
+                    chunk_rng = take!(rng_pool)
+                    # `Optim` optimizers may carry mutable state, so each task gets its own copy.
+                    chunk_optimizer = deepcopy(optimizer)
+                    try
+                        return map(chunk) do i
+                            Random.seed!(chunk_rng, run_seeds[i])
+                            result = pathfinder(
+                                optim_fun;
+                                rng=chunk_rng,
+                                history_length,
+                                optimizer=chunk_optimizer,
+                                ndraws=ndraws_per_run,
+                                init=_init[i],
+                                ntasks=ntasks_per_run,
+                                ndraws_elbo,
+                                kwargs...,
+                            )
+                            put!(progress_channel, true)
+                            yield()
+                            return result
+                        end
+                    finally
+                        put!(rng_pool, chunk_rng)
+                    end
+                end
+            else
+                map(_init, run_seeds) do init, seed
+                    Random.seed!(copy_rng, seed)
+                    result = pathfinder(
+                        optim_fun;
+                        rng=copy_rng,
+                        history_length,
+                        optimizer=optimizer,
+                        ndraws=ndraws_per_run,
+                        init,
+                        ntasks=ntasks_per_run,
+                        ndraws_elbo,
+                        kwargs...,
+                    )
+                    put!(progress_channel, true)
+                    yield()
+                    return result
+                end
+            end
+        finally
+            put!(progress_channel, false)
+            close(progress_channel)
+            wait(progress_taskref[])
+        end
     end
-    iter_optimizers = fill(optimizer, nruns)
-    iter_sp =
-        if executor isa Folds.ThreadedEx
-            # temporary workaround due to
-            # https://github.com/JuliaFolds2/Transducers.jl/issues/10
-            # also support optimizers that store state
-            zip(_init, Iterators.map(deepcopy, iter_optimizers))
-        else
-            Transducers.withprogress(zip(_init, iter_optimizers); interval=1e-3)
-        end |> trans
-    pathfinder_results = Folds.collect(iter_sp, executor)
-    fit_distributions =
-        pathfinder_results |> Transducers.Map(x -> x.fit_distribution) |> collect
-    draws_all = reduce(hcat, pathfinder_results |> Transducers.Map(x -> x.draws))
+    fit_distributions = map(x -> x.fit_distribution, pathfinder_results)
+    draws_all = mapreduce(x -> x.draws, hcat, pathfinder_results)
 
     # draw samples from augmented mixture model
     inds = axes(draws_all, 2)
     sample_inds, psis_result = if importance
-        log_densities_fit =
-            pathfinder_results |>
-            Transducers.MapCat() do x
-                return Distributions.logpdf(x.fit_distribution, x.draws)
-            end |>
-            collect
-        iter_logp = eachcol(draws_all) |> Transducers.Map(logp)
-        log_densities_target = Folds.collect(iter_logp, executor)
+        log_densities_fit = if threaded
+            OhMyThreads.tmapreduce(
+                x -> Distributions.logpdf(x.fit_distribution, x.draws),
+                vcat,
+                pathfinder_results;
+                nchunks=nchunks,
+            )
+        else
+            mapreduce(
+                x -> Distributions.logpdf(x.fit_distribution, x.draws),
+                vcat,
+                pathfinder_results,
+            )
+        end
+        log_densities_target = if threaded
+            OhMyThreads.tmap(logp, eachcol(draws_all); nchunks=nchunks)
+        else
+            map(logp, eachcol(draws_all))
+        end
         log_densities_ratios = log_densities_target - log_densities_fit
         resample(rng, inds, log_densities_ratios, ndraws)
     else

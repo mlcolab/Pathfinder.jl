@@ -41,12 +41,8 @@ links = InterLinks(
     ),
     "Optim" => "https://julianlsolvers.github.io/Optim.jl/stable/",
     "Optimization" => "https://docs.sciml.ai/Optimization/stable/",
+    "OhMyThreads" => "https://juliafolds2.github.io/OhMyThreads.jl/stable/",
     "PSIS" => "https://julia.arviz.org/PSIS/stable/",
-    "Transducers" => (
-        "https://juliafolds2.github.io/Transducers.jl/stable/",  # not built for a while
-        "https://juliafolds2.github.io/Transducers.jl/dev/objects.inv",
-        joinpath(@__DIR__, "inventories", "Transducers.toml"),
-    ),
 )
 
 makedocs(;
