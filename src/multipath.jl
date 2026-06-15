@@ -160,15 +160,12 @@ function multipathfinder(
 
     # run pathfinder independently from each starting point
     run_seeds = rand!(rng, similar(_init, UInt64))
-    copy_rng = copy(rng)
-    nchunks = min(nruns, ntasks)
-    threaded = nchunks > 1 && Threads.nthreads() > 1
 
     pathfinder_results = ProgressLogging.@withprogress name = "Multi-path Pathfinder" begin
         progress_taskref = Ref{Task}()
         progress_channel = Channel{Bool}(
             min(nruns, 1_000); spawn=true, taskref=progress_taskref
-        ) do ch            
+        ) do ch
             # Throttle progress logs as generally the logging system is not super performant:
             # - At most 1 progress log every 0.1 seconds
             # - At most 1 progress log every 0.5% progress
@@ -189,60 +186,25 @@ function multipathfinder(
         end
 
         try
-            if threaded
-                rng_pool = Channel{typeof(copy_rng)}(nchunks)
-                put!(rng_pool, copy_rng)
-                for _ in 2:nchunks
-                    put!(rng_pool, copy(rng))
-                end
-                OhMyThreads.tmapreduce(
-                    vcat,
-                    OhMyThreads.chunks(eachindex(_init, run_seeds); n=nchunks);
-                    chunking=false,
-                ) do chunk
-                    chunk_rng = take!(rng_pool)
-                    # `Optim` optimizers may carry mutable state, so each task gets its own copy.
-                    chunk_optimizer = deepcopy(optimizer)
-                    try
-                        return map(chunk) do i
-                            Random.seed!(chunk_rng, run_seeds[i])
-                            result = pathfinder(
-                                optim_fun;
-                                rng=chunk_rng,
-                                history_length,
-                                optimizer=chunk_optimizer,
-                                ndraws=ndraws_per_run,
-                                init=_init[i],
-                                ntasks=ntasks_per_run,
-                                ndraws_elbo,
-                                kwargs...,
-                            )
-                            put!(progress_channel, true)
-                            yield()
-                            return result
-                        end
-                    finally
-                        put!(rng_pool, chunk_rng)
-                    end
-                end
-            else
-                map(_init, run_seeds) do init, seed
-                    Random.seed!(copy_rng, seed)
-                    result = pathfinder(
-                        optim_fun;
-                        rng=copy_rng,
-                        history_length,
-                        optimizer=optimizer,
-                        ndraws=ndraws_per_run,
-                        init,
-                        ntasks=ntasks_per_run,
-                        ndraws_elbo,
-                        kwargs...,
-                    )
-                    put!(progress_channel, true)
-                    yield()
-                    return result
-                end
+            # `Optim` optimizers may carry mutable state, so each chunk gets its own copy.
+            _chunk_tmap(
+                _init, run_seeds; ntasks, setup=() -> (copy(rng), deepcopy(optimizer))
+            ) do (chunk_rng, chunk_optimizer), init, seed
+                Random.seed!(chunk_rng, seed)
+                result = pathfinder(
+                    optim_fun;
+                    rng=chunk_rng,
+                    history_length,
+                    optimizer=chunk_optimizer,
+                    ndraws=ndraws_per_run,
+                    init,
+                    ntasks=ntasks_per_run,
+                    ndraws_elbo,
+                    kwargs...,
+                )
+                put!(progress_channel, true)
+                yield()
+                return result
             end
         finally
             put!(progress_channel, false)
@@ -256,25 +218,13 @@ function multipathfinder(
     # draw samples from augmented mixture model
     inds = axes(draws_all, 2)
     sample_inds, psis_result = if importance
-        log_densities_fit = if threaded
-            OhMyThreads.tmapreduce(
-                x -> Distributions.logpdf(x.fit_distribution, x.draws),
-                vcat,
-                pathfinder_results;
-                nchunks=nchunks,
-            )
-        else
-            mapreduce(
-                x -> Distributions.logpdf(x.fit_distribution, x.draws),
-                vcat,
-                pathfinder_results,
-            )
-        end
-        log_densities_target = if threaded
-            OhMyThreads.tmap(logp, eachcol(draws_all); nchunks=nchunks)
-        else
-            map(logp, eachcol(draws_all))
-        end
+        log_densities_fit = _maybe_tmapreduce(
+            x -> Distributions.logpdf(x.fit_distribution, x.draws),
+            vcat,
+            pathfinder_results,
+            ntasks,
+        )
+        log_densities_target = _maybe_tmap(logp, eachcol(draws_all), ntasks)
         log_densities_ratios = log_densities_target - log_densities_fit
         resample(rng, inds, log_densities_ratios, ndraws)
     else
