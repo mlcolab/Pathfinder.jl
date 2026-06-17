@@ -35,7 +35,9 @@ using Test
         dists = Normal.(0, σs)
         @testset "ntasks=$ntasks" for ntasks in (1, Threads.nthreads())
             rng = Random.seed!(Random.default_rng(), 42)
-            lopt, estimates = Pathfinder.maximize_elbo(rng, logp, dists, 100, ntasks)
+            lopt, estimates = @inferred Pathfinder.maximize_elbo(
+                rng, logp, dists, 100, ntasks
+            )
             @test lopt == 3
             @test estimates[lopt].value ≈ 0
             rng = Random.seed!(Random.default_rng(), 42)
@@ -43,7 +45,9 @@ using Test
             @test lopt2 == lopt
             @test getproperty.(estimates2, :value) == getproperty.(estimates, :value)
             @test getproperty.(estimates2, :std_err) == getproperty.(estimates, :std_err)
-            lopt3, estimates3 = Pathfinder.maximize_elbo(rng, logp, dists[2:1], 100, ntasks)
+            lopt3, estimates3 = @inferred Pathfinder.maximize_elbo(
+                rng, logp, dists[2:1], 100, ntasks
+            )
             @test lopt3 == 0
             @test isempty(estimates3)
         end

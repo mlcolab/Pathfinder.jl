@@ -22,7 +22,7 @@ using Test
         ℓ = build_logdensityproblem(logp, dim, 2)
         rngs = [MersenneTwister(), Random.default_rng()]
         seed = 76
-        @testset for rng in rngs, ntasks in (1, Threads.nthreads())
+        @testset for rng in rngs, ntasks in unique((1, Threads.nthreads()))
             Random.seed!(rng, seed)
             result = multipathfinder(
                 ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, ntasks

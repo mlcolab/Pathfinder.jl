@@ -18,7 +18,7 @@ using Test
         seed = 42
         @testset for dim in [1, 5, 10, 100],
             rng in rngs,
-            ntasks in (1, Threads.nthreads())
+            ntasks in unique((1, Threads.nthreads()))
 
             ℓ = build_logdensityproblem(logp, 5, 2)
             init = randn(dim)
@@ -83,7 +83,7 @@ using Test
         x = randn(dim)
         seed = 38
         optimizer = Optim.LBFGS(; m=6)
-        @testset for rng in rngs, ntasks in (1, Threads.nthreads())
+        @testset for rng in rngs, ntasks in unique((1, Threads.nthreads()))
             Random.seed!(rng, seed)
             # less restrictive type check to work around https://github.com/mlcolab/Pathfinder.jl/issues/142
             # TODO: remove this workaround once the issue is fixed
