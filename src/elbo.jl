@@ -1,13 +1,11 @@
-function maximize_elbo(rng, logp, dists, ndraws, executor)
-    EE = Core.Compiler.return_type(
-        elbo_and_samples, Tuple{typeof(rng),typeof(logp),eltype(dists),Int}
-    )
-    estimates = similar(dists, EE)
-    isempty(estimates) && return 0, estimates
-    Folds.map!(estimates, dists, executor) do dist
-        return elbo_and_samples(rng, logp, dist, ndraws)
+function maximize_elbo(rng, logp, dists, ndraws, ntasks::Int)
+    seeds = rand!(rng, similar(dists, UInt64))
+    estimates = _chunk_tmap(dists, seeds; ntasks, setup=() -> copy(rng)) do chunk_rng, dist, seed
+        Random.seed!(chunk_rng, seed)
+        return elbo_and_samples(chunk_rng, logp, dist, ndraws)
     end
-    _, iteration_opt = _findmax(estimates |> Transducers.Map(est -> est.value))
+    isempty(estimates) && return 0, estimates
+    _, iteration_opt = _findmax_skipnan(est -> est.value, estimates)
     return iteration_opt, estimates
 end
 
@@ -17,7 +15,7 @@ function elbo_and_samples(rng, logp, dist, ndraws)
     logpϕ .= logp.(eachcol(ϕ))
     logr = logpϕ - logqϕ
     elbo = Statistics.mean(logr)
-    elbo_se = sqrt(Statistics.var(logr) / length(logr))
+    elbo_se = sqrt(Statistics.var(logr; mean = elbo) / length(logr))
     return ELBOEstimate(elbo, elbo_se, ϕ, logpϕ, logqϕ, logr)
 end
 

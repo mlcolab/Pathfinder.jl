@@ -51,7 +51,7 @@ function optimize_with_trace(
     _callback = OptimizationCallback(
         xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
     )
-    sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
+    sol = SciMLBase.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
 
     _∇fxs = _fill_missing_gradient_values!(∇fxs, xs, sol.cache.f)
 

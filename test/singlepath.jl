@@ -3,13 +3,11 @@ using Distributions
 using ForwardDiff
 using LinearAlgebra
 using Optim
-using Optimization
 using Pathfinder
 using Random
 using ReverseDiff
 using SciMLBase
 using Test
-using Transducers
 
 @testset "single path pathfinder" begin
     @testset "IsoNormal" begin
@@ -18,14 +16,16 @@ using Transducers
         ndraws = 100
         rngs = [MersenneTwister(), Random.default_rng()]
         seed = 42
-        @testset for dim in [1, 5, 10, 100], rng in rngs
-            executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
+        @testset for dim in [1, 5, 10, 100],
+            rng in rngs,
+            ntasks in unique((1, Threads.nthreads()))
+
             ℓ = build_logdensityproblem(logp, 5, 2)
             init = randn(dim)
             Random.seed!(rng, seed)
             # less restrictive type check to work around https://github.com/mlcolab/Pathfinder.jl/issues/142
             # TODO: remove this workaround once the issue is fixed
-            result = @inferred PathfinderResult pathfinder(ℓ; init, ndraws, rng, executor)
+            result = @inferred PathfinderResult pathfinder(ℓ; init, ndraws, rng, ntasks)
             @test result isa PathfinderResult
             @test result.input === ℓ
             @test result.optim_prob isa SciMLBase.OptimizationProblem
@@ -53,14 +53,14 @@ using Transducers
                 argmax(getproperty.(result.elbo_estimates, :value))
 
             Random.seed!(rng, seed)
-            result2 = pathfinder(ℓ; init, ndraws, rng, executor)
+            result2 = pathfinder(ℓ; init, ndraws, rng, ntasks)
             @test result2.fit_iteration == result.fit_iteration
             @test result2.draws == result.draws
             @test getproperty.(result2.elbo_estimates, :value) ==
                 getproperty.(result.elbo_estimates, :value)
 
             ndraws = 2
-            result3 = pathfinder(ℓ; init, ndraws, executor)
+            result3 = pathfinder(ℓ; init, ndraws, ntasks)
             @test size(result3.draws) == (dim, ndraws)
         end
     end
@@ -78,25 +78,23 @@ using Transducers
         logp(x) = -dot(x, P, x) / 2
         dim = 5
         ℓ = build_logdensityproblem(logp, dim, 2)
-        ndraws_elbo = 100
+        ndraws_elbo = 500
         rngs = [MersenneTwister(), Random.default_rng()]
         x = randn(dim)
         seed = 38
         optimizer = Optim.LBFGS(; m=6)
-        @testset for rng in rngs
-            executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
-
+        @testset for rng in rngs, ntasks in unique((1, Threads.nthreads()))
             Random.seed!(rng, seed)
             # less restrictive type check to work around https://github.com/mlcolab/Pathfinder.jl/issues/142
             # TODO: remove this workaround once the issue is fixed
             result = @inferred PathfinderResult pathfinder(
-                ℓ; rng, optimizer, ndraws_elbo, executor
+                ℓ; rng, optimizer, ndraws_elbo, ntasks
             )
             @test result.input === ℓ
             @test result.fit_distribution.Σ ≈ Σ rtol = 1e-1
             @test result.optimizer == optimizer
             Random.seed!(rng, seed)
-            result2 = pathfinder(ℓ; rng, optimizer, ndraws_elbo, executor)
+            result2 = pathfinder(ℓ; rng, optimizer, ndraws_elbo, ntasks)
             @test result2.fit_distribution == result.fit_distribution
             @test result2.draws == result.draws
             @test getproperty.(result2.elbo_estimates, :value) ==
@@ -170,5 +168,37 @@ using Transducers
         @test_throws ArgumentError pathfinder(logp)
         @test_throws ArgumentError pathfinder(build_logdensityproblem(logp, 0, 2))
         pathfinder(build_logdensityproblem(logp, 3, 2))
+    end
+
+    @testset "reproducibility across ntasks" begin
+        logp(x) = -sum(abs2, x) / 2
+        ℓ = build_logdensityproblem(logp, 5, 2)
+        seed = 17
+
+        @testset "explicit rng" begin
+            rng = MersenneTwister(seed)
+            serial = pathfinder(ℓ; rng, ndraws=100, ntasks=1)
+            Random.seed!(rng, seed)
+            threaded = pathfinder(ℓ; rng, ndraws=100, ntasks=Threads.nthreads())
+            @test serial.draws == threaded.draws
+            @test serial.fit_iteration == threaded.fit_iteration
+            @test getproperty.(serial.elbo_estimates, :value) ==
+                getproperty.(threaded.elbo_estimates, :value)
+            @test serial.fit_distribution.μ == threaded.fit_distribution.μ
+            @test serial.fit_distribution.Σ == threaded.fit_distribution.Σ
+        end
+
+        @testset "default rng" begin
+            Random.seed!(seed)
+            serial = pathfinder(ℓ; ndraws=100, ntasks=1)
+            Random.seed!(seed)
+            threaded = pathfinder(ℓ; ndraws=100, ntasks=Threads.nthreads())
+            @test serial.draws == threaded.draws
+            @test serial.fit_iteration == threaded.fit_iteration
+            @test getproperty.(serial.elbo_estimates, :value) ==
+                getproperty.(threaded.elbo_estimates, :value)
+            @test serial.fit_distribution.μ == threaded.fit_distribution.μ
+            @test serial.fit_distribution.Σ == threaded.fit_distribution.Σ
+        end
     end
 end
