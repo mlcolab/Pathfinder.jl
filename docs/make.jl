@@ -6,10 +6,6 @@ using DocumenterInterLinks
 using DynamicPPL # bring type names into scope for @docs signatures
 using Turing # load extension
 
-# fix pretty-printed widths for both `@example` and `jldoctest` blocks, regardless of the
-# terminal width of whatever environment runs this script
-ENV["COLUMNS"] = "100"
-
 # has necessary secrets for deploying docs to GitHub Pages
 const HAS_GH_DEPLOY_SECRETS = all(
     !isempty, (get(ENV, "GITHUB_TOKEN", ""), get(ENV, "DOCUMENTER_KEY", ""))
@@ -49,29 +45,32 @@ links = InterLinks(
     "PSIS" => "https://julia.arviz.org/PSIS/stable/",
 )
 
-makedocs(;
-    modules=[Pathfinder, PathfinderTuringExt],
-    authors="Seth Axen <seth.axen@gmail.com> and contributors",
-    repo=Remotes.GitHub("mlcolab", "Pathfinder.jl"),
-    sitename="Pathfinder.jl",
-    format=Documenter.HTML(;
-        prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://mlcolab.github.io/Pathfinder.jl",
-        assets=String["assets/citations.css"],
-    ),
-    pages=[
-        "Home" => "index.md",
-        "Library" => ["Public" => "lib/public.md", "Internals" => "lib/internals.md"],
-        "Examples" => [
-            "Quickstart" => "examples/quickstart.md",
-            "Initializing HMC" => "examples/initializing-hmc.md",
-            "Turing usage" => "examples/turing.md",
+# Increase the terminal width from 80 to 100 chars to avoid column truncation
+withenv("COLUMNS" => 100) do
+    makedocs(;
+        modules=[Pathfinder, PathfinderTuringExt],
+        authors="Seth Axen <seth.axen@gmail.com> and contributors",
+        repo=Remotes.GitHub("mlcolab", "Pathfinder.jl"),
+        sitename="Pathfinder.jl",
+        format=Documenter.HTML(;
+            prettyurls=get(ENV, "CI", "false") == "true",
+            canonical="https://mlcolab.github.io/Pathfinder.jl",
+            assets=String["assets/citations.css"],
+        ),
+        pages=[
+            "Home" => "index.md",
+            "Library" => ["Public" => "lib/public.md", "Internals" => "lib/internals.md"],
+            "Examples" => [
+                "Quickstart" => "examples/quickstart.md",
+                "Initializing HMC" => "examples/initializing-hmc.md",
+                "Turing usage" => "examples/turing.md",
+            ],
+            "References" => "references.md",
         ],
-        "References" => "references.md",
-    ],
-    plugins=[bib, links],
-    warnonly=[:missing_docs],
-)
+        plugins=[bib, links],
+        warnonly=[:missing_docs],
+    )
+end
 
 deploydocs(;
     repo="github.com/mlcolab/Pathfinder.jl",
