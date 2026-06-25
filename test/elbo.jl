@@ -2,7 +2,6 @@ using Distributions
 using Pathfinder
 using Random
 using Test
-using Transducers
 
 @testset "ELBO estimation" begin
     @testset "elbo_and_samples" begin
@@ -34,21 +33,20 @@ using Transducers
         logp(x) = logpdf(target_dist, x[1])
         σs = [1e-3, 0.05, σ_target, 1.0, 1.1, 1.2, 5.0, 10.0]
         dists = Normal.(0, σs)
-        executors = [SequentialEx(), ThreadedEx()]
-        @testset "$executor" for executor in executors
+        @testset "ntasks=$ntasks" for ntasks in (1, Threads.nthreads())
             rng = Random.seed!(Random.default_rng(), 42)
             lopt, estimates = @inferred Pathfinder.maximize_elbo(
-                rng, logp, dists, 100, executor
+                rng, logp, dists, 100, ntasks
             )
             @test lopt == 3
             @test estimates[lopt].value ≈ 0
             rng = Random.seed!(Random.default_rng(), 42)
-            lopt2, estimates2 = Pathfinder.maximize_elbo(rng, logp, dists, 100, executor)
+            lopt2, estimates2 = Pathfinder.maximize_elbo(rng, logp, dists, 100, ntasks)
             @test lopt2 == lopt
             @test getproperty.(estimates2, :value) == getproperty.(estimates, :value)
             @test getproperty.(estimates2, :std_err) == getproperty.(estimates, :std_err)
             lopt3, estimates3 = @inferred Pathfinder.maximize_elbo(
-                rng, logp, dists[2:1], 100, executor
+                rng, logp, dists[2:1], 100, ntasks
             )
             @test lopt3 == 0
             @test isempty(estimates3)

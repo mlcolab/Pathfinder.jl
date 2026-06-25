@@ -11,20 +11,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [1]
+        version: ['1']
         package:
           - DynamicHMC
           - AdvancedHMC
           - Turing
         downgrade:
-          - true
           - false
+        include:
+          - version: '1.11'
+            package: DynamicHMC
+            downgrade: true
+          - version: '1.11'
+            package: AdvancedHMC
+            downgrade: true
+          - version: '1.11'
+            package: Turing
+            downgrade: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v2
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.version }}
           arch: x64
+      - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-downgrade-compat@v2
         with:
           skip: LinearAlgebra,Pathfinder,Random,Statistics,Folds,Transducers
@@ -41,7 +51,9 @@ jobs:
             Pkg.instantiate()
             include(joinpath(test_path, "runtests.jl"))'
       - uses: julia-actions/julia-processcoverage@v1
-      - uses: codecov/codecov-action@v5
+        with:
+          directories: src,ext
+      - uses: codecov/codecov-action@v7
         with:
           files: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}

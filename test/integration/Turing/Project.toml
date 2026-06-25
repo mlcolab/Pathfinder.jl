@@ -1,12 +1,30 @@
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+AbstractMCMC = "80f14c24-f653-4e6a-9b94-39d6b0f70001"
+DynamicPPL = "366bfd00-2699-11ea-058f-f148b4cae6d8"
+FlexiChains = "4a37a8b9-6e57-4b92-8664-298d46e639f7"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LogDensityProblems = "6fdf6af0-433a-55f7-b3ed-c6c6e0b8df7c"
+MCMCChains = "c7f686f2-ff18-58e9-bc7b-31028e88f75d"
 Pathfinder = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
+[sources.Pathfinder]
+path = "../../.."
+
 [compat]
+ADTypes = "0.2.5, 1"
+AbstractMCMC = "5.14"
+DynamicPPL = "0.40.6, 0.41"
+FlexiChains = "0.3.4, 0.4, 0.5, 0.6"
+LinearAlgebra = "1"
+LogDensityProblems = "2.1.0"
+MCMCChains = "6.0.2, 7"
+Pathfinder = "0.10"
+Random = "1"
 ReverseDiff = "1.15"
+Test = "1"
+Turing = "0.43, 0.44, 0.45"

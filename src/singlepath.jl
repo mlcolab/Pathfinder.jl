@@ -11,8 +11,6 @@ const _ARGUMENT_DOCSTRING = """
     - [`SciMLBase.OptimizationProblem`](@extref): an optimization problem containing a
         function with the same properties as the above `OptimizationFunction`, as well as an
         initial point. If provided, `init` and `dim` are ignored.
-    - [`DynamicPPL.Model`](@extref): a Turing model. If provided, `init` and `dim` are
-        ignored.
 """
 
 """
@@ -113,14 +111,10 @@ $(_ARGUMENT_DOCSTRING)
 - `ndraws_elbo::Int=$DEFAULT_NDRAWS_ELBO`: Number of draws used to estimate the ELBO
 - `ndraws::Int=ndraws_elbo`: number of approximate draws to return
 - `rng::Random.AbstractRNG`: The random number generator to be used for drawing samples
-- `executor::Transducers.Executor`: Transducers.jl executor that
-    determines if and how to perform ELBO computation in parallel. The default
-    ([`Transducers.SequentialEx()`](@extref `Transducers.SequentialEx`)) performs no
-    parallelization. If `rng` is known to be thread-safe, and the log-density function is
-    known to have no internal state, then
-    [`Transducers.PreferParallel()`](@extref `Transducers.PreferParallel`) may be used to
-    parallelize log-density evaluation. This is generally only faster for expensive log
-    density functions.
+- `ntasks::Int=1`: maximum number of parallel tasks used to compute ELBO estimates across
+    the fitted distributions. The default `ntasks = 1` runs sequentially; larger values
+    parallelize the ELBO evaluation, in which case the log-density function must be
+    thread-safe. Results are reproducible regardless of `ntasks`.
 - `history_length::Int=$DEFAULT_HISTORY_LENGTH`: Size of the history used to approximate the
     inverse Hessian.
 - `optimizer`: Optimizer to be used for constructing trajectory. Can be any optimizer
@@ -295,7 +289,7 @@ function _pathfinder(
     history_length::Int=DEFAULT_HISTORY_LENGTH,
     optimizer=default_optimizer(history_length),
     ndraws_elbo=DEFAULT_NDRAWS_ELBO,
-    executor::Transducers.Executor=Transducers.SequentialEx(),
+    ntasks::Int=1,
     kwargs...,
 )
     # compute trajectory
@@ -310,7 +304,7 @@ function _pathfinder(
 
     # find ELBO-maximizing distribution
     fit_iteration, elbo_estimates = @views maximize_elbo(
-        rng, logp, fit_distributions[(begin + 1):end], ndraws_elbo, executor
+        rng, logp, fit_distributions[(begin + 1):end], ndraws_elbo, ntasks
     )
     if isempty(elbo_estimates)
         success = false

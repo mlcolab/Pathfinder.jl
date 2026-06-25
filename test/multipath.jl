@@ -2,13 +2,11 @@ using ADTypes
 using Distributions
 using ForwardDiff
 using LinearAlgebra
-using Optimization
 using Pathfinder
 using PSIS
 using ReverseDiff
 using SciMLBase
 using Test
-using Transducers
 
 @testset "multi path pathfinder" begin
     @testset "MvNormal" begin
@@ -24,12 +22,10 @@ using Transducers
         ℓ = build_logdensityproblem(logp, dim, 2)
         rngs = [MersenneTwister(), Random.default_rng()]
         seed = 76
-        @testset for rng in rngs
-            executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
-
+        @testset for rng in rngs, ntasks in unique((1, Threads.nthreads()))
             Random.seed!(rng, seed)
             result = multipathfinder(
-                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, executor
+                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, ntasks
             )
             @test result isa MultiPathfinderResult
             @test result.input === ℓ
@@ -66,7 +62,7 @@ using Transducers
 
             Random.seed!(rng, seed)
             result2 = multipathfinder(
-                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, executor
+                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, ntasks
             )
             @test result2.fit_distribution == result.fit_distribution
             @test result2.draws == result.draws
@@ -74,7 +70,7 @@ using Transducers
 
             Random.seed!(rng, seed)
             result3 = multipathfinder(
-                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, executor
+                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, ntasks
             )
             for (c1, c2) in
                 zip(result.fit_distribution.components, result3.fit_distribution.components)
@@ -106,5 +102,44 @@ using Transducers
         ℓ = build_logdensityproblem(logp, 5, 2)
         @test_throws ArgumentError multipathfinder(ℓ, 10; nruns=0)
         multipathfinder(ℓ, 10; nruns=2)
+    end
+
+    @testset "reproducibility across ntasks" begin
+        logp(x) = -sum(abs2, x) / 2
+        ℓ = build_logdensityproblem(logp, 5, 2)
+        seed = 19
+        nruns = 6
+        ndraws = 200
+        nthreads = Threads.nthreads()
+
+        @testset "explicit rng" begin
+            rng = MersenneTwister(seed)
+            serial = multipathfinder(ℓ, ndraws; rng, nruns, ntasks=1, ntasks_per_run=1)
+            Random.seed!(rng, seed)
+            threaded = multipathfinder(
+                ℓ, ndraws; rng, nruns, ntasks=nthreads, ntasks_per_run=nthreads
+            )
+            @test serial.draws == threaded.draws
+            @test serial.draw_component_ids == threaded.draw_component_ids
+            @test [c.μ for c in serial.fit_distribution.components] ==
+                [c.μ for c in threaded.fit_distribution.components]
+            @test [c.Σ for c in serial.fit_distribution.components] ==
+                [c.Σ for c in threaded.fit_distribution.components]
+        end
+
+        @testset "default rng" begin
+            Random.seed!(seed)
+            serial = multipathfinder(ℓ, ndraws; nruns, ntasks=1, ntasks_per_run=1)
+            Random.seed!(seed)
+            threaded = multipathfinder(
+                ℓ, ndraws; nruns, ntasks=nthreads, ntasks_per_run=nthreads
+            )
+            @test serial.draws == threaded.draws
+            @test serial.draw_component_ids == threaded.draw_component_ids
+            @test [c.μ for c in serial.fit_distribution.components] ==
+                [c.μ for c in threaded.fit_distribution.components]
+            @test [c.Σ for c in serial.fit_distribution.components] ==
+                [c.Σ for c in threaded.fit_distribution.components]
+        end
     end
 end

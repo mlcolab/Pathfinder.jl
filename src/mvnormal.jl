@@ -13,12 +13,10 @@ were rejected due to keeping the inverse Hessian positive definite.
 """
 function fit_mvnormals(θs, ∇logpθs; kwargs...)
     Σs, num_bfgs_updates_rejected = lbfgs_inverse_hessians(θs, ∇logpθs; kwargs...)
-    trans = Transducers.MapSplat() do Σ, ∇logpθ, θ
+    dists = map(Σs, ∇logpθs, θs) do Σ, ∇logpθ, θ
         μ = muladd(Σ, ∇logpθ, θ)
         return Distributions.MvNormal(μ, Σ)
     end
-    l = length(Σs)
-    dists = @views(zip(Σs, ∇logpθs[1:l], θs[1:l])) |> trans |> collect
     return dists, num_bfgs_updates_rejected
 end
 

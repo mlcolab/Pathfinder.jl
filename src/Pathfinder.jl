@@ -2,12 +2,12 @@ module Pathfinder
 
 using ADTypes: ADTypes
 using Distributions: Distributions
-using Folds: Folds
 using IrrationalConstants: log2π
 using LinearAlgebra
 using LogDensityProblems: LogDensityProblems
+using OhMyThreads: OhMyThreads
 using Optim: Optim, LineSearches
-using Optimization: Optimization
+using OptimizationBase: OptimizationBase, OptimizationState
 using OptimizationOptimJL: OptimizationOptimJL
 using PDMats: PDMats
 using ProgressLogging: ProgressLogging
@@ -16,7 +16,6 @@ using Random
 using SciMLBase: SciMLBase
 using Statistics: Statistics
 using StatsBase: StatsBase
-using Transducers: Transducers
 
 # Declare and export the public API
 export PathfinderResult, MultiPathfinderResult
@@ -38,9 +37,17 @@ end
 # We depend on Optim, and Optim depends on ForwardDiff, so we can offer it as a default.
 default_ad() = ADTypes.AutoForwardDiff()
 
+"""
+    _default_turing_chain_type()
+
+Return the default `chain_type` for the Turing extension's `pathfinder`/`multipathfinder`
+methods. Methods are defined in package extensions, matching `Turing.sample`'s own default.
+"""
+function _default_turing_chain_type end
+
 function RankUpdateEuclideanMetric end
 
-include("transducers.jl")
+include("utils.jl")
 include("woodbury.jl")
 include("optimize.jl")
 include("inverse_hessian.jl")

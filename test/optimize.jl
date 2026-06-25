@@ -8,6 +8,8 @@ using ReverseDiff
 using SciMLBase
 using Test
 
+using OptimizationBase: OptimizationState
+
 @testset "build_optim_function" begin
     n = 20
     x = randn(n)
@@ -68,18 +70,11 @@ end
                 return g
             end
             should_fail =
-                cbfail || (
-                    fail_on_nonfinite && (
-                        isnan(fval) ||
-                        fval == Inf ||
-                        (isdefined(Optimization, :OptimizationState) && !isfinite(gval))
-                    )
-                )
+                cbfail ||
+                (fail_on_nonfinite && (isnan(fval) || fval == Inf || !isfinite(gval)))
 
             callback = (state, args...) -> cbfail
-            state = Optimization.OptimizationState(;
-                iter=0, u=x, objective=-fval, grad=-∇f(x)
-            )
+            state = OptimizationState(; iter=0, u=x, objective=(-fval), grad=(-∇f(x)))
             cb_args = (state, -fval)
 
             cb = Pathfinder.OptimizationCallback(
@@ -154,9 +149,12 @@ end
         end
         @test logs[1].kwargs[:progress] === nothing
         @test logs[1].message == "Optimizing"
-        @test logs[2].kwargs[:progress] == 0.0
+        # First callback progress depends on backend iteration numbering
+        # (0-indexed in Optim v1, 1-indexed in Optim v2)
+        @test logs[2].kwargs[:progress] isa Number
+        @test 0.0 <= logs[2].kwargs[:progress] <= 0.001
         @test logs[2].message == "Optimizing"
-        @test logs[3].kwargs[:progress] == 0.001
+        @test logs[3].kwargs[:progress] > logs[2].kwargs[:progress]
         @test logs[end].kwargs[:progress] == "done"
     end
 end

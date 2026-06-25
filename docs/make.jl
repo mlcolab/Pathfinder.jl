@@ -1,8 +1,19 @@
 using AdvancedHMC  # triggering loading of PathfinderAdvancedHMCExt
 using Pathfinder
+using AdvancedHMC  # load RankEuclideanMetric using Requires
 using Documenter
 using DocumenterCitations
 using DocumenterInterLinks
+using DynamicPPL # bring type names into scope for @docs signatures
+using Turing # load extension
+
+# has necessary secrets for deploying docs to GitHub Pages
+const HAS_GH_DEPLOY_SECRETS = all(
+    !isempty, (get(ENV, "GITHUB_TOKEN", ""), get(ENV, "DOCUMENTER_KEY", ""))
+)
+
+# Expose extension module in Main so @docs blocks can reference it
+const PathfinderTuringExt = Base.get_extension(Pathfinder, :PathfinderTuringExt)
 
 PathfinderAdvancedHMCExt = Base.get_extension(Pathfinder, :PathfinderAdvancedHMCExt)
 
@@ -11,6 +22,7 @@ DocMeta.setdocmeta!(Pathfinder, :DocTestSetup, :(using Pathfinder); recursive=tr
 bib = CitationBibliography(joinpath(@__DIR__, "src", "references.bib"); style=:numeric)
 
 links = InterLinks(
+    "AbstractMCMC" => "https://turinglang.org/AbstractMCMC.jl/stable/",
     "AdvancedHMC" => "https://turinglang.org/AdvancedHMC.jl/stable/",
     "ADTypes" => "https://sciml.github.io/ADTypes.jl/stable/",
     "Distributions" => (
@@ -24,6 +36,7 @@ links = InterLinks(
         joinpath(@__DIR__, "inventories", "DynamicHMC.toml"),
     ),
     "DynamicPPL" => "https://turinglang.org/DynamicPPL.jl/stable/",
+    "FlexiChains" => "https://pysm.dev/FlexiChains.jl/stable/",
     "LogDensityProblems" => "https://www.tamaspapp.eu/LogDensityProblems.jl/stable/",
     "MCMCChains" => (
         "https://turinglang.org/MCMCChains.jl/stable/",
@@ -31,39 +44,39 @@ links = InterLinks(
     ),
     "Optim" => "https://julianlsolvers.github.io/Optim.jl/stable/",
     "Optimization" => "https://docs.sciml.ai/Optimization/stable/",
+    "OhMyThreads" => "https://juliafolds2.github.io/OhMyThreads.jl/stable/",
     "PSIS" => "https://julia.arviz.org/PSIS/stable/",
-    "Transducers" => (
-        "https://juliafolds2.github.io/Transducers.jl/stable/",  # not built for a while
-        "https://juliafolds2.github.io/Transducers.jl/dev/objects.inv",
-        joinpath(@__DIR__, "inventories", "Transducers.toml"),
-    ),
 )
 
-makedocs(;
-    modules=[Pathfinder, PathfinderAdvancedHMCExt],
-    authors="Seth Axen <seth.axen@gmail.com> and contributors",
-    repo=Remotes.GitHub("mlcolab", "Pathfinder.jl"),
-    sitename="Pathfinder.jl",
-    format=Documenter.HTML(;
-        prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://mlcolab.github.io/Pathfinder.jl",
-        assets=String["assets/citations.css"],
-    ),
-    pages=[
-        "Home" => "index.md",
-        "Library" => ["Public" => "lib/public.md", "Internals" => "lib/internals.md"],
-        "Examples" => [
-            "Quickstart" => "examples/quickstart.md",
-            "Initializing HMC" => "examples/initializing-hmc.md",
-            "Turing usage" => "examples/turing.md",
+# Increase the terminal width from 80 to 100 chars to avoid column truncation
+withenv("COLUMNS" => 100) do
+    return makedocs(;
+        modules=[Pathfinder, PathfinderAdvancedHMCExt, PathfinderTuringExt],
+        authors="Seth Axen <seth.axen@gmail.com> and contributors",
+        repo=Remotes.GitHub("mlcolab", "Pathfinder.jl"),
+        sitename="Pathfinder.jl",
+        format=Documenter.HTML(;
+            prettyurls=get(ENV, "CI", "false") == "true",
+            canonical="https://mlcolab.github.io/Pathfinder.jl",
+            assets=String["assets/citations.css"],
+        ),
+        pages=[
+            "Home" => "index.md",
+            "Library" => ["Public" => "lib/public.md", "Internals" => "lib/internals.md"],
+            "Examples" => [
+                "Quickstart" => "examples/quickstart.md",
+                "Initializing HMC" => "examples/initializing-hmc.md",
+                "Turing usage" => "examples/turing.md",
+            ],
+            "References" => "references.md",
         ],
-        "References" => "references.md",
-    ],
-    plugins=[bib, links],
-)
-
-if get(ENV, "DEPLOY_DOCS", "true") == "true"
-    deploydocs(;
-        repo="github.com/mlcolab/Pathfinder.jl", devbranch="main", push_preview=true
+        plugins=[bib, links],
+        warnonly=[:missing_docs],
     )
 end
+
+deploydocs(;
+    repo="github.com/mlcolab/Pathfinder.jl",
+    devbranch="main",
+    push_preview=HAS_GH_DEPLOY_SECRETS,
+)

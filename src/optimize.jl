@@ -51,7 +51,7 @@ function optimize_with_trace(
     _callback = OptimizationCallback(
         xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite
     )
-    sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
+    sol = SciMLBase.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
 
     _∇fxs = _fill_missing_gradient_values!(∇fxs, xs, sol.cache.f)
 
@@ -83,7 +83,7 @@ struct OptimizationCallback{X,FX,∇FX,ID,CB}
     fail_on_nonfinite::Bool
 end
 
-function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args...)
+function (cb::OptimizationCallback)(state::OptimizationState, args...)
     (; xs, fxs, ∇fxs, progress_name, progress_id, maxiters, callback, fail_on_nonfinite) =
         cb
     ret = callback !== nothing && callback(state, args...)
