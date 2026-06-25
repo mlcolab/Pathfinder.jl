@@ -45,29 +45,32 @@ links = InterLinks(
     "PSIS" => "https://julia.arviz.org/PSIS/stable/",
 )
 
-makedocs(;
-    modules=[Pathfinder, PathfinderTuringExt],
-    authors="Seth Axen <seth.axen@gmail.com> and contributors",
-    repo=Remotes.GitHub("mlcolab", "Pathfinder.jl"),
-    sitename="Pathfinder.jl",
-    format=Documenter.HTML(;
-        prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://mlcolab.github.io/Pathfinder.jl",
-        assets=String["assets/citations.css"],
-    ),
-    pages=[
-        "Home" => "index.md",
-        "Library" => ["Public" => "lib/public.md", "Internals" => "lib/internals.md"],
-        "Examples" => [
-            "Quickstart" => "examples/quickstart.md",
-            "Initializing HMC" => "examples/initializing-hmc.md",
-            "Turing usage" => "examples/turing.md",
+# Increase the terminal width from 80 to 100 chars to avoid column truncation
+withenv("COLUMNS" => 100) do
+    return makedocs(;
+        modules=[Pathfinder, PathfinderTuringExt],
+        authors="Seth Axen <seth.axen@gmail.com> and contributors",
+        repo=Remotes.GitHub("mlcolab", "Pathfinder.jl"),
+        sitename="Pathfinder.jl",
+        format=Documenter.HTML(;
+            prettyurls=get(ENV, "CI", "false") == "true",
+            canonical="https://mlcolab.github.io/Pathfinder.jl",
+            assets=String["assets/citations.css"],
+        ),
+        pages=[
+            "Home" => "index.md",
+            "Library" => ["Public" => "lib/public.md", "Internals" => "lib/internals.md"],
+            "Examples" => [
+                "Quickstart" => "examples/quickstart.md",
+                "Initializing HMC" => "examples/initializing-hmc.md",
+                "Turing usage" => "examples/turing.md",
+            ],
+            "References" => "references.md",
         ],
-        "References" => "references.md",
-    ],
-    plugins=[bib, links],
-    warnonly=[:missing_docs],
-)
+        plugins=[bib, links],
+        warnonly=[:missing_docs],
+    )
+end
 
 deploydocs(;
     repo="github.com/mlcolab/Pathfinder.jl",

@@ -4,7 +4,6 @@ using AbstractMCMC: AbstractMCMC
 using Accessors: Accessors
 using ADTypes: ADTypes
 using DynamicPPL: DynamicPPL
-using MCMCChains: MCMCChains
 using Pathfinder: Pathfinder
 using Random: Random
 using Turing: Turing
@@ -54,7 +53,7 @@ function (spl::InitStrategySampler)(rng::Random.AbstractRNG, point::AbstractVect
     (; model, strategy) = spl
     varinfo = DynamicPPL.VarInfo(rng, model, strategy)
     varinfo_linked = DynamicPPL.link(varinfo, model)
-    copyto!(point, varinfo_linked[:])
+    return copyto!(point, varinfo_linked[:])
 end
 
 function _maybe_add_sampler_to_kwargs(model::DynamicPPL.Model; kwargs...)
@@ -121,16 +120,16 @@ Run single-path Pathfinder on a Turing `model`.
     `[-init_scale, init_scale]` in unconstrained space is used.
 - `init_scale::Real=2`: Scale of the default initial point sampler (in unconstrained space).
 - Remaining keywords are forwarded to the base method [`pathfinder`](@ref Pathfinder.pathfinder).
-- `chain_type::Type=MCMCChains.Chains`: The type of chain to return. Can be
-    [`MCMCChains.Chains`](@extref), [`FlexiChains.VNChain`](@extref FlexiChains.FlexiChain),
-    or any other type for which a method [`AbstractMCMC.from_samples`](@extref) converting
-    from a matrix of [`DynamicPPL.ParamsWithStats`](@extref DynamicPPL.ParamsWithStats) is
-    defined.
+- `chain_type::Type`: The type of chain to return. Can be [`MCMCChains.Chains`](@extref),
+    [`FlexiChains.VNChain`](@extref FlexiChains.FlexiChain), or any other type for which a
+    method [`AbstractMCMC.from_samples`](@extref) converting from a matrix of
+    [`DynamicPPL.ParamsWithStats`](@extref DynamicPPL.ParamsWithStats) is defined. Defaults to
+    the same chain type that `Turing.sample` itself defaults to.
 
 # Returns
-- [`PathfinderResult`](@ref Pathfinder.PathfinderResult) where `draws_transformed` is an
-    [`MCMCChains.Chains`](@extref) with constrained parameter values corresponding to the
-    unconstrained `draws`.
+- [`PathfinderResult`](@ref Pathfinder.PathfinderResult) where `draws_transformed` is a chain
+    object of type `chain_type` (see above) with constrained parameter values corresponding to
+    the unconstrained `draws`.
 
 # Example
 
@@ -152,23 +151,23 @@ julia> init_sampler = InitFromPrior();
 julia> result = pathfinder(demo_model(); rng, init, init_sampler);
 
 julia> result.draws_transformed
-Chains MCMC chain (5×6×1 Array{Float64, 3}):
-
-Iterations        = 1:1:5
-Number of chains  = 1
-Samples per chain = 5
-parameters        = α, β, σ
-internals         = logprior, loglikelihood, logjoint
-
-Use `describe(chains)` for summary statistics and quantiles.
-
+╭─FlexiChain (5 iterations, 1 chain) ──────────────────────────────────────────────────────────────╮
+│ ↓ iter  = 1:5                                                                                    │
+│ → chain = 1:1                                                                                    │
+│                                                                                                  │
+│ Parameters (3) ── VarName                                                                        │
+│  Float64  α, β, σ                                                                                │
+│                                                                                                  │
+│ Extras (3)                                                                                       │
+│  Float64  logprior, loglikelihood, logjoint                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 """
 Pathfinder.pathfinder(::DynamicPPL.Model; kwargs...)
 function Pathfinder.pathfinder(
     model::DynamicPPL.Model;
     adtype::ADTypes.AbstractADType=Pathfinder.default_ad(),
-    chain_type=MCMCChains.Chains,
+    chain_type=Pathfinder._default_turing_chain_type(),
     rng::Random.AbstractRNG=Random.default_rng(),
     kwargs...,
 )
@@ -205,9 +204,9 @@ Run multi-path Pathfinder on a Turing `model`.
 
 # Returns
 - [`MultiPathfinderResult`](@ref Pathfinder.MultiPathfinderResult) where `draws_transformed`
-    (and each single-path result's `draws_transformed`) is an
-    [`MCMCChains.Chains`](@extref) with constrained parameter values corresponding to the
-    unconstrained `draws`.
+    (and each single-path result's `draws_transformed`) is a chain object of type `chain_type`
+    (see [`pathfinder(model; kwargs...)`](@ref Pathfinder.pathfinder(::DynamicPPL.Model; kwargs...)))
+    with constrained parameter values corresponding to the unconstrained `draws`.
 
 # Example
 
@@ -229,16 +228,16 @@ julia> result = multipathfinder(
        );
 
 julia> result.draws_transformed
-Chains MCMC chain (1000×6×1 Array{Float64, 3}):
-
-Iterations        = 1:1:1000
-Number of chains  = 1
-Samples per chain = 1000
-parameters        = α, β, σ
-internals         = logprior, loglikelihood, logjoint
-
-Use `describe(chains)` for summary statistics and quantiles.
-
+╭─FlexiChain (1000 iterations, 1 chain) ───────────────────────────────────────────────────────────╮
+│ ↓ iter  = 1:1000                                                                                 │
+│ → chain = 1:1                                                                                    │
+│                                                                                                  │
+│ Parameters (3) ── VarName                                                                        │
+│  Float64  α, β, σ                                                                                │
+│                                                                                                  │
+│ Extras (3)                                                                                       │
+│  Float64  logprior, loglikelihood, logjoint                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 """
 Pathfinder.multipathfinder(::DynamicPPL.Model, ::Int; kwargs...)
@@ -246,7 +245,7 @@ function Pathfinder.multipathfinder(
     model::DynamicPPL.Model,
     ndraws::Int;
     adtype::ADTypes.AbstractADType=Pathfinder.default_ad(),
-    chain_type=MCMCChains.Chains,
+    chain_type=Pathfinder._default_turing_chain_type(),
     rng::Random.AbstractRNG=Random.default_rng(),
     kwargs...,
 )

@@ -4,6 +4,7 @@ using ADTypes,
     FlexiChains,
     LogDensityProblems,
     LinearAlgebra,
+    MCMCChains,
     Pathfinder,
     Random,
     ReverseDiff,
@@ -95,6 +96,18 @@ end
         end
     end
 
+    @testset "default chain_type matches Turing version" begin
+        model = dynamic_const_model()
+        result = pathfinder(model; ndraws=100)
+        if pkgversion(Turing) < v"0.45"
+            @test Pathfinder._default_turing_chain_type() === MCMCChains.Chains
+            @test result.draws_transformed isa MCMCChains.Chains
+        else
+            @test Pathfinder._default_turing_chain_type() === FlexiChains.VNChain
+            @test result.draws_transformed isa FlexiChains.VNChain
+        end
+    end
+
     @testset "integration tests" begin
         @testset "regression model" begin
             x = 0:0.01:1
@@ -112,7 +125,7 @@ end
                 string(:logjoint),
             ])
 
-            result = pathfinder(model; ndraws=10_000)
+            result = pathfinder(model; ndraws=10_000, chain_type=MCMCChains.Chains)
             @test result isa PathfinderResult
             @test result.input === model
             @test size(result.draws) == (5, 10_000)
@@ -124,10 +137,17 @@ end
                     DynamicPPL.ParamsWithStats, result.draws_transformed, model
                 )[1].params,
             )
-            chns = sample(model, NUTS(), 10_000; initial_params, progress=false)
+            chns = sample(
+                model,
+                NUTS(),
+                10_000;
+                initial_params,
+                progress=false,
+                chain_type=MCMCChains.Chains,
+            )
             @test mean(chns).nt.mean ≈ mean(result.draws_transformed).nt.mean rtol = 0.1
 
-            result = multipathfinder(model, 10_000; nruns=4)
+            result = multipathfinder(model, 10_000; nruns=4, chain_type=MCMCChains.Chains)
             @test result isa MultiPathfinderResult
             @test result.input === model
             @test size(result.draws) == (5, 10_000)
@@ -140,7 +160,14 @@ end
                     DynamicPPL.ParamsWithStats, result.draws_transformed, model
                 )[1].params,
             )
-            chns = sample(model, NUTS(), 10_000; initial_params, progress=false)
+            chns = sample(
+                model,
+                NUTS(),
+                10_000;
+                initial_params,
+                progress=false,
+                chain_type=MCMCChains.Chains,
+            )
             @test mean(chns).nt.mean ≈ mean(result.draws_transformed).nt.mean rtol = 0.1
 
             for r in result.pathfinder_results
@@ -177,13 +204,17 @@ end
     end
 
     @testset "models with dynamic constraints successfully fitted" begin
-        result = pathfinder(dynamic_const_model(); ndraws=10_000)
+        result = pathfinder(
+            dynamic_const_model(); ndraws=10_000, chain_type=MCMCChains.Chains
+        )
         chns = result.draws_transformed
         @test all(0 .< chns[:, :lb, 1] .< 0.1)
         @test all(0.11 .< chns[:, :ub, 1] .< 0.2)
         @test all(chns[:, :lb, 1] .< chns[:, :x, 1] .< chns[:, :ub, 1])
 
-        result = multipathfinder(dynamic_const_model(), 10_000; nruns=4)
+        result = multipathfinder(
+            dynamic_const_model(), 10_000; nruns=4, chain_type=MCMCChains.Chains
+        )
         for r in result.pathfinder_results
             chns = r.draws_transformed
             @test all(0 .< chns[:, :lb, 1] .< 0.1)
