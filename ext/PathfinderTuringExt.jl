@@ -155,7 +155,7 @@ julia> result.draws_transformed
 │ ↓ iter  = 1:5                                                                │
 │ → chain = 1:1                                                                │
 │                                                                              │
-│ Parameters (3) ── AbstractPPL.VarName                                        │
+│ Parameters (3) ── VarName                                                    │
 │  Float64  α, β, σ                                                            │
 │                                                                              │
 │ Extras (3)                                                                   │
@@ -232,7 +232,7 @@ julia> result.draws_transformed
 │ ↓ iter  = 1:1000                                                             │
 │ → chain = 1:1                                                                │
 │                                                                              │
-│ Parameters (3) ── AbstractPPL.VarName                                        │
+│ Parameters (3) ── VarName                                                    │
 │  Float64  α, β, σ                                                            │
 │                                                                              │
 │ Extras (3)                                                                   │

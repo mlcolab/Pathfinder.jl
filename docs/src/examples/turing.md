@@ -5,7 +5,7 @@ This tutorial demonstrates how [Turing](https://turinglang.org/) can be used wit
 We'll demonstrate with a regression example.
 
 ```@example 1
-using AbstractMCMC, AdvancedHMC, DynamicPPL, FlexiChains, Pathfinder, Random, Turing
+using AbstractMCMC, AdvancedHMC, DynamicPPL, FlexiChains, MCMCChains, Pathfinder, Random, Turing
 Random.seed!(39)
 
 @model function regress(x)
@@ -26,7 +26,10 @@ nothing # hide
 ```
 
 For convenience, [`pathfinder`](@ref) and [`multipathfinder`](@ref) can take [Turing models](@extref `DynamicPPL.Model`) as inputs and produce [`MCMCChains.Chains`](@extref) or [`FlexiChains.VNChain`](@extref `FlexiChains.FlexiChain`) objects as outputs.
-To access this, we run Pathfinder normally; the chains representation of the draws (defaulting to `Chains`) is stored in `draws_transformed`.
+To access this, we run Pathfinder normally; the chains representation of the draws is stored in `draws_transformed`, with the type defaulting to whatever `Turing.sample` itself defaults to.
+
+!!! note "Turing v0.45 changed the default chain type"
+    Since Turing v0.45, the default `chain_type` is [`FlexiChains.VNChain`](@extref `FlexiChains.FlexiChain`) instead of [`MCMCChains.Chains`](@extref). This tutorial uses the new default throughout, except where it explicitly demonstrates requesting `MCMCChains.Chains` instead.
 
 ```@example 1
 result_single = pathfinder(model; ndraws=1_000)
@@ -36,10 +39,10 @@ result_single = pathfinder(model; ndraws=1_000)
 result_single.draws_transformed
 ```
 
-To request a different chain type (e.g. `VNChain`), we can specify the `chain_type` directly.
+To request a different chain type (e.g. `MCMCChains.Chains`), we can specify the `chain_type` directly.
 
 ```@example 1
-pathfinder(model; ndraws=1_000, chain_type=VNChain).draws_transformed
+pathfinder(model; ndraws=1_000, chain_type=MCMCChains.Chains).draws_transformed
 ```
 
 Note that while Turing's `sample` methods default to initializing parameters from the prior with [`InitFromPrior`](@extref `DynamicPPL.InitFromPrior`), Pathfinder defaults to uniformly sampling them in the range `[-2, 2]` in unconstrained space (equivalent to Turing's [`InitFromUniform(-2, 2)`](@extref `DynamicPPL.InitFromUniform`)).
@@ -53,20 +56,21 @@ The Pareto shape diagnostic indicates that it is likely safe to use these draws 
 
 ```@example 1
 chns_pf = result_multi.draws_transformed
-describe(chns_pf)
+summarystats(chns_pf)
 ```
 
 We can also use these draws to initialize MCMC sampling with [`InitFromParams`](@extref `DynamicPPL.InitFromParams`).
+[`FlexiChains.VNChain`](@extref `FlexiChains.FlexiChain`) subsets iterations and chains with keyword arguments rather than [`MCMCChains.Chains`](@extref)'s 3-argument indexing; see the [FlexiChains migration guide](https://pysm.dev/FlexiChains.jl/stable/migration/) for more such translations.
 
 ```@example 1
-params = AbstractMCMC.to_samples(DynamicPPL.ParamsWithStats, chns_pf[1:n_chains, :, :], model)
+params = AbstractMCMC.to_samples(DynamicPPL.ParamsWithStats, chns_pf[iter=1:n_chains], model)
 initial_params = [InitFromParams(p.params) for p in vec(params)]
 nothing # hide
 ```
 
 ```@example 1
 chns = sample(model, Turing.NUTS(), MCMCThreads(), 1_000, n_chains; initial_params, progress=false)
-describe(chns)
+summarystats(chns)
 ```
 
 We can use Pathfinder's estimate of the metric and only perform enough warm-up to tune the step size.
@@ -89,8 +93,8 @@ chns = sample(
     n_adapts,
     initial_params,
     progress=false,
-)[n_adapts + 1:end, :, :]  # drop warm-up draws
-describe(chns)
+)[iter=(n_adapts + 1):(n_adapts + n_draws)]  # drop warm-up draws
+summarystats(chns)
 ```
 
 See [Initializing HMC with Pathfinder](@ref) for further examples.
