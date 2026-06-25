@@ -8,7 +8,6 @@ projects = ["test"]
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
-AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 IrrationalConstants = "92d709cd-6900-40b7-9082-c6be49f344b6"
