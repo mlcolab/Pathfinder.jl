@@ -14,7 +14,12 @@ const HAS_GH_DEPLOY_SECRETS = all(
 # Expose extension module in Main so @docs blocks can reference it
 const PathfinderTuringExt = Base.get_extension(Pathfinder, :PathfinderTuringExt)
 
-DocMeta.setdocmeta!(Pathfinder, :DocTestSetup, :(using Pathfinder); recursive=true)
+DocMeta.setdocmeta!(
+    Pathfinder,
+    :DocTestSetup,
+    :(using Pathfinder; ENV["COLUMNS"] = "80");  # fix pretty-printed widths regardless of CI terminal size
+    recursive=true,
+)
 
 bib = CitationBibliography(joinpath(@__DIR__, "src", "references.bib"); style=:numeric)
 
