@@ -1,6 +1,5 @@
 using AdvancedHMC  # triggering loading of PathfinderAdvancedHMCExt
 using Pathfinder
-using AdvancedHMC  # load RankEuclideanMetric using Requires
 using Documenter
 using DocumenterCitations
 using DocumenterInterLinks
