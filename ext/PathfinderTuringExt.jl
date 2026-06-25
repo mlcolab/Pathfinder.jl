@@ -151,16 +151,16 @@ julia> init_sampler = InitFromPrior();
 julia> result = pathfinder(demo_model(); rng, init, init_sampler);
 
 julia> result.draws_transformed
-╭─FlexiChain (5 iterations, 1 chain) ──────────────────────────────────────────╮
-│ ↓ iter  = 1:5                                                                │
-│ → chain = 1:1                                                                │
-│                                                                              │
-│ Parameters (3) ── VarName                                                    │
-│  Float64  α, β, σ                                                            │
-│                                                                              │
-│ Extras (3)                                                                   │
-│  Float64  logprior, loglikelihood, logjoint                                  │
-╰──────────────────────────────────────────────────────────────────────────────╯
+╭─FlexiChain (5 iterations, 1 chain) ──────────────────────────────────────────────────────────────╮
+│ ↓ iter  = 1:5                                                                                    │
+│ → chain = 1:1                                                                                    │
+│                                                                                                  │
+│ Parameters (3) ── VarName                                                                        │
+│  Float64  α, β, σ                                                                                │
+│                                                                                                  │
+│ Extras (3)                                                                                       │
+│  Float64  logprior, loglikelihood, logjoint                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 """
 Pathfinder.pathfinder(::DynamicPPL.Model; kwargs...)
@@ -228,16 +228,16 @@ julia> result = multipathfinder(
        );
 
 julia> result.draws_transformed
-╭─FlexiChain (1000 iterations, 1 chain) ───────────────────────────────────────╮
-│ ↓ iter  = 1:1000                                                             │
-│ → chain = 1:1                                                                │
-│                                                                              │
-│ Parameters (3) ── VarName                                                    │
-│  Float64  α, β, σ                                                            │
-│                                                                              │
-│ Extras (3)                                                                   │
-│  Float64  logprior, loglikelihood, logjoint                                  │
-╰──────────────────────────────────────────────────────────────────────────────╯
+╭─FlexiChain (1000 iterations, 1 chain) ───────────────────────────────────────────────────────────╮
+│ ↓ iter  = 1:1000                                                                                 │
+│ → chain = 1:1                                                                                    │
+│                                                                                                  │
+│ Parameters (3) ── VarName                                                                        │
+│  Float64  α, β, σ                                                                                │
+│                                                                                                  │
+│ Extras (3)                                                                                       │
+│  Float64  logprior, loglikelihood, logjoint                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 """
 Pathfinder.multipathfinder(::DynamicPPL.Model, ::Int; kwargs...)

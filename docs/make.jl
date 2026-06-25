@@ -6,6 +6,10 @@ using DocumenterInterLinks
 using DynamicPPL # bring type names into scope for @docs signatures
 using Turing # load extension
 
+# fix pretty-printed widths for both `@example` and `jldoctest` blocks, regardless of the
+# terminal width of whatever environment runs this script
+ENV["COLUMNS"] = "100"
+
 # has necessary secrets for deploying docs to GitHub Pages
 const HAS_GH_DEPLOY_SECRETS = all(
     !isempty, (get(ENV, "GITHUB_TOKEN", ""), get(ENV, "DOCUMENTER_KEY", ""))
@@ -14,12 +18,7 @@ const HAS_GH_DEPLOY_SECRETS = all(
 # Expose extension module in Main so @docs blocks can reference it
 const PathfinderTuringExt = Base.get_extension(Pathfinder, :PathfinderTuringExt)
 
-DocMeta.setdocmeta!(
-    Pathfinder,
-    :DocTestSetup,
-    :(using Pathfinder; ENV["COLUMNS"] = "80");  # fix pretty-printed widths regardless of CI terminal size
-    recursive=true,
-)
+DocMeta.setdocmeta!(Pathfinder, :DocTestSetup, :(using Pathfinder); recursive=true)
 
 bib = CitationBibliography(joinpath(@__DIR__, "src", "references.bib"); style=:numeric)
 
