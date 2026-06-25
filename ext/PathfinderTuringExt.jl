@@ -53,7 +53,7 @@ function (spl::InitStrategySampler)(rng::Random.AbstractRNG, point::AbstractVect
     (; model, strategy) = spl
     varinfo = DynamicPPL.VarInfo(rng, model, strategy)
     varinfo_linked = DynamicPPL.link(varinfo, model)
-    copyto!(point, varinfo_linked[:])
+    return copyto!(point, varinfo_linked[:])
 end
 
 function _maybe_add_sampler_to_kwargs(model::DynamicPPL.Model; kwargs...)

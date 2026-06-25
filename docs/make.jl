@@ -47,7 +47,7 @@ links = InterLinks(
 
 # Increase the terminal width from 80 to 100 chars to avoid column truncation
 withenv("COLUMNS" => 100) do
-    makedocs(;
+    return makedocs(;
         modules=[Pathfinder, PathfinderTuringExt],
         authors="Seth Axen <seth.axen@gmail.com> and contributors",
         repo=Remotes.GitHub("mlcolab", "Pathfinder.jl"),
