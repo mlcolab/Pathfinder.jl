@@ -38,6 +38,14 @@ end
 # We depend on Optim, and Optim depends on ForwardDiff, so we can offer it as a default.
 default_ad() = ADTypes.AutoForwardDiff()
 
+"""
+    _default_turing_chain_type()
+
+Return the default `chain_type` for the Turing extension's `pathfinder`/`multipathfinder`
+methods. Methods are defined in package extensions, matching `Turing.sample`'s own default.
+"""
+function _default_turing_chain_type end
+
 include("utils.jl")
 include("woodbury.jl")
 include("optimize.jl")
