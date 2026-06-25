@@ -99,7 +99,7 @@ end
     @testset "default chain_type matches Turing version" begin
         model = dynamic_const_model()
         result = pathfinder(model; ndraws=100)
-        if Base.pkgversion(Turing) < v"0.45"
+        if pkgversion(Turing) < v"0.45"
             @test Pathfinder._default_turing_chain_type() === MCMCChains.Chains
             @test result.draws_transformed isa MCMCChains.Chains
         else
