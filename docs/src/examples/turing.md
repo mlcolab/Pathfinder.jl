@@ -29,7 +29,7 @@ For convenience, [`pathfinder`](@ref) and [`multipathfinder`](@ref) can take [Tu
 To access this, we run Pathfinder normally; the chains representation of the draws is stored in `draws_transformed`, with the type defaulting to whatever `Turing.sample` itself defaults to.
 
 !!! note "Turing v0.45 changed the default chain type"
-    Since Turing v0.45, the default `chain_type` is [`FlexiChains.VNChain`](@extref `FlexiChains.FlexiChain`) instead of [`MCMCChains.Chains`](@extref). This tutorial uses the new default throughout, except where it explicitly demonstrates requesting `MCMCChains.Chains` instead.
+    Since Turing v0.45, the default `chain_type` is [`FlexiChains.VNChain`](@extref `FlexiChains.FlexiChain`) instead of [`MCMCChains.Chains`](@extref). This tutorial uses the new default throughout; see [Using `MCMCChains.Chains` instead](@ref) below if you still need `MCMCChains.Chains`.
 
 ```@example 1
 result_single = pathfinder(model; ndraws=1_000)
@@ -37,12 +37,6 @@ result_single = pathfinder(model; ndraws=1_000)
 
 ```@example 1
 result_single.draws_transformed
-```
-
-To request a different chain type (e.g. `MCMCChains.Chains`), we can specify the `chain_type` directly.
-
-```@example 1
-pathfinder(model; ndraws=1_000, chain_type=MCMCChains.Chains).draws_transformed
 ```
 
 Note that while Turing's `sample` methods default to initializing parameters from the prior with [`InitFromPrior`](@extref `DynamicPPL.InitFromPrior`), Pathfinder defaults to uniformly sampling them in the range `[-2, 2]` in unconstrained space (equivalent to Turing's [`InitFromUniform(-2, 2)`](@extref `DynamicPPL.InitFromUniform`)).
@@ -95,6 +89,28 @@ chns = sample(
     progress=false,
 )[iter=(n_adapts + 1):(n_adapts + n_draws)]  # drop warm-up draws
 summarystats(chns)
+```
+
+## Using `MCMCChains.Chains` instead
+
+To request [`MCMCChains.Chains`](@extref) instead of the default [`FlexiChains.VNChain`](@extref `FlexiChains.FlexiChain`), specify `chain_type` directly.
+
+```@example 1
+result_multi_mcmc = multipathfinder(
+    model, 1_000; nruns=n_chains, init_sampler=InitFromPrior(), chain_type=MCMCChains.Chains
+)
+chns_pf_mcmc = result_multi_mcmc.draws_transformed
+```
+
+[`MCMCChains.Chains`](@extref) subsets iterations and chains with 3-argument indexing (`chain[iterations, parameters, chains]`) rather than [`FlexiChains.VNChain`](@extref `FlexiChains.FlexiChain`)'s keyword arguments; see the [FlexiChains migration guide](https://pysm.dev/FlexiChains.jl/stable/migration/) for more such translations.
+As before, we can use these draws to initialize MCMC sampling with [`InitFromParams`](@extref `DynamicPPL.InitFromParams`).
+
+```@example 1
+params_mcmc = AbstractMCMC.to_samples(
+    DynamicPPL.ParamsWithStats, chns_pf_mcmc[1:n_chains, :, :], model
+)
+initial_params_mcmc = [InitFromParams(p.params) for p in vec(params_mcmc)]
+nothing # hide
 ```
 
 See [Initializing HMC with Pathfinder](@ref) for further examples.
