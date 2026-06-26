@@ -82,6 +82,14 @@ end
             @test m.D == D
         end
 
+        @testset "Pathfinder.RankUpdateEuclideanMetric deprecation" begin
+            m = @test_deprecated Pathfinder.RankUpdateEuclideanMetric(M⁻¹)
+            @test m isa AdvancedHMC.RankUpdateEuclideanMetric
+            @test m.A == A
+            @test m.B == B
+            @test m.D == D
+        end
+
         metric2 = AdvancedHMC.RankUpdateEuclideanMetric(3)
         @test size(metric2) == (3,)
         @test size(metric2, 2) == 1

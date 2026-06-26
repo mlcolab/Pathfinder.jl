@@ -37,6 +37,8 @@ end
 # We depend on Optim, and Optim depends on ForwardDiff, so we can offer it as a default.
 default_ad() = ADTypes.AutoForwardDiff()
 
+function RankUpdateEuclideanMetric end
+
 """
     _default_turing_chain_type()
 
