@@ -4,6 +4,12 @@ Documentation for `Pathfinder.jl`'s internal functions.
 
 See the [Public Documentation](@ref) section for documentation of the public interface.
 
+## AdvancedHMC integration
+
+```@docs
+AdvancedHMC.RankUpdateEuclideanMetric(::Pathfinder.WoodburyPDMat)
+```
+
 ## Internal functions
 
 These are meant only for internal use.

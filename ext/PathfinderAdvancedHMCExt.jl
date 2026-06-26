@@ -11,8 +11,8 @@ using Pathfinder: Pathfinder
 """
     AdvancedHMC.RankUpdateEuclideanMetric(W::WoodburyPDMat)
 
-Construct an [`AdvancedHMC.RankUpdateEuclideanMetric`](https://turinglang.org/AdvancedHMC.jl/stable/)
-from a [`WoodburyPDMat`](@ref), reusing its precomputed factorization.
+Construct an `AdvancedHMC.RankUpdateEuclideanMetric` from a `WoodburyPDMat`,
+reusing its precomputed factorization.
 """
 function AdvancedHMC.RankUpdateEuclideanMetric(
     W::Pathfinder.WoodburyPDMat{T,<:Diagonal{T}}

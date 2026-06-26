@@ -11,7 +11,8 @@ const HAS_GH_DEPLOY_SECRETS = all(
     !isempty, (get(ENV, "GITHUB_TOKEN", ""), get(ENV, "DOCUMENTER_KEY", ""))
 )
 
-# Expose extension module in Main so @docs blocks can reference it
+# Expose extension modules in Main so @docs blocks can reference them
+const PathfinderAdvancedHMCExt = Base.get_extension(Pathfinder, :PathfinderAdvancedHMCExt)
 const PathfinderTuringExt = Base.get_extension(Pathfinder, :PathfinderTuringExt)
 
 DocMeta.setdocmeta!(Pathfinder, :DocTestSetup, :(using Pathfinder); recursive=true)
@@ -48,7 +49,7 @@ links = InterLinks(
 # Increase the terminal width from 80 to 100 chars to avoid column truncation
 withenv("COLUMNS" => 100) do
     return makedocs(;
-        modules=[Pathfinder, PathfinderTuringExt],
+        modules=[Pathfinder, PathfinderAdvancedHMCExt, PathfinderTuringExt],
         authors="Seth Axen <seth.axen@gmail.com> and contributors",
         repo=Remotes.GitHub("mlcolab", "Pathfinder.jl"),
         sitename="Pathfinder.jl",
