@@ -209,7 +209,7 @@ samples_ahmc2, stats_ahmc2 = sample(
 
 ### Use Pathfinder's metric estimate for sampling
 
-To use Pathfinder's metric with no metric adaptation, we can pass it directly to `AdvancedHMC.RankUpdateEuclideanMetric`, which Pathfinder's extension automatically supports:
+To use Pathfinder's metric with no metric adaptation, we can pass it directly to `AdvancedHMC.RankUpdateEuclideanMetric`:
 
 ```@example 1
 nadapts = 75
