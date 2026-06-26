@@ -75,6 +75,14 @@ end
         r = randn(5)
         θ = randn(5)
 
+        @testset "WoodburyPDMat constructor" begin
+            m = AdvancedHMC.RankUpdateEuclideanMetric(M⁻¹)
+            @test m isa AdvancedHMC.RankUpdateEuclideanMetric
+            @test m.A == A
+            @test m.B == B
+            @test m.D == D
+        end
+
         metric2 = Pathfinder.RankUpdateEuclideanMetric(3)
         @test metric2.M⁻¹ ≈ I
         @test size(metric2) == (3,)
