@@ -17,7 +17,13 @@ from a [`WoodburyPDMat`](@ref), reusing its precomputed factorization.
 function AdvancedHMC.RankUpdateEuclideanMetric(
     W::Pathfinder.WoodburyPDMat{T,<:Diagonal{T}}
 ) where {T}
-    return AdvancedHMC.RankUpdateEuclideanMetric(W.A, W.B, W.D)
+    @static if isdefined(AdvancedHMC, :WoodburyFactorization)
+        return AdvancedHMC.RankUpdateEuclideanMetric(
+            W.A, W.B, W.D, AdvancedHMC.WoodburyFactorization(W.F.U, W.F.Q, W.F.V)
+        )
+    else
+        return AdvancedHMC.RankUpdateEuclideanMetric(W.A, W.B, W.D)
+    end
 end
 
 end  # module

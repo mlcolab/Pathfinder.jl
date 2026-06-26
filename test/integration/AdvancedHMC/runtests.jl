@@ -80,6 +80,11 @@ end
             @test m.A == A
             @test m.B == B
             @test m.D == D
+            @static if isdefined(AdvancedHMC, :WoodburyFactorization)
+                @test m.factorization.U === M⁻¹.F.U
+                @test m.factorization.Q === M⁻¹.F.Q
+                @test m.factorization.V === M⁻¹.F.V
+            end
         end
 
         @testset "Pathfinder.RankUpdateEuclideanMetric deprecation" begin
