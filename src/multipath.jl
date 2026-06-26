@@ -226,9 +226,9 @@ function multipathfinder(
         )
         log_densities_target = _maybe_tmap(logp, eachcol(draws_all), ntasks)
         log_densities_ratios = log_densities_target - log_densities_fit
-        resample(rng, inds, log_densities_ratios, ndraws)
+        _resample(rng, inds, log_densities_ratios, ndraws)
     else
-        resample(rng, inds, ndraws), nothing
+        _resample(rng, inds, nothing, ndraws)
     end
 
     fit_distribution = Distributions.MixtureModel(fit_distributions)

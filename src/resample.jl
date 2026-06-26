@@ -1,18 +1,68 @@
 """
-    resample(rng, x, log_weights, ndraws; replace=true) -> (draws, psis_result)
-    resample(rng, x, ndraws; replace=true) -> draws
+    resample(result::MultiPathfinderResult, ndraws; kwargs...) -> MultiPathfinderResult
 
-Draw `ndraws` samples from `x`.
+Resample `ndraws` draws from a fitted [`MultiPathfinderResult`](@ref).
 
-If `log_weights` is provided, perform Pareto smoothed importance resampling.
+All fields of the result are preserved except `draws`, `draw_component_ids`,
+`draws_transformed`, and `psis_result`, which reflect the new draws.
+
+# Keywords
+- `rng::AbstractRNG`: pseudorandom number generator (default: `result.rng`)
+- `replace::Bool=true`: sample with or without replacement
+- `importance::Bool=true`: use PSIS-smoothed importance weights
+- `ndraws_per_run::Union{Nothing,Int}=nothing`: if set, generate this many fresh draws per
+    run from `fit_distribution` before resampling; otherwise reuse existing draws from
+    `pathfinder_results`. Setting this is useful when more draws are needed than were
+    originally requested.
+- `ntasks::Int=1`: number of parallel tasks for log-density evaluation, used only when
+    generating fresh draws with `importance=true`
 """
-function resample(rng, x, log_ratios, ndraws; replace=true)
+function resample(
+    result::MultiPathfinderResult,
+    ndraws;
+    rng=result.rng,
+    replace=true,
+    importance=true,
+    ndraws_per_run=nothing,
+    ntasks=1,
+)
+    draws_all, eff_ndraws_per_run = _get_candidate_draws(rng, result, ndraws_per_run)
+
+    psis_or_ratios = if !importance
+        nothing
+    elseif ndraws_per_run === nothing && result.psis_result !== nothing
+        result.psis_result  # reuse stored weights — avoids re-evaluating logp
+    else
+        _compute_log_densities_ratios(result, draws_all, ntasks)
+    end
+
+    sample_inds, new_psis = _resample(rng, axes(draws_all, 2), psis_or_ratios, ndraws; replace)
+    return _build_resampled_result(result, draws_all, sample_inds, eff_ndraws_per_run, new_psis)
+end
+
+"""
+    _resample(rng, x, log_weights, ndraws; replace=true) -> (draws, psis_result)
+    _resample(rng, x, psis_result::PSIS.PSISResult, ndraws; replace=true) -> (draws, psis_result)
+    _resample(rng, x, ::Nothing, ndraws; replace=true) -> (draws, nothing)
+
+Draw `ndraws` samples from `x`, returning `(samples, psis_result_or_nothing)`.
+
+- With `log_weights`: perform Pareto smoothed importance resampling.
+- With a `PSISResult`: reuse pre-computed PSIS weights.
+- With `nothing`: sample uniformly.
+"""
+function _resample(rng, x, log_ratios, ndraws; replace=true)
     psis_result = PSIS.psis(log_ratios)
-    (; weights) = psis_result
-    pweights = StatsBase.ProbabilityWeights(weights, one(eltype(weights)))
+    pweights = StatsBase.ProbabilityWeights(psis_result.weights, one(eltype(psis_result.weights)))
     return StatsBase.sample(rng, x, pweights, ndraws; replace), psis_result
 end
-resample(rng, x, ndraws; replace=true) = StatsBase.sample(rng, x, ndraws; replace)
+
+function _resample(rng, x, psis_result::PSIS.PSISResult, ndraws; replace=true)
+    pweights = StatsBase.ProbabilityWeights(psis_result.weights, one(eltype(psis_result.weights)))
+    return StatsBase.sample(rng, x, pweights, ndraws; replace), psis_result
+end
+
+_resample(rng, x, ::Nothing, ndraws; replace=true) = (StatsBase.sample(rng, x, ndraws; replace), nothing)
 
 # Returns (draws_all, effective_ndraws_per_run).
 # When ndraws_per_run is nothing, uses existing draws stored in pathfinder_results.
@@ -64,53 +114,4 @@ function _build_resampled_result(
         result.pathfinder_results,
         new_psis_result,
     )
-end
-
-"""
-    resample(result::MultiPathfinderResult, ndraws; kwargs...) -> MultiPathfinderResult
-
-Resample `ndraws` draws from a fitted [`MultiPathfinderResult`](@ref).
-
-All fields of the result are preserved except `draws`, `draw_component_ids`,
-`draws_transformed`, and `psis_result`, which reflect the new draws.
-
-# Keywords
-- `rng::AbstractRNG`: pseudorandom number generator (default: `result.rng`)
-- `replace::Bool=false`: sample with or without replacement
-- `importance::Bool=true`: use PSIS-smoothed importance weights
-- `ndraws_per_run::Union{Nothing,Int}=nothing`: if set, generate this many fresh draws per
-    run from `fit_distribution` before resampling; otherwise reuse existing draws from
-    `pathfinder_results`. Setting this is useful when more draws are needed than were
-    originally requested.
-- `ntasks::Int=1`: number of parallel tasks for log-density evaluation, used only when
-    generating fresh draws with `importance=true`
-"""
-function resample(
-    result::MultiPathfinderResult,
-    ndraws;
-    rng=result.rng,
-    replace=false,
-    importance=true,
-    ndraws_per_run=nothing,
-    ntasks=1,
-)
-    draws_all, eff_ndraws_per_run = _get_candidate_draws(rng, result, ndraws_per_run)
-
-    sample_inds, new_psis = if importance
-        if ndraws_per_run === nothing && result.psis_result !== nothing
-            # Reuse stored PSIS weights — avoids re-evaluating logp
-            pweights = StatsBase.ProbabilityWeights(
-                result.psis_result.weights, one(eltype(result.psis_result.weights))
-            )
-            StatsBase.sample(rng, axes(draws_all, 2), pweights, ndraws; replace),
-            result.psis_result
-        else
-            log_densities_ratios = _compute_log_densities_ratios(result, draws_all, ntasks)
-            resample(rng, axes(draws_all, 2), log_densities_ratios, ndraws; replace)
-        end
-    else
-        resample(rng, axes(draws_all, 2), ndraws; replace), nothing
-    end
-
-    return _build_resampled_result(result, draws_all, sample_inds, eff_ndraws_per_run, new_psis)
 end

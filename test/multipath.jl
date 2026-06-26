@@ -154,7 +154,7 @@ using Test
         rng = MersenneTwister(42)
         result = multipathfinder(ℓ, ndraws_per_run; nruns, ndraws_per_run, rng)
 
-        @testset "resample existing draws without replacement" begin
+        @testset "resample existing draws with replacement" begin
             r2 = resample(result, ndraws_new)
             @test r2 isa MultiPathfinderResult
             @test size(r2.draws) == (dim, ndraws_new)
@@ -162,22 +162,20 @@ using Test
             @test length(unique(r2.draw_component_ids)) <= nruns
             @test r2.draws_transformed == r2.draws
             @test r2.psis_result === result.psis_result
-            # all draws come from original candidate pool
             draws_all = mapreduce(x -> x.draws, hcat, result.pathfinder_results)
             for col in eachcol(r2.draws)
                 @test any(==(col), eachcol(draws_all))
             end
-            # without replacement: no duplicate columns
-            @test length(unique(eachcol(r2.draws))) == ndraws_new
         end
 
-        @testset "resample existing draws with replacement" begin
-            r2 = resample(result, ndraws_new; replace=true)
+        @testset "resample existing draws without replacement" begin
+            r2 = resample(result, ndraws_new; replace=false)
             @test size(r2.draws) == (dim, ndraws_new)
             draws_all = mapreduce(x -> x.draws, hcat, result.pathfinder_results)
             for col in eachcol(r2.draws)
                 @test any(==(col), eachcol(draws_all))
             end
+            @test length(unique(eachcol(r2.draws))) == ndraws_new
         end
 
         @testset "resample existing draws without importance" begin
