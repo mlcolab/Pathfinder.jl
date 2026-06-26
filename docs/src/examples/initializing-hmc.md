@@ -209,11 +209,11 @@ samples_ahmc2, stats_ahmc2 = sample(
 
 ### Use Pathfinder's metric estimate for sampling
 
-To use Pathfinder's metric with no metric adaptation, we need to use Pathfinder's own [`Pathfinder.RankUpdateEuclideanMetric`](@ref) type, which just wraps our inverse metric estimate for use with AdvancedHMC:
+To use Pathfinder's metric with no metric adaptation, we can pass it directly to `AdvancedHMC.RankUpdateEuclideanMetric`, which Pathfinder's extension automatically supports:
 
 ```@example 1
 nadapts = 75
-metric = Pathfinder.RankUpdateEuclideanMetric(inv_metric)
+metric = AdvancedHMC.RankUpdateEuclideanMetric(inv_metric)
 hamiltonian = Hamiltonian(metric, ∇P)
 ϵ = find_good_stepsize(hamiltonian, init_params)
 integrator = Leapfrog(ϵ)

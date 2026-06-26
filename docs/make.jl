@@ -1,5 +1,5 @@
 using Pathfinder
-using AdvancedHMC  # load RankEuclideanMetric using Requires
+using AdvancedHMC  # trigger PathfinderAdvancedHMCExt
 using Documenter
 using DocumenterCitations
 using DocumenterInterLinks
