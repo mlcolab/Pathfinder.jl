@@ -279,7 +279,8 @@ function Pathfinder._rebuild_draws_transformed(
     model::DynamicPPL.Model, result, new_draws::AbstractMatrix
 )
     ldf = create_log_density_function(model, Pathfinder.default_ad())
-    return draws_to_chains(typeof(result.draws_transformed), ldf, new_draws)
+    chain_type = Pathfinder._chain_constructor(result.draws_transformed)
+    return draws_to_chains(chain_type, ldf, new_draws)
 end
 
 end  # module

@@ -93,6 +93,12 @@ end
 # The Turing extension overrides this for DynamicPPL.Model inputs to return a Chains object.
 _rebuild_draws_transformed(input, result, new_draws) = new_draws
 
+# Extension point: return the chain constructor to pass to AbstractMCMC.from_samples.
+# Chain-type-specific extensions override this so that from_samples dispatches correctly.
+# For example, MCMCChains defines from_samples only for the bare unparameterized type, so
+# its override returns MCMCChains.Chains rather than the concrete parameterized type.
+_chain_constructor(chain) = typeof(chain)
+
 # Applies sample_inds to draws_all and returns a new MultiPathfinderResult.
 function _build_resampled_result(
     result::MultiPathfinderResult, draws_all, sample_inds, ndraws_per_run, new_psis_result
