@@ -29,8 +29,12 @@ function resample(
     draws_all, eff_ndraws_per_run, psis_or_ratios = _get_candidate_draws(
         rng, result, ndraws_per_run, importance, ntasks
     )
-    sample_inds, new_psis = _resample(rng, axes(draws_all, 2), psis_or_ratios, ndraws; replace)
-    return _build_resampled_result(result, draws_all, sample_inds, eff_ndraws_per_run, new_psis)
+    sample_inds, new_psis = _resample(
+        rng, axes(draws_all, 2), psis_or_ratios, ndraws; replace
+    )
+    return _build_resampled_result(
+        result, draws_all, sample_inds, eff_ndraws_per_run, new_psis
+    )
 end
 
 """
@@ -46,23 +50,31 @@ Draw `ndraws` samples from `x`, returning `(samples, psis_result_or_nothing)`.
 """
 function _resample(rng, x, log_ratios, ndraws; replace=true)
     psis_result = PSIS.psis(log_ratios)
-    pweights = StatsBase.ProbabilityWeights(psis_result.weights, one(eltype(psis_result.weights)))
+    pweights = StatsBase.ProbabilityWeights(
+        psis_result.weights, one(eltype(psis_result.weights))
+    )
     return StatsBase.sample(rng, x, pweights, ndraws; replace), psis_result
 end
 
 function _resample(rng, x, psis_result::PSIS.PSISResult, ndraws; replace=true)
-    pweights = StatsBase.ProbabilityWeights(psis_result.weights, one(eltype(psis_result.weights)))
+    pweights = StatsBase.ProbabilityWeights(
+        psis_result.weights, one(eltype(psis_result.weights))
+    )
     return StatsBase.sample(rng, x, pweights, ndraws; replace), psis_result
 end
 
-_resample(rng, x, ::Nothing, ndraws; replace=true) = (StatsBase.sample(rng, x, ndraws; replace), nothing)
+function _resample(rng, x, ::Nothing, ndraws; replace=true)
+    return (StatsBase.sample(rng, x, ndraws; replace), nothing)
+end
 
 # Returns (draws_all, effective_ndraws_per_run, psis_or_ratios).
 # When ndraws_per_run is nothing, reuses existing draws stored in pathfinder_results,
 # along with stored PSIS weights if available. When ndraws_per_run is an integer, generates
 # fresh draws from each mixture component using rand_and_logpdf for efficiency.
 # psis_or_ratios is PSISResult (reuse stored), AbstractVector (log-ratios to smooth), or nothing.
-function _get_candidate_draws(rng, result::MultiPathfinderResult, ndraws_per_run, importance, ntasks)
+function _get_candidate_draws(
+    rng, result::MultiPathfinderResult, ndraws_per_run, importance, ntasks
+)
     if ndraws_per_run === nothing
         draws_all = reduce(hcat, map(x -> x.draws, result.pathfinder_results))
         eff_n = size(first(result.pathfinder_results).draws, 2)
