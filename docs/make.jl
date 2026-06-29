@@ -62,8 +62,8 @@ withenv("COLUMNS" => 100) do
             "Library" => ["Public" => "lib/public.md", "Internals" => "lib/internals.md"],
             "Examples" => [
                 "Quickstart" => "examples/quickstart.md",
-                "Initializing HMC" => "examples/initializing-hmc.md",
                 "Resampling" => "examples/resampling.md",
+                "Initializing HMC" => "examples/initializing-hmc.md",
                 "Turing usage" => "examples/turing.md",
             ],
             "References" => "references.md",
