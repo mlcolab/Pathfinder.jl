@@ -9,16 +9,18 @@ using Random: Random
 using Turing: Turing
 
 """
-    create_log_density_function(model::DynamicPPL.Model, adtype::ADTypes.AbstractADType)
+    create_log_density_function(model::DynamicPPL.Model, adtype)
 
 Create a log density function from a `model`.
 
 The return value is an object implementing the LogDensityProblems API whose log-density is
 that of the `model` transformed to unconstrained space with the appropriate log-density
-adjustment due to change of variables.
+adjustment due to change of variables. If `adtype` is `nothing`, only `logdensity` is
+implemented; if it is an `ADTypes.AbstractADType`, `logdensity_and_gradient` is also
+implemented.
 """
 function create_log_density_function(
-    model::DynamicPPL.Model, adtype::ADTypes.AbstractADType
+    model::DynamicPPL.Model, adtype::Union{ADTypes.AbstractADType,Nothing}
 )
     ldf = DynamicPPL.LogDensityFunction(
         model, DynamicPPL.getlogjoint_internal, DynamicPPL.LinkAll(); adtype
@@ -278,7 +280,7 @@ end
 function Pathfinder._rebuild_draws_transformed(
     model::DynamicPPL.Model, result, new_draws::AbstractMatrix
 )
-    ldf = create_log_density_function(model, Pathfinder.default_ad())
+    ldf = create_log_density_function(model, nothing)
     chain_type = Pathfinder._chain_type_from_chain(result.draws_transformed)
     return draws_to_chains(chain_type, ldf, new_draws)
 end
