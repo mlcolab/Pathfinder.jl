@@ -26,16 +26,9 @@ function resample(
     ndraws_per_run=nothing,
     ntasks=1,
 )
-    draws_all, eff_ndraws_per_run = _get_candidate_draws(rng, result, ndraws_per_run)
-
-    psis_or_ratios = if !importance
-        nothing
-    elseif ndraws_per_run === nothing && result.psis_result !== nothing
-        result.psis_result  # reuse stored weights — avoids re-evaluating logp
-    else
-        _compute_log_densities_ratios(result, draws_all, ntasks)
-    end
-
+    draws_all, eff_ndraws_per_run, psis_or_ratios = _get_candidate_draws(
+        rng, result, ndraws_per_run, importance, ntasks
+    )
     sample_inds, new_psis = _resample(rng, axes(draws_all, 2), psis_or_ratios, ndraws; replace)
     return _build_resampled_result(result, draws_all, sample_inds, eff_ndraws_per_run, new_psis)
 end
@@ -64,47 +57,66 @@ end
 
 _resample(rng, x, ::Nothing, ndraws; replace=true) = (StatsBase.sample(rng, x, ndraws; replace), nothing)
 
-# Returns (draws_all, effective_ndraws_per_run).
-# When ndraws_per_run is nothing, uses existing draws stored in pathfinder_results.
-# When ndraws_per_run is an integer, generates fresh draws from each mixture component.
-function _get_candidate_draws(rng, result::MultiPathfinderResult, ndraws_per_run)
+# Returns (draws_all, effective_ndraws_per_run, psis_or_ratios).
+# When ndraws_per_run is nothing, reuses existing draws stored in pathfinder_results,
+# along with stored PSIS weights if available. When ndraws_per_run is an integer, generates
+# fresh draws from each mixture component using rand_and_logpdf for efficiency.
+# psis_or_ratios is PSISResult (reuse stored), AbstractVector (log-ratios to smooth), or nothing.
+function _get_candidate_draws(rng, result::MultiPathfinderResult, ndraws_per_run, importance, ntasks)
     if ndraws_per_run === nothing
-        draws_all = mapreduce(x -> x.draws, hcat, result.pathfinder_results)
-        return draws_all, size(result.pathfinder_results[1].draws, 2)
+        draws_all = reduce(hcat, map(x -> x.draws, result.pathfinder_results))
+        eff_n = size(first(result.pathfinder_results).draws, 2)
+        if !importance
+            return draws_all, eff_n, nothing
+        elseif result.psis_result !== nothing
+            return draws_all, eff_n, result.psis_result  # reuse stored weights — no logp calls
+        else
+            # Use each component's log-density, not the mixture's, matching how
+            # multipathfinder computes importance weights.
+            log_densities_fit = _maybe_tmapreduce(
+                x -> Distributions.logpdf(x.fit_distribution, x.draws),
+                vcat,
+                result.pathfinder_results,
+                ntasks,
+            )
+            log_densities_target = _maybe_tmap(result.logp, eachcol(draws_all), ntasks)
+            return draws_all, eff_n, log_densities_target - log_densities_fit
+        end
     else
         components = Distributions.components(result.fit_distribution)
-        draws_all = mapreduce(c -> rand(rng, c, ndraws_per_run), hcat, components)
-        return draws_all, ndraws_per_run
+        if importance
+            # rand_and_logpdf generates draws and their log-densities together
+            draws_and_logq = map(c -> rand_and_logpdf(rng, c, ndraws_per_run), components)
+            draws_all = reduce(hcat, map(first, draws_and_logq))
+            log_densities_fit = reduce(vcat, map(last, draws_and_logq))
+            log_densities_target = _maybe_tmap(result.logp, eachcol(draws_all), ntasks)
+            return draws_all, ndraws_per_run, log_densities_target - log_densities_fit
+        else
+            draws_all = reduce(hcat, map(c -> rand(rng, c, ndraws_per_run), components))
+            return draws_all, ndraws_per_run, nothing
+        end
     end
-end
-
-# Computes log(p_target(x)) - log(q_fit(x)) for each column of draws_all.
-function _compute_log_densities_ratios(result::MultiPathfinderResult, draws_all, ntasks)
-    log_densities_fit = _maybe_tmap(
-        col -> Distributions.logpdf(result.fit_distribution, col),
-        eachcol(draws_all),
-        ntasks,
-    )
-    log_densities_target = _maybe_tmap(result.logp, eachcol(draws_all), ntasks)
-    return log_densities_target - log_densities_fit
 end
 
 # Extension point for rebuilding draws_transformed after resampling.
 # The Turing extension overrides this for DynamicPPL.Model inputs to return a Chains object.
 _rebuild_draws_transformed(input, result, new_draws) = new_draws
 
-# Extension point: return the chain constructor to pass to AbstractMCMC.from_samples.
+# Extension point: return the chain type to pass to AbstractMCMC.from_samples.
 # Chain-type-specific extensions override this so that from_samples dispatches correctly.
 # For example, MCMCChains defines from_samples only for the bare unparameterized type, so
 # its override returns MCMCChains.Chains rather than the concrete parameterized type.
-_chain_constructor(chain) = typeof(chain)
+function _chain_type_from_chain end
 
 # Applies sample_inds to draws_all and returns a new MultiPathfinderResult.
 function _build_resampled_result(
     result::MultiPathfinderResult, draws_all, sample_inds, ndraws_per_run, new_psis_result
 )
     new_draws = draws_all[:, sample_inds]
-    new_draw_component_ids = cld.(sample_inds, ndraws_per_run)
+    nruns = length(result.pathfinder_results)
+    draw_component_ids_all = repeat(1:nruns; inner=ndraws_per_run)
+    col_offset = firstindex(draws_all, 2) - 1
+    new_draw_component_ids = draw_component_ids_all[sample_inds .- col_offset]
     new_draws_transformed = _rebuild_draws_transformed(result.input, result, new_draws)
     return MultiPathfinderResult(
         result.input,
