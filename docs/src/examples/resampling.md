@@ -19,7 +19,7 @@ since it has a poor Pareto-``\hat{k}`` diagnostic.
 ```@example 1
 using Pathfinder, Random
 
-Random.seed!(23)
+Random.seed!(99)
 
 logp_banana(x) = -(x[1]^2 + 5(x[2] - x[1]^2)^2) / 2
 

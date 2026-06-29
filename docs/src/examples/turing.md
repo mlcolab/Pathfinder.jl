@@ -56,10 +56,11 @@ summarystats(chns_pf)
 ```
 
 We can also use these draws to initialize MCMC sampling with [`InitFromParams`](@extref `DynamicPPL.InitFromParams`).
-[`FlexiChains.VNChain`](@extref `FlexiChains.FlexiChain`) subsets iterations and chains with keyword arguments rather than [`MCMCChains.Chains`](@extref)'s 3-argument indexing; see the [FlexiChains migration guide](https://pysm.dev/FlexiChains.jl/stable/migration/) for more such translations.
+[`resample`](@ref) with `replace=false` selects `n_chains` distinct draws (importance-weighted) from the candidate pool; see [Resampling](@ref) for details.
 
 ```@example 1
-params = AbstractMCMC.to_samples(DynamicPPL.ParamsWithStats, chns_pf[iter=1:n_chains], model)
+init_result = resample(result_multi, n_chains; replace=false)
+params = AbstractMCMC.to_samples(DynamicPPL.ParamsWithStats, init_result.draws_transformed, model)
 initial_params = [InitFromParams(p.params) for p in vec(params)]
 nothing # hide
 ```
@@ -106,12 +107,12 @@ result_multi_mcmc = multipathfinder(
 chns_pf_mcmc = result_multi_mcmc.draws_transformed
 ```
 
-As before, we can use these draws to initialize MCMC sampling with [`InitFromParams`](@extref `DynamicPPL.InitFromParams`).
-Note that `Chains` subsets iterations and chains with 3-argument indexing (`chain[iterations, parameters, chains]`): 
+As before, we can use these draws to initialize MCMC sampling with [`InitFromParams`](@extref `DynamicPPL.InitFromParams`):
 
 ```@example 1
+init_result_mcmc = resample(result_multi_mcmc, n_chains; replace=false)
 params_mcmcchains = AbstractMCMC.to_samples(
-    DynamicPPL.ParamsWithStats, chns_pf_mcmc[1:n_chains, :, :], model
+    DynamicPPL.ParamsWithStats, init_result_mcmc.draws_transformed, model
 )
 initial_params_mcmcchains = [InitFromParams(p.params) for p in vec(params_mcmcchains)]
 nothing # hide
