@@ -184,7 +184,9 @@ using Test
         end
 
         @testset "resample existing draws with importance, no stored PSIS" begin
-            result_no_psis = multipathfinder(ℓ, ndraws_per_run; nruns, ndraws_per_run, rng, importance=false)
+            result_no_psis = multipathfinder(
+                ℓ, ndraws_per_run; nruns, ndraws_per_run, rng, importance=false
+            )
             @test result_no_psis.psis_result === nothing
             r2 = resample(result_no_psis, ndraws_new)
             @test r2 isa MultiPathfinderResult
