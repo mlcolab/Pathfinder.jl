@@ -146,7 +146,7 @@ function multipathfinder(
 )
     _init = if init === nothing
         nruns > 0 || throw(
-            ArgumentError("A positive `nruns` must be set or `init` must be provided.")
+            ArgumentError("A positive `nruns` must be set or `init` must be provided."),
         )
         fill(init, nruns)
     else
@@ -213,20 +213,17 @@ function multipathfinder(
         end
     end
     fit_distributions = map(x -> x.fit_distribution, pathfinder_results)
-    draws_all = mapreduce(x -> x.draws, hcat, pathfinder_results)
+    draws_all = reduce(hcat, map(x -> x.draws, pathfinder_results))
 
     # draw samples from augmented mixture model
     inds = axes(draws_all, 2)
     sample_inds, psis_result = if importance
-        log_densities_fit = _maybe_tmapreduce(
-            x -> Distributions.logpdf(x.fit_distribution, x.draws),
-            vcat,
-            pathfinder_results,
-            ntasks,
+        _resample(
+            rng,
+            inds,
+            _compute_log_densities_ratios(logp, pathfinder_results, draws_all, ntasks),
+            ndraws,
         )
-        log_densities_target = _maybe_tmap(logp, eachcol(draws_all), ntasks)
-        log_densities_ratios = log_densities_target - log_densities_fit
-        _resample(rng, inds, log_densities_ratios, ndraws)
     else
         _resample(rng, inds, nothing, ndraws)
     end
