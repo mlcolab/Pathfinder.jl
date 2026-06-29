@@ -121,10 +121,8 @@ using Test
             )
             @test serial.draws == threaded.draws
             @test serial.draw_component_ids == threaded.draw_component_ids
-            @test [c.μ for c in serial.fit_distribution.components] ==
-                [c.μ for c in threaded.fit_distribution.components]
-            @test [c.Σ for c in serial.fit_distribution.components] ==
-                [c.Σ for c in threaded.fit_distribution.components]
+            @test [c.μ for c in serial.fit_distribution.components] == [c.μ for c in threaded.fit_distribution.components]
+            @test [c.Σ for c in serial.fit_distribution.components] == [c.Σ for c in threaded.fit_distribution.components]
         end
 
         @testset "default rng" begin
@@ -136,10 +134,8 @@ using Test
             )
             @test serial.draws == threaded.draws
             @test serial.draw_component_ids == threaded.draw_component_ids
-            @test [c.μ for c in serial.fit_distribution.components] ==
-                [c.μ for c in threaded.fit_distribution.components]
-            @test [c.Σ for c in serial.fit_distribution.components] ==
-                [c.Σ for c in threaded.fit_distribution.components]
+            @test [c.μ for c in serial.fit_distribution.components] == [c.μ for c in threaded.fit_distribution.components]
+            @test [c.Σ for c in serial.fit_distribution.components] == [c.Σ for c in threaded.fit_distribution.components]
         end
     end
 
@@ -187,6 +183,18 @@ using Test
             end
         end
 
+        @testset "resample existing draws with importance, no stored PSIS" begin
+            result_no_psis = multipathfinder(ℓ, ndraws_per_run; nruns, ndraws_per_run, rng, importance=false)
+            @test result_no_psis.psis_result === nothing
+            r2 = resample(result_no_psis, ndraws_new)
+            @test r2 isa MultiPathfinderResult
+            @test r2.psis_result isa PSIS.PSISResult
+            draws_all = mapreduce(x -> x.draws, hcat, result_no_psis.pathfinder_results)
+            for col in eachcol(r2.draws)
+                @test any(==(col), eachcol(draws_all))
+            end
+        end
+
         @testset "generate new draws" begin
             r2 = resample(result, ndraws_new; ndraws_per_run=50, replace=true)
             @test r2 isa MultiPathfinderResult
@@ -197,7 +205,9 @@ using Test
         end
 
         @testset "generate new draws without importance" begin
-            r2 = resample(result, ndraws_new; ndraws_per_run=50, importance=false, replace=true)
+            r2 = resample(
+                result, ndraws_new; ndraws_per_run=50, importance=false, replace=true
+            )
             @test size(r2.draws) == (dim, ndraws_new)
             @test r2.psis_result === nothing
         end
