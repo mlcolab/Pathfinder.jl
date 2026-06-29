@@ -63,6 +63,7 @@ withenv("COLUMNS" => 100) do
             "Examples" => [
                 "Quickstart" => "examples/quickstart.md",
                 "Initializing HMC" => "examples/initializing-hmc.md",
+                "Resampling" => "examples/resampling.md",
                 "Turing usage" => "examples/turing.md",
             ],
             "References" => "references.md",
