@@ -27,7 +27,7 @@ function resample(
     ntasks::Int=1,
 )
     draws_per_component, psis_result = _candidate_draws_and_psis_result(
-        rng, result, ndraws_per_run,
+        rng, result, ndraws_per_run
     )
     components = Distributions.components(result.fit_distribution)
     psis_result_new = if importance
