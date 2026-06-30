@@ -14,8 +14,8 @@ All fields of the result are preserved except `draws`, `draw_component_ids`,
     run from `fit_distribution` before resampling; otherwise reuse existing draws from
     `pathfinder_results`. Setting this is useful when more draws are needed than were
     originally requested.
-- `ntasks::Int=1`: number of parallel tasks for log-density evaluation, used only when
-    generating fresh draws with `importance=true`
+- `ntasks::Int=1`: number of parallel tasks for evaluating the target log density when
+    computing importance weights
 """
 function resample(
     result::MultiPathfinderResult,
@@ -47,16 +47,13 @@ end
 
 """
     _resample(rng, x, psis_result, ndraws; replace=true) -> (draws, component_ids)
-    _resample(rng, x, ::Nothing, ndraws; replace=true) -> (draws, component_ids)
 
-Draw `ndraws` samples from the trailing axes of `x`, returning `draws`.
+Draw `ndraws` samples from `x`, returning a draw matrix and component id vector.
 
-`x` is a 3D array with dimensions `(dim, ndraws_per_component, ncomponents)`.
-`draws` is a matrix with dimensions `(dim, ndraws)`.
-`component_ids` is an integer vector with dimensions `(ndraws,)`.
-
-- With a `PSIS.PSISResult`: sample with importance weights.
-- With `nothing`: sample uniformly.
+`x` is a 3D `(dim, ndraws_per_component, ncomponents)` array. The returned `draws` has
+size `(dim, ndraws)` and `component_ids` is an integer vector of length `ndraws`.
+If `psis_result` is a `PSIS.PSISResult`, samples are weighted by its importance weights;
+if `nothing`, samples are drawn uniformly.
 """
 function _resample(rng, draws_per_component, psis_result, ndraws; replace=true)
     draws_all = reshape(draws_per_component, size(draws_per_component, 1), :)
