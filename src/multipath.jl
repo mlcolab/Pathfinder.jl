@@ -146,7 +146,7 @@ function multipathfinder(
 )
     _init = if init === nothing
         nruns > 0 || throw(
-            ArgumentError("A positive `nruns` must be set or `init` must be provided.")
+            ArgumentError("A positive `nruns` must be set or `init` must be provided."),
         )
         fill(init, nruns)
     else
@@ -213,29 +213,16 @@ function multipathfinder(
         end
     end
     fit_distributions = map(x -> x.fit_distribution, pathfinder_results)
-    draws_all = mapreduce(x -> x.draws, hcat, pathfinder_results)
+    fit_distribution = Distributions.MixtureModel(fit_distributions)
+    draws_per_component = stack(map(x -> x.draws, pathfinder_results))
 
     # draw samples from augmented mixture model
-    inds = axes(draws_all, 2)
-    sample_inds, psis_result = if importance
-        log_densities_fit = _maybe_tmapreduce(
-            x -> Distributions.logpdf(x.fit_distribution, x.draws),
-            vcat,
-            pathfinder_results,
-            ntasks,
-        )
-        log_densities_target = _maybe_tmap(logp, eachcol(draws_all), ntasks)
-        log_densities_ratios = log_densities_target - log_densities_fit
-        resample(rng, inds, log_densities_ratios, ndraws)
+    psis_result = if importance
+        _compute_psis_result(logp, fit_distributions, draws_per_component; ntasks)
     else
-        resample(rng, inds, ndraws), nothing
+        nothing
     end
-
-    fit_distribution = Distributions.MixtureModel(fit_distributions)
-    draws = draws_all[:, sample_inds]
-
-    # get component ids (k) of draws in ϕ
-    draw_component_ids = cld.(sample_inds, ndraws_per_run)
+    draws, draw_component_ids = _resample(rng, draws_per_component, psis_result, ndraws)
 
     # placeholders
     fit_distribution_transformed = fit_distribution

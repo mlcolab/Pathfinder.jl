@@ -25,18 +25,18 @@ using Test
     @testset "_maybe_tmap" begin
         xs = randn(50)
         @testset "ntasks=$ntasks" for ntasks in (1, Threads.nthreads())
-            @test Pathfinder._maybe_tmap(sin, xs, ntasks) == map(sin, xs)
-            @test Pathfinder._maybe_tmap(sin, Float64[], ntasks) == Float64[]
+            @test Pathfinder._maybe_tmap(sin, xs; ntasks) == map(sin, xs)
+            @test Pathfinder._maybe_tmap(sin, Float64[]; ntasks) == Float64[]
         end
     end
 
     @testset "_maybe_tmapreduce" begin
         xs = [randn(3) for _ in 1:20]
         @testset "ntasks=$ntasks" for ntasks in (1, Threads.nthreads())
-            @test Pathfinder._maybe_tmapreduce(identity, vcat, xs, ntasks) ==
+            @test Pathfinder._maybe_tmapreduce(identity, vcat, xs; ntasks) ==
                 mapreduce(identity, vcat, xs)
             # `+` on floats is non-associative, so parallel reduction order may differ
-            @test Pathfinder._maybe_tmapreduce(sum, +, xs, ntasks) ≈ mapreduce(sum, +, xs)
+            @test Pathfinder._maybe_tmapreduce(sum, +, xs; ntasks) ≈ mapreduce(sum, +, xs)
         end
     end
 
@@ -53,9 +53,11 @@ using Test
                 return s * x
             end == map(x -> 10x, xs)
             # empty arrays return empty
-            @test isempty(Pathfinder._chunk_tmap(Int[]; ntasks, setup=() -> 0) do _, x
-                return x
-            end)
+            @test isempty(
+                Pathfinder._chunk_tmap(Int[]; ntasks, setup=() -> 0) do _, x
+                    return x
+                end,
+            )
         end
 
         # the reproducible-seeding idiom yields identical output regardless of ntasks
@@ -63,7 +65,9 @@ using Test
             rng = Random.seed!(Random.default_rng(), seed)
             xs = collect(1:n)
             seeds = rand!(rng, similar(xs, UInt64))
-            return Pathfinder._chunk_tmap(xs, seeds; ntasks, setup=() -> copy(rng)) do r, _, s
+            return Pathfinder._chunk_tmap(
+                xs, seeds; ntasks, setup=() -> copy(rng)
+            ) do r, _, s
                 Random.seed!(r, s)
                 return rand(r)
             end

@@ -30,21 +30,21 @@ function _chunk_tmap(f, xss::AbstractArray...; ntasks::Int, setup)
 end
 
 # `map`/`mapreduce` using at most `ntasks` parallel tasks.
-function _maybe_tmap(f, xs::AbstractArray, ntasks::Int)
-    nchunks = _nchunks(length(xs), ntasks)
+function _maybe_tmap(f, xss::AbstractArray...; ntasks::Int)
+    nchunks = _nchunks(length(first(xss)), ntasks)
     if nchunks == 1
-        return map(f, xs)
+        return map(f, xss...)
     else
-        return OhMyThreads.tmap(f, xs; nchunks)
+        return OhMyThreads.tmap(f, xss...; nchunks)
     end
 end
 
-function _maybe_tmapreduce(f, op, xs::AbstractArray, ntasks::Int)
-    nchunks = _nchunks(length(xs), ntasks)
+function _maybe_tmapreduce(f, op, xss::AbstractArray...; ntasks::Int)
+    nchunks = _nchunks(length(first(xss)), ntasks)
     if nchunks == 1
-        return mapreduce(f, op, xs)
+        return mapreduce(f, op, xss...)
     else
-        return OhMyThreads.tmapreduce(f, op, xs; nchunks)
+        return OhMyThreads.tmapreduce(f, op, xss...; nchunks)
     end
 end
 

@@ -223,6 +223,22 @@ end
         end
     end
 
+    @testset "resample(::MultiPathfinderResult)" begin
+        model = dynamic_const_model()
+        result = multipathfinder(model, 20; nruns=4, chain_type=MCMCChains.Chains)
+        r2 = resample(result, 5; replace=false)
+        @test r2 isa MultiPathfinderResult
+        @test r2.draws_transformed isa MCMCChains.Chains
+        @test size(r2.draws, 2) == 5
+        @test_throws MethodError Pathfinder._chain_type_from_chain(r2.draws)
+
+        result_flexi = multipathfinder(model, 20; nruns=4, chain_type=FlexiChains.VNChain)
+        r3 = resample(result_flexi, 5; replace=false)
+        @test r3 isa MultiPathfinderResult
+        @test r3.draws_transformed isa FlexiChains.VNChain
+        @test size(r3.draws, 2) == 5
+    end
+
     @testset "AbstractInitStrategy integration" begin
         x = 0:0.01:1
         y = sin.(x) .+ randn.() .* 0.2 .+ x
