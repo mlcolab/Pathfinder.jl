@@ -27,6 +27,16 @@ Public = true
 Private = false
 ```
 
+## Resampling
+
+```@autodocs
+Modules = [Pathfinder]
+Pages = ["resample.jl"]
+Order = [:function, :type]
+Public = true
+Private = false
+```
+
 ## AdvancedHMC integration
 
 ```@docs

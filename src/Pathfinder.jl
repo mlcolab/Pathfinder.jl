@@ -19,7 +19,7 @@ using StatsBase: StatsBase
 
 # Declare and export the public API
 export PathfinderResult, MultiPathfinderResult
-export pathfinder, multipathfinder
+export pathfinder, multipathfinder, resample
 
 const DEFAULT_HISTORY_LENGTH = 6
 const DEFAULT_LINE_SEARCH = LineSearches.HagerZhang()
@@ -53,8 +53,8 @@ include("optimize.jl")
 include("inverse_hessian.jl")
 include("mvnormal.jl")
 include("elbo.jl")
-include("resample.jl")
 include("singlepath.jl")
 include("multipath.jl")
+include("resample.jl")
 
 end

@@ -9,4 +9,6 @@ using Turing: Turing
     Pathfinder._default_turing_chain_type() = FlexiChains.VNChain
 end
 
+Pathfinder._chain_type_from_chain(chain::FlexiChains.VNChain) = typeof(chain)
+
 end  # module

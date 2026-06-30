@@ -118,6 +118,10 @@ result_dhmc1 = mcmc_with_warmup(
 )
 ```
 
+!!! tip "Initializing multiple chains"
+    When initializing several independent chains from a [`multipathfinder`](@ref) result, use [`resample`](@ref) with `replace=false` to obtain distinct starting points.
+    See [Resampling](@ref) for details.
+
 ### Initializing metric adaptation from Pathfinder's estimate
 
 To start with Pathfinder's inverse metric estimate, we just need to initialize a [`DynamicHMC.GaussianKineticEnergy`](@extref) object with it as input: 
