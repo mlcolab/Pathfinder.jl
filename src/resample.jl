@@ -79,6 +79,9 @@ function _compute_psis_result(logp, components, draws_per_component; ntasks)
 end
 
 function _compute_log_importance_ratios(logp, components, draws_per_component, ntasks)
+    # Both eachslice calls return AbstractArrays whose size matches the sliced dimensions
+    # — (K,) and (N, K) — and _maybe_tmap (like map) preserves that size, so both
+    # log_densities_fit and log_densities_target are (N, K) and subtract element-wise.
     log_densities_fit = stack(
         _maybe_tmap(
             Distributions.logpdf, components, eachslice(draws_per_component; dims=3); ntasks
