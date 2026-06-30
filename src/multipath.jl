@@ -213,26 +213,16 @@ function multipathfinder(
         end
     end
     fit_distributions = map(x -> x.fit_distribution, pathfinder_results)
-    draws_all = reduce(hcat, map(x -> x.draws, pathfinder_results))
+    fit_distribution = Distributions.MixtureModel(fit_distributions)
+    draws_per_component = stack(map(x -> x.draws, pathfinder_results))
 
     # draw samples from augmented mixture model
-    inds = axes(draws_all, 2)
-    sample_inds, psis_result = if importance
-        _resample(
-            rng,
-            inds,
-            _compute_log_densities_ratios(logp, pathfinder_results, draws_all, ntasks),
-            ndraws,
-        )
+    psis_result = if importance
+        _compute_psis_result(logp, fit_distributions, draws_per_component; ntasks)
     else
-        _resample(rng, inds, nothing, ndraws)
+        nothing
     end
-
-    fit_distribution = Distributions.MixtureModel(fit_distributions)
-    draws = draws_all[:, sample_inds]
-
-    # get component ids (k) of draws in ϕ
-    draw_component_ids = cld.(sample_inds, ndraws_per_run)
+    draws, draw_component_ids = _resample(rng, draws_per_component, psis_result, ndraws)
 
     # placeholders
     fit_distribution_transformed = fit_distribution
