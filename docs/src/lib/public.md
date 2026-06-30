@@ -37,6 +37,12 @@ Public = true
 Private = false
 ```
 
+## AdvancedHMC integration
+
+```@docs
+AdvancedHMC.RankUpdateEuclideanMetric(::Pathfinder.WoodburyPDMat)
+```
+
 ## Turing integration
 
 The above functions have special overloads for supporting Turing models.

@@ -29,7 +29,7 @@ path = ".."
 [compat]
 ADTypes = "0.2.5, 1"
 AbstractMCMC = "5.14"
-AdvancedHMC = "0.8.3"
+AdvancedHMC = "0.8.6"
 Documenter = "1"
 DocumenterCitations = "1.2.1"
 DocumenterInterLinks = "1"
