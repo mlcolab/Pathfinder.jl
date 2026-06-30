@@ -29,9 +29,9 @@ function resample(
     draws_per_component, psis_result = _candidate_draws_and_psis_result(
         rng, result, ndraws_per_run
     )
-    components = Distributions.components(result.fit_distribution)
     psis_result_new = if importance
         if psis_result === nothing
+            components = Distributions.components(result.fit_distribution)
             _compute_psis_result(result.logp, components, draws_per_component; ntasks)
         else
             psis_result
