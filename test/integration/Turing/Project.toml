@@ -18,7 +18,7 @@ path = "../../.."
 [compat]
 ADTypes = "0.2.5, 1"
 AbstractMCMC = "5.14"
-DynamicPPL = "0.40.6, 0.41"
+DynamicPPL = "0.40.6, 0.41, 0.42"
 FlexiChains = "0.3.4, 0.4, 0.5, 0.6"
 LinearAlgebra = "1"
 LogDensityProblems = "2.1.0"
