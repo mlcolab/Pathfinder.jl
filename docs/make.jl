@@ -34,7 +34,7 @@ links = InterLinks(
         joinpath(@__DIR__, "inventories", "DynamicHMC.toml"),
     ),
     "DynamicPPL" => "https://turinglang.org/DynamicPPL.jl/stable/",
-    "FlexiChains" => "https://pysm.dev/FlexiChains.jl/stable/",
+    "FlexiChains" => "https://juliabayes.org/FlexiChains.jl/stable/",
     "LogDensityProblems" => "https://www.tamaspapp.eu/LogDensityProblems.jl/stable/",
     "MCMCChains" => (
         "https://turinglang.org/MCMCChains.jl/stable/",
