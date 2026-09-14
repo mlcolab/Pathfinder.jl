@@ -215,7 +215,7 @@ Run multi-path Pathfinder on a Turing `model`.
 ```jldoctest
 julia> using Pathfinder, Turing, StableRNGs
 
-julia> rng = StableRNG(3);
+julia> rng = StableRNG(5);
 
 julia> @model function demo_model()
            α ~ Normal(0, 1)
