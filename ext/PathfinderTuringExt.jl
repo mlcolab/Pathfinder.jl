@@ -213,9 +213,9 @@ Run multi-path Pathfinder on a Turing `model`.
 # Example
 
 ```jldoctest
-julia> using Logging, Pathfinder, Turing, StableRNGs
+julia> using Pathfinder, Turing, StableRNGs
 
-julia> rng = StableRNG(3);
+julia> rng = StableRNG(5);
 
 julia> @model function demo_model()
            α ~ Normal(0, 1)
@@ -225,9 +225,9 @@ julia> @model function demo_model()
 
 julia> init = [InitFromParams((; α)) for α in -4.0:4.0];
 
-julia> result = with_logger(NullLogger()) do
-           multipathfinder(demo_model(), 1_000; rng, init, init_sampler=InitFromPrior())
-       end;
+julia> result = multipathfinder(
+           demo_model(), 1_000; rng, init, init_sampler=InitFromPrior(),
+       );
 
 julia> result.draws_transformed
 ╭─FlexiChain (1000 iterations, 1 chain) ───────────────────────────────────────────────────────────╮
