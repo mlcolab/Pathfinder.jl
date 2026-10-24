@@ -1,6 +1,6 @@
 name = "Pathfinder"
 uuid = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
-version = "0.10.7"
+version = "0.10.8"
 authors = ["Seth Axen <seth.axen@gmail.com> and contributors"]
 
 [workspace]
@@ -58,7 +58,7 @@ LogDensityProblems = "2.1.0"
 MCMCChains = "6.0.2, 7"
 OhMyThreads = "0.8.5"
 Optim = "2"
-OptimizationBase = "5"
+OptimizationBase = "5.1"
 OptimizationOptimJL = "0.4.10"
 PDMats = "0.11.35"
 PSIS = "0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9"
