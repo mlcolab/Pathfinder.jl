@@ -44,6 +44,7 @@ links = InterLinks(
     "Optimization" => "https://docs.sciml.ai/Optimization/stable/",
     "OhMyThreads" => "https://juliafolds2.github.io/OhMyThreads.jl/stable/",
     "PSIS" => "https://julia.arviz.org/PSIS/stable/",
+    "SciMLBase" => "https://docs.sciml.ai/SciMLBase/stable/",
 )
 
 # Increase the terminal width from 80 to 100 chars to avoid column truncation
