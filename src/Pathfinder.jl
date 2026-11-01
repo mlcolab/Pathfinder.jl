@@ -49,10 +49,10 @@ function _default_turing_chain_type end
 
 include("utils.jl")
 include("woodbury.jl")
-include("optimize.jl")
 include("inverse_hessian.jl")
 include("mvnormal.jl")
 include("elbo.jl")
+include("optimize.jl")
 include("singlepath.jl")
 include("multipath.jl")
 include("resample.jl")

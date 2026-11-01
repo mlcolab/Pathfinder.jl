@@ -74,4 +74,59 @@ end
         @test all(≈(1), dot.(ps, ss) ./ norm.(ss) ./ norm.(ps))
         @test num_bfgs_updates_rejected == 0
     end
+
+    @testset "LBFGSInverseHessianState" begin
+        n = 10
+        logp(x) = logp_banana(x)
+        θ₀ = 10 * randn(n)
+        ℓ = build_logdensityproblem(logp, n, 2)
+        fun = Pathfinder.build_optim_function(
+            ℓ, SciMLBase.NoAD(), LogDensityProblems.capabilities(ℓ)
+        )
+        prob = SciMLBase.OptimizationProblem(fun, θ₀)
+        # a short history, so the ring buffer wraps around several times
+        @testset for history_length in [2, 3, 5]
+            _, optim_trace = Pathfinder.optimize_with_trace(prob, Optim.LBFGS())
+            (; points, gradients) = optim_trace
+            Hs, num_bfgs_updates_rejected = Pathfinder.lbfgs_inverse_hessians(
+                points, gradients; history_length
+            )
+
+            # advancing the state one point at a time reconstructs the same matrices
+            state = @inferred Pathfinder.LBFGSInverseHessianState(
+                points[1], gradients[1]; history_length
+            )
+            @test size(state.S) == size(state.Y) == (n, history_length)
+            H = @inferred Pathfinder.lbfgs_inverse_hessian(state)
+            @test H isa Pathfinder.WoodburyPDMat
+            @test H == Hs[1]
+            for l in 1:(length(points) - 1)
+                state2 = Pathfinder.update_inverse_hessian!(
+                    state, points[l + 1], gradients[l + 1]
+                )
+                @test state2 === state
+                @test state.θ === points[l + 1]
+                @test state.∇logpθ === gradients[l + 1]
+                @test state.history_length_effective == min(l, history_length)
+                H = Pathfinder.lbfgs_inverse_hessian(state)
+                @test H.A == Hs[l + 1].A
+                @test H.B == Hs[l + 1].B
+                @test H.D == Hs[l + 1].D
+            end
+            @test state.num_bfgs_updates_rejected == num_bfgs_updates_rejected
+        end
+
+        @testset "rejected update" begin
+            θ = randn(n)
+            ∇logpθ = randn(n)
+            state = Pathfinder.LBFGSInverseHessianState(θ, ∇logpθ; history_length=3)
+            H₀ = Pathfinder.lbfgs_inverse_hessian(state)
+            # a step along the gradient of the log-density has negative curvature
+            s = 0.1 * ∇logpθ
+            Pathfinder.update_inverse_hessian!(state, θ + s, ∇logpθ + s)
+            @test state.num_bfgs_updates_rejected == 1
+            @test state.history_length_effective == 0
+            @test Pathfinder.lbfgs_inverse_hessian(state) == H₀
+        end
+    end
 end

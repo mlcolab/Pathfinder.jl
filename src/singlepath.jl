@@ -38,12 +38,17 @@ Container for results of single-path Pathfinder.
 - `optim_solution::`[`SciMLBase.OptimizationSolution`](@extref): Solution object of
     optimization.
 - `optim_trace::Pathfinder.OptimizationTrace`: container for optimization trace of points,
-    log-density, and gradient. The first point is the initial point.
+    log-density, and gradient. The first point is the initial point. With
+    `save_trace=false`, only the log-densities are stored, and `length(optim_trace) - 1` is
+    still the number of iterations.
 - `fit_distributions::AbstractVector{Distributions.MvNormal}`: Multivariate normal
     distributions for each point in `optim_trace`, where
-    `fit_distributions[fit_iteration + 1] == fit_distribution`
+    `fit_distributions[fit_iteration + 1] == fit_distribution`. Empty with
+    `save_trace=false`.
 - `elbo_estimates::AbstractVector{<:Pathfinder.ELBOEstimate}`: ELBO estimates for all but
-    the first distribution in `fit_distributions`.
+    the first distribution in `fit_distributions`, one per iteration. With
+    `save_trace=false`, only `elbo_estimates[fit_iteration]` keeps its draws; the others
+    have none.
 - `num_bfgs_updates_rejected::Int`: Number of times a BFGS update to the reconstructed
     inverse Hessian was rejected to keep the inverse Hessian positive definite.
 
@@ -131,6 +136,16 @@ $(_ARGUMENT_DOCSTRING)
 - `fail_on_nonfinite::Bool=true`: If `true`, optimization fails if the log-density is a
     `NaN` or `Inf` or if the gradient is ever non-finite. If `nretries > 0`, then
     optimization will be retried after reinitialization.
+- `save_trace::Bool=true`: Whether to keep the whole optimization trajectory, the
+    multivariate normal fitted at each of its points, and the ELBO draws of every fit, which
+    together take `O(dim * maxiters * history_length)` memory. If `false`, each fit is
+    scored as soon as its point is reached and only the ELBO-maximizing fit and its draws
+    are kept, so memory does not grow with the number of iterations. The result then has
+    empty `optim_trace.points`, `optim_trace.gradients` and `fit_distributions`, and only
+    `elbo_estimates[fit_iteration]` carries draws. The ELBO estimates are computed one at a
+    time during the optimization, so `ntasks` does not parallelize them, and from a
+    different random stream than with `save_trace=true`, so the selected iteration can
+    differ between the two by the Monte Carlo error of the ELBO estimates.
 - `kwargs...` : Remaining keywords are forwarded to
     [`Optimization.solve`](@extref Optimization `CommonSolve.solve`).
 
@@ -202,6 +217,7 @@ function pathfinder(
         optim_prob,
         optim_solution,
         optim_trace,
+        fit_distribution,
         fit_distributions,
         fit_iteration,
         elbo_estimates,
@@ -217,11 +233,9 @@ function pathfinder(
     end
 
     if num_bfgs_updates_rejected > 0
-        perc = round(num_bfgs_updates_rejected * (100//length(fit_distributions)); digits=1)
+        perc = round(num_bfgs_updates_rejected * (100//length(optim_trace)); digits=1)
         @warn "$num_bfgs_updates_rejected ($(perc)%) updates to the inverse Hessian estimate were rejected to keep it positive definite."
     end
-
-    fit_distribution = fit_distributions[fit_iteration + 1]
 
     # reuse existing draws; draw additional ones if necessary
     draws = if ndraws_elbo_actual == 0
@@ -290,22 +304,36 @@ function _pathfinder(
     optimizer=default_optimizer(history_length),
     ndraws_elbo=DEFAULT_NDRAWS_ELBO,
     ntasks::Int=1,
+    save_trace::Bool=true,
     kwargs...,
 )
-    # compute trajectory
-    optim_solution, optim_trace = optimize_with_trace(prob, optimizer; kwargs...)
+    if save_trace
+        # compute trajectory
+        optim_solution, optim_trace = optimize_with_trace(prob, optimizer; kwargs...)
+
+        # fit mv-normal distributions to trajectory
+        fit_distributions, num_bfgs_updates_rejected = fit_mvnormals(
+            optim_trace.points, optim_trace.gradients; history_length
+        )
+
+        # find ELBO-maximizing distribution
+        fit_iteration, elbo_estimates = @views maximize_elbo(
+            rng, logp, fit_distributions[(begin + 1):end], ndraws_elbo, ntasks
+        )
+        fit_distribution = fit_distributions[fit_iteration + 1]
+    else
+        # fit and score each distribution as its point is reached, keeping only the best
+        online_fit = OnlineFit(prob, logp; rng, ndraws_elbo, history_length)
+        optim_solution, optim_trace = optimize_with_trace(
+            prob, optimizer; online_fit, kwargs...
+        )
+        (; fit_distribution, fit_iteration, elbo_estimates) = online_fit
+        fit_distributions = typeof(fit_distribution)[]
+        num_bfgs_updates_rejected = online_fit.lbfgs_state.num_bfgs_updates_rejected
+    end
     L = length(optim_trace) - 1
     success = L > 0
 
-    # fit mv-normal distributions to trajectory
-    fit_distributions, num_bfgs_updates_rejected = fit_mvnormals(
-        optim_trace.points, optim_trace.gradients; history_length
-    )
-
-    # find ELBO-maximizing distribution
-    fit_iteration, elbo_estimates = @views maximize_elbo(
-        rng, logp, fit_distributions[(begin + 1):end], ndraws_elbo, ntasks
-    )
     if isempty(elbo_estimates)
         success = false
     else
@@ -317,6 +345,7 @@ function _pathfinder(
         success,
         optim_solution,
         optim_trace,
+        fit_distribution,
         fit_distributions,
         fit_iteration,
         elbo_estimates,
