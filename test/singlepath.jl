@@ -136,6 +136,176 @@ using Test
             @test result2.optim_prob.u0 == result2.optim_trace.points[1]
         end
     end
+    @testset "save_trace=false" begin
+        # an ill-conditioned Gaussian, so that L-BFGS keeps iterating up to `maxiters`
+        dim = 30
+        prec = exp10.(range(-2, 2; length=dim))
+        logp(x) = -dot(prec, abs2.(x)) / 2
+        ℓ = build_logdensityproblem(logp, dim, 1)
+        init = ones(dim)
+        ndraws_elbo = 4
+        same_fit(a, b) = a.μ == b.μ && a.Σ.A == b.Σ.A && a.Σ.B == b.Σ.B && a.Σ.D == b.Σ.D
+
+        @testset for rng in [MersenneTwister(), Random.default_rng()],
+            maxiters in [5, 40],
+            ndraws in [2, ndraws_elbo, 10]
+
+            seed = 21
+            Random.seed!(rng, seed)
+            result_trace = pathfinder(ℓ; init, rng, maxiters, ndraws_elbo, ndraws, ntries=1)
+            Random.seed!(rng, seed)
+            # less restrictive type check to work around https://github.com/mlcolab/Pathfinder.jl/issues/142
+            result = @inferred PathfinderResult pathfinder(
+                ℓ; init, rng, maxiters, ndraws_elbo, ndraws, ntries=1, save_trace=false
+            )
+            @test result isa PathfinderResult
+            L = length(result_trace.optim_trace) - 1
+            @test L == maxiters
+
+            # the same trajectory, stored as log-densities only
+            @test length(result.optim_trace) - 1 == L
+            @test result.optim_trace.log_densities == result_trace.optim_trace.log_densities
+            @test isempty(result.optim_trace.points)
+            @test isempty(result.optim_trace.gradients)
+            @test result.optim_trace.points isa typeof(result_trace.optim_trace.points)
+            @test result.optim_solution.retcode == result_trace.optim_solution.retcode
+            @test result.optim_solution.u == result_trace.optim_solution.u
+            @test result.num_bfgs_updates_rejected == result_trace.num_bfgs_updates_rejected
+
+            # no fits are kept but the selected one, which is the fit the stored trajectory
+            # gives at that iteration
+            @test result.fit_distributions isa typeof(result_trace.fit_distributions)
+            @test isempty(result.fit_distributions)
+            @test 1 ≤ result.fit_iteration ≤ L
+            @test same_fit(
+                result.fit_distribution,
+                result_trace.fit_distributions[result.fit_iteration + 1],
+            )
+            @test all(isfinite, mean(result.fit_distribution))
+
+            # one ELBO estimate per iteration; only the selected one keeps its draws
+            @test result.elbo_estimates isa typeof(result_trace.elbo_estimates)
+            @test length(result.elbo_estimates) == L
+            values = getproperty.(result.elbo_estimates, :value)
+            @test result.fit_iteration == last(Pathfinder._findmax_skipnan(values))
+            for (i, est) in enumerate(result.elbo_estimates)
+                @test length(est.log_density_ratios) == ndraws_elbo
+                @test size(est.draws) == (dim, i == result.fit_iteration ? ndraws_elbo : 0)
+            end
+
+            # the returned draws reuse the selected fit's ELBO draws, as with `save_trace`
+            @test size(result.draws) == (dim, ndraws)
+            k = min(ndraws, ndraws_elbo)
+            @test result.draws[:, 1:k] ==
+                result.elbo_estimates[result.fit_iteration].draws[:, 1:k]
+            @test all(isfinite, result.draws)
+
+            # reproducible
+            Random.seed!(rng, seed)
+            result2 = pathfinder(
+                ℓ; init, rng, maxiters, ndraws_elbo, ndraws, ntries=1, save_trace=false
+            )
+            @test result2.fit_iteration == result.fit_iteration
+            @test result2.draws == result.draws
+            @test getproperty.(result2.elbo_estimates, :value) == values
+        end
+
+        @testset "memory does not grow with the number of iterations" begin
+            # large enough that the O(dim) part of the result dominates its scalars
+            dim_large = 2_000
+            prec_large = exp10.(range(-2, 2; length=dim_large))
+            logp_large(x) = -dot(prec_large, abs2.(x)) / 2
+            ℓ_large = build_logdensityproblem(logp_large, dim_large, 1)
+            init_large = ones(dim_large)
+            rng = MersenneTwister(3)
+            sizes = map([20, 80]) do maxiters
+                Random.seed!(rng, 3)
+                result = pathfinder(
+                    ℓ_large;
+                    init=init_large,
+                    rng,
+                    maxiters,
+                    ndraws_elbo,
+                    ndraws=10,
+                    ntries=1,
+                    save_trace=false,
+                )
+                @test length(result.optim_trace) - 1 == maxiters
+                return Base.summarysize(result)
+            end
+            Random.seed!(rng, 3)
+            result_trace = pathfinder(
+                ℓ_large; init=init_large, rng, maxiters=80, ndraws_elbo, ndraws=10, ntries=1
+            )
+            # 4x the iterations add only the per-iteration scalars
+            @test sizes[2] < 1.05 * sizes[1]
+            @test Base.summarysize(result_trace) > 5 * sizes[2]
+        end
+
+        @testset "custom callback" begin
+            iterations = Int[]
+            positions = Vector{Float64}[]
+            callback = function (state, args...)
+                push!(iterations, state.iter)
+                push!(positions, copy(state.u))
+                return false
+            end
+            result = pathfinder(
+                ℓ;
+                init,
+                rng=MersenneTwister(8),
+                maxiters=10,
+                callback,
+                ntries=1,
+                save_trace=false,
+            )
+            @test length(iterations) == length(result.optim_trace) == 11
+            @test positions[1] ≈ init
+            @test positions[end] ≈ result.optim_solution.u
+        end
+
+        @testset "retries" begin
+            dim = 5
+            nfail = 20
+            logp_nan(x) = i ≤ nfail ? NaN : -sum(abs2, x) / 2
+            ℓ_nan = build_logdensityproblem(logp_nan, dim, 2)
+            callback = (args...,) -> (i += 1; false)
+            i = 1
+            result = pathfinder(ℓ_nan; callback, save_trace=false)
+            @test result.fit_distribution.μ ≈ zeros(dim) atol = 1e-6
+            @test result.fit_distribution.Σ ≈ diagm(ones(dim)) atol = 1e-6
+            @test result.num_tries == nfail + 1
+            @test isempty(result.optim_trace.points)
+            i = 1
+            init_nan = randn(dim)
+            result2 = pathfinder(
+                ℓ_nan; init=init_nan, callback, ntries=nfail, save_trace=false
+            )
+            @test !isapprox(result2.fit_distribution.μ, zeros(dim); atol=1e-6)
+            @test result2.fit_iteration == 0
+            @test isempty(result2.elbo_estimates)
+            @test result2.num_tries == nfail
+        end
+
+        @testset "optimizer that reports no gradient" begin
+            logp_iso(x) = -sum(abs2, x) / 2
+            init_iso = randn(3)
+            optimizer = Optim.NelderMead()
+            result = pathfinder(
+                build_logdensityproblem(logp_iso, 3, 1);
+                init=init_iso,
+                optimizer,
+                maxiters=50,
+                save_trace=false,
+            )
+            @test result.fit_iteration ≥ 1
+            @test all(isfinite, result.draws)
+            @test_throws ArgumentError pathfinder(
+                logp_iso; init=init_iso, optimizer, maxiters=50, save_trace=false
+            )
+        end
+    end
+
     @testset "UniformSampler" begin
         @test_throws DomainError Pathfinder.UniformSampler(-1.0)
         @test_throws DomainError Pathfinder.UniformSampler(0.0)

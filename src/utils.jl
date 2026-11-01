@@ -57,16 +57,17 @@ _findmax_skipnan(xs) = _findmax_skipnan(identity, xs)
 function _findmax_skipnan(key, xs)
     state = missing
     for (i, x) in enumerate(xs)
-        xi = key(x)
-        if state === missing
-            state = (xi, i)
-            continue
-        end
-        isnan(xi) && continue
-        xmax = first(state)
-        if isnan(xmax) || xi > xmax
-            state = (xi, i)
-        end
+        state = _findmax_skipnan_step(state, key(x), i)
     end
     return state
+end
+
+# One step of `_findmax_skipnan`: fold the `i`th value `xi` into `state`, which is `missing`
+# before the first value. The online fit in `optimize.jl` selects with the same steps, so it
+# chooses the same iteration as the batch version.
+function _findmax_skipnan_step(state, xi, i)
+    state === missing && return (xi, i)
+    isnan(xi) && return state
+    xmax = first(state)
+    return (isnan(xmax) || xi > xmax) ? (xi, i) : state
 end

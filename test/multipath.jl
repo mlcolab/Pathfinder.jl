@@ -230,4 +230,28 @@ using Test
             @test r2.logp === result.logp
         end
     end
+    @testset "save_trace=false" begin
+        dim = 5
+        Σ = rand_pd_mat(Float64, dim)
+        μ = randn(dim)
+        d = MvNormal(μ, Σ)
+        logp(x) = logpdf(d, x)
+        ℓ = build_logdensityproblem(logp, dim, 2)
+        nruns = 4
+        ndraws = 400
+        rng = MersenneTwister(5)
+        result = multipathfinder(ℓ, ndraws; nruns, rng, save_trace=false)
+        @test result isa MultiPathfinderResult
+        @test size(result.draws) == (dim, ndraws)
+        @test length(result.pathfinder_results) == nruns
+        for r in result.pathfinder_results
+            @test isempty(r.fit_distributions)
+            @test isempty(r.optim_trace.points)
+            @test !isempty(r.elbo_estimates)
+            @test size(r.elbo_estimates[r.fit_iteration].draws, 1) == dim
+        end
+        Random.seed!(rng, 5)
+        result2 = multipathfinder(ℓ, ndraws; nruns, rng, save_trace=false)
+        @test result2.draws == result.draws
+    end
 end

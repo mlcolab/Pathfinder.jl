@@ -28,6 +28,20 @@ struct ELBOEstimate{T,P,L<:AbstractVector{T}}
     log_density_ratios::L
 end
 
+# the same estimate without its draws, which are the only part that grows with the dimension
+function _without_draws(est::ELBOEstimate)
+    (; value, std_err, draws, log_densities_target, log_densities_fit, log_density_ratios) =
+        est
+    return ELBOEstimate(
+        value,
+        std_err,
+        similar(draws, size(draws, 1), 0),
+        log_densities_target,
+        log_densities_fit,
+        log_density_ratios,
+    )
+end
+
 function Base.show(io::IO, ::MIME"text/plain", elbo::ELBOEstimate)
     print(io, "ELBO estimate: ", _to_string(elbo))
     return nothing
