@@ -81,7 +81,7 @@ using Test
         ndraws_elbo = 500
         rngs = [MersenneTwister(), Random.default_rng()]
         x = randn(dim)
-        seed = 38
+        seed = 86
         optimizer = Optim.LBFGS(; m=6)
         @testset for rng in rngs, ntasks in unique((1, Threads.nthreads()))
             Random.seed!(rng, seed)
