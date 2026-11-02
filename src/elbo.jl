@@ -1,10 +1,8 @@
 function maximize_elbo(rng, logp, dists, ndraws, ntasks::Int; save_samples::Bool=true)
-    dim = isempty(dists) ? 0 : length(first(dists))
-    T = eltype(eltype(dists))
     seeds = rand!(rng, similar(dists, UInt64))
     # each chunk gets its own RNG and draws buffer. `elbo_and_samples!` copies the draws if
     # they are to be saved, so the buffer can be reused.
-    setup = () -> (copy(rng), Matrix{T}(undef, dim, ndraws))
+    setup = () -> (copy(rng), _elbo_draws_buffer(dists, ndraws))
     estimates = _chunk_tmap(dists, seeds; ntasks, setup) do (chunk_rng, draws), dist, seed
         Random.seed!(chunk_rng, seed)
         return elbo_and_samples!(draws, chunk_rng, logp, dist; save_samples)
@@ -12,6 +10,13 @@ function maximize_elbo(rng, logp, dists, ndraws, ntasks::Int; save_samples::Bool
     isempty(estimates) && return 0, estimates
     _, iteration_opt = _findmax_skipnan(est -> est.value, estimates)
     return iteration_opt, estimates
+end
+
+# not inlined into the `setup` closure of `maximize_elbo`, since a type captured by a closure
+# is stored as a `DataType`, which breaks inference on older Julia versions
+function _elbo_draws_buffer(dists, ndraws)
+    dim = isempty(dists) ? 0 : length(first(dists))
+    return Matrix{eltype(eltype(dists))}(undef, dim, ndraws)
 end
 
 function elbo_and_samples!(ϕ, rng, logp, dist; save_samples::Bool=true, ntasks::Int=1)
