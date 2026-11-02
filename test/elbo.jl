@@ -4,7 +4,7 @@ using Random
 using Test
 
 @testset "ELBO estimation" begin
-    @testset "elbo_and_samples" begin
+    @testset "elbo_and_samples!" begin
         σ_target = 0.08
         target_dist = Normal(0, σ_target)
         logp(x) = logpdf(target_dist, x[1])
@@ -12,18 +12,28 @@ using Test
         rng = Random.seed!(Random.default_rng(), 42)
         @testset for σ in σs
             dist = Normal(0, σ)
-            est = @inferred Pathfinder.elbo_and_samples(rng, logp, dist, 1_000_000)
+            draws = Matrix{Float64}(undef, length(dist), 1_000_000)
+            # rng = Random.seed!(Random.default_rng(), 42)
+            est = @inferred Pathfinder.elbo_and_samples!(draws, rng, logp, dist)
             @test est isa Pathfinder.ELBOEstimate
 
             # explicit elbo calculation
             r = σ / σ_target
             elbo_exp = (1 - r^2) / 2 + log(r)
             @test est.value ≈ elbo_exp atol = 3 * est.std_err
+            @test est.draws !== draws
             @test est.log_densities_target ≈ logp.(eachcol(est.draws))
             @test est.log_densities_fit ≈ logpdf.(dist, first.(eachcol(est.draws)))
             @test est.log_density_ratios == est.log_densities_target - est.log_densities_fit
             @test est.value ≈ mean(est.log_density_ratios)
             @test est.std_err ≈ std(est.log_density_ratios) / sqrt(1_000_000)
+
+            # fill!(draws, 0)
+            # est_nosave = @inferred Pathfinder.elbo_and_samples!(draws, rng, logp, dist; save_samples=false)
+            # @test est_nosave.value == est.value
+            # @test est_nosave.std_err == est.std_err
+            # @test est_nosave.draws !== draws
+            # @test isempty(est_nosave.draws)
         end
     end
 

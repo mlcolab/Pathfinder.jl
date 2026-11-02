@@ -104,6 +104,54 @@ using Test
         multipathfinder(ℓ, 10; nruns=2)
     end
 
+    @testset "save_trace" begin
+        # if trace not stored, then ELBO draws are not reused for returned draws, so each
+        # single path run will end with a different RNG state depending on if save_trace is
+        # true or false. Since each run is independently seeded, this does not affect
+        # subsequent runs, so we should get identical fits for save_trace=true and
+        # save_trace=false
+        dim = 10
+        Σ = rand_pd_mat(Float64, dim)
+        logp(x) = -dot(x, Σ, x) / 2
+        ℓ = build_logdensityproblem(logp, dim, 2)
+        ndraws = 100
+        nruns = 4
+        ntasks = Threads.nthreads()
+        importance = false
+
+        # Test with save_trace=true (default)
+        rng = Random.seed!(Random.default_rng(), 42)
+        result_with_trace = multipathfinder(
+            ℓ, ndraws; importance, nruns, rng, dim, ntasks, save_trace=true
+        )
+        for r in result_with_trace.pathfinder_results
+            @test !isempty(r.fit_distributions)
+            @test length(r.fit_distributions) ==
+                length(r.optim_trace.points) ==
+                length(r.optim_trace.gradients)
+        end
+
+        # Test with save_trace=false
+        Random.seed!(rng, 42)
+        result_without_trace = multipathfinder(
+            ℓ, ndraws; importance, nruns, rng, dim, ntasks, save_trace=false
+        )
+        for r in result_without_trace.pathfinder_results
+            @test isempty(r.fit_distributions)
+            @test isempty(r.optim_trace.points)
+            @test isempty(r.optim_trace.gradients)
+        end
+
+        # # check consistency
+        for (r1, r2) in zip(
+            result_with_trace.pathfinder_results,
+            result_without_trace.pathfinder_results,
+        )
+            @test r1.fit_distribution ≈ r2.fit_distribution
+            @test r1.fit_iteration == r2.fit_iteration
+        end
+    end
+
     @testset "reproducibility across ntasks" begin
         logp(x) = -sum(abs2, x) / 2
         ℓ = build_logdensityproblem(logp, 5, 2)

@@ -29,13 +29,22 @@ function _chunk_tmap(f, xss::AbstractArray...; ntasks::Int, setup)
     end
 end
 
-# `map`/`mapreduce` using at most `ntasks` parallel tasks.
+# `map`/`map!`/`mapreduce` using at most `ntasks` parallel tasks.
 function _maybe_tmap(f, xss::AbstractArray...; ntasks::Int)
     nchunks = _nchunks(length(first(xss)), ntasks)
     if nchunks == 1
         return map(f, xss...)
     else
         return OhMyThreads.tmap(f, xss...; nchunks)
+    end
+end
+
+function _maybe_tmap!(f, out, xss::AbstractArray...; ntasks::Int)
+    nchunks = _nchunks(length(first(xss)), ntasks)
+    if nchunks == 1
+        return map!(f, out, xss...)
+    else
+        return OhMyThreads.tmap!(f, out, xss...; nchunks)
     end
 end
 

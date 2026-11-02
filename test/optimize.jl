@@ -54,6 +54,7 @@ end
         progress_name = "Optimizing"
         progress_id = nothing
         maxiters = 1_000
+        history_length = 11
         x = randn(5)
         check_vals = [0.0, NaN, -Inf, Inf]
         @testset for fail_on_nonfinite in [true, false],
@@ -61,10 +62,8 @@ end
             gval in check_vals,
             cbfail in [true, false]
 
-            xs = Vector{Float64}[]
-            fxs = Float64[]
-            ∇fxs = Union{Nothing,Vector{Float64}}[]
-            ∇f = function (x)
+            logp = x -> fval
+            ∇logp = function (x)
                 g = -x
                 g[end] = gval
                 return g
@@ -74,13 +73,14 @@ end
                 (fail_on_nonfinite && (isnan(fval) || fval == Inf || !isfinite(gval)))
 
             callback = (state, args...) -> cbfail
-            state = OptimizationState(; iter=0, u=x, objective=(-fval), grad=(-∇f(x)))
-            cb_args = (state, -fval)
+            state = OptimizationState(; iter=0, u=x, objective=-logp(x), grad=-∇logp(x))
+            cb_args = (state, -logp(x))
 
             cb = Pathfinder.OptimizationCallback(
-                xs,
-                fxs,
-                ∇fxs,
+                logp,
+                ∇logp,
+                x;
+                history_length,
                 progress_name,
                 progress_id,
                 maxiters,
@@ -89,6 +89,8 @@ end
             )
             @test cb isa Pathfinder.OptimizationCallback
             @test cb(cb_args...) == should_fail
+            @test isconcretetype(typeof(cb.fit_distributions))
+            @test length(cb.lbfgs_state.history.history_perm) == history_length + 1
         end
     end
 end
