@@ -58,11 +58,8 @@ function RegressionProblem(x, J, y)
 end
 
 function (prob::RegressionProblem)(θ)
-    σ = θ.σ
-    α = θ.α
-    β = θ.β
-    z = prob.z
-    y = prob.y
+    (; σ, α, β) = θ
+    (; z, y) = prob
     lp = normlogpdf(σ) + logtwo
     lp += normlogpdf(α)
     lp += sum(normlogpdf, β)
@@ -113,7 +110,7 @@ Here we just need to pass one of the draws as the initial point `q`:
 
 ```@example 1
 result_dhmc1 = mcmc_with_warmup(
-    Random.GLOBAL_RNG,
+    Random.default_rng(),
     ∇P,
     ndraws;
     initialization=(; q=init_params),
@@ -121,13 +118,17 @@ result_dhmc1 = mcmc_with_warmup(
 )
 ```
 
+!!! tip "Initializing multiple chains"
+    When initializing several independent chains from a [`multipathfinder`](@ref) result, use [`resample`](@ref) with `replace=false` to obtain distinct starting points.
+    See [Resampling](@ref) for details.
+
 ### Initializing metric adaptation from Pathfinder's estimate
 
 To start with Pathfinder's inverse metric estimate, we just need to initialize a [`DynamicHMC.GaussianKineticEnergy`](@extref) object with it as input: 
 
 ```@example 1
 result_dhmc2 = mcmc_with_warmup(
-    Random.GLOBAL_RNG,
+    Random.default_rng(),
     ∇P,
     ndraws;
     initialization=(; q=init_params, κ=GaussianKineticEnergy(inv_metric)),
@@ -145,7 +146,7 @@ To turn off metric adaptation entirely and use Pathfinder's estimate, we just se
 
 ```@example 1
 result_dhmc3 = mcmc_with_warmup(
-    Random.GLOBAL_RNG,
+    Random.default_rng(),
     ∇P,
     ndraws;
     initialization=(; q=init_params, κ=GaussianKineticEnergy(inv_metric)),
@@ -212,11 +213,11 @@ samples_ahmc2, stats_ahmc2 = sample(
 
 ### Use Pathfinder's metric estimate for sampling
 
-To use Pathfinder's metric with no metric adaptation, we need to use Pathfinder's own [`Pathfinder.RankUpdateEuclideanMetric`](@ref) type, which just wraps our inverse metric estimate for use with AdvancedHMC:
+To use Pathfinder's metric with no metric adaptation, we can pass it directly to [`AdvancedHMC.RankUpdateEuclideanMetric`](@extref AdvancedHMC AdvancedHMC.RankUpdateEuclideanMetric-api):
 
 ```@example 1
 nadapts = 75
-metric = Pathfinder.RankUpdateEuclideanMetric(inv_metric)
+metric = AdvancedHMC.RankUpdateEuclideanMetric(inv_metric)
 hamiltonian = Hamiltonian(metric, ∇P)
 ϵ = find_good_stepsize(hamiltonian, init_params)
 integrator = Leapfrog(ϵ)

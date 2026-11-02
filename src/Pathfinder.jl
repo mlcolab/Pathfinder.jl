@@ -2,26 +2,24 @@ module Pathfinder
 
 using ADTypes: ADTypes
 using Distributions: Distributions
-using Folds: Folds
 using IrrationalConstants: log2π
 using LinearAlgebra
 using LogDensityProblems: LogDensityProblems
-using LogDensityProblemsAD: LogDensityProblemsAD
+using OhMyThreads: OhMyThreads
 using Optim: Optim, LineSearches
-using Optimization: Optimization
+using OptimizationBase: OptimizationBase, OptimizationState
 using OptimizationOptimJL: OptimizationOptimJL
 using PDMats: PDMats
 using ProgressLogging: ProgressLogging
 using PSIS: PSIS
 using Random
-using Requires: Requires
 using SciMLBase: SciMLBase
 using Statistics: Statistics
 using StatsBase: StatsBase
-using Transducers: Transducers
 
+# Declare and export the public API
 export PathfinderResult, MultiPathfinderResult
-export pathfinder, multipathfinder
+export pathfinder, multipathfinder, resample
 
 const DEFAULT_HISTORY_LENGTH = 6
 const DEFAULT_LINE_SEARCH = LineSearches.HagerZhang()
@@ -39,34 +37,24 @@ end
 # We depend on Optim, and Optim depends on ForwardDiff, so we can offer it as a default.
 default_ad() = ADTypes.AutoForwardDiff()
 
-include("transducers.jl")
+function RankUpdateEuclideanMetric end
+
+"""
+    _default_turing_chain_type()
+
+Return the default `chain_type` for the Turing extension's `pathfinder`/`multipathfinder`
+methods. Methods are defined in package extensions, matching `Turing.sample`'s own default.
+"""
+function _default_turing_chain_type end
+
+include("utils.jl")
 include("woodbury.jl")
 include("lbfgs.jl")
 include("optimize.jl")
 include("mvnormal.jl")
 include("elbo.jl")
-include("resample.jl")
 include("singlepath.jl")
 include("multipath.jl")
-
-function __init__()
-    Requires.@require AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d" begin
-        include("integration/advancedhmc.jl")
-    end
-    @static if !isdefined(Base, :get_extension)
-        Requires.@require DynamicHMC = "bbc10e6e-7c05-544b-b16e-64fede858acb" begin
-            include("../ext/PathfinderDynamicHMCExt.jl")
-        end
-        Requires.@require Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697" begin
-            Requires.@require DynamicPPL = "366bfd00-2699-11ea-058f-f148b4cae6d8" begin
-                Requires.@require MCMCChains = "c7f686f2-ff18-58e9-bc7b-31028e88f75d" begin
-                    Requires.@require Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0" begin
-                        include("../ext/PathfinderTuringExt.jl")
-                    end
-                end
-            end
-        end
-    end
-end
+include("resample.jl")
 
 end

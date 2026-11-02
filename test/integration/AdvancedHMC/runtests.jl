@@ -21,11 +21,8 @@ struct RegressionProblem{X,Y}
 end
 
 function (prob::RegressionProblem)(θ)
-    σ = θ.σ
-    α = θ.α
-    β = θ.β
-    x = prob.x
-    y = prob.y
+    (; σ, α, β) = θ
+    (; x, y) = prob
     lp = normlogpdf(σ) + logtwo
     lp += normlogpdf(α)
     lp += sum(normlogpdf, β)
@@ -70,40 +67,67 @@ end
     ∂ℓπ∂θ(x) = -x
 
     @testset "RankUpdateEuclideanMetric" begin
-        metric = Pathfinder.RankUpdateEuclideanMetric(M⁻¹)
-        @test metric.M⁻¹ === M⁻¹
+        metric = AdvancedHMC.RankUpdateEuclideanMetric(M⁻¹)
         metric_dense = AdvancedHMC.DenseEuclideanMetric(Symmetric(Matrix(M⁻¹)))
         h = AdvancedHMC.Hamiltonian(metric, ℓπ, ∂ℓπ∂θ)
         h_dense = AdvancedHMC.Hamiltonian(metric_dense, ℓπ, ∂ℓπ∂θ)
         r = randn(5)
         θ = randn(5)
 
-        metric2 = Pathfinder.RankUpdateEuclideanMetric(3)
-        @test metric2.M⁻¹ ≈ I
+        @testset "WoodburyPDMat constructor" begin
+            m = AdvancedHMC.RankUpdateEuclideanMetric(M⁻¹)
+            @test m isa AdvancedHMC.RankUpdateEuclideanMetric
+            @test m.A == A
+            @test m.B == B
+            @test m.D == D
+            @test m.factorization.U === M⁻¹.F.U
+            @test m.factorization.Q === M⁻¹.F.Q
+            @test m.factorization.V === M⁻¹.F.V
+        end
+
+        @testset "Pathfinder.RankUpdateEuclideanMetric deprecation" begin
+            m = @test_deprecated Pathfinder.RankUpdateEuclideanMetric(M⁻¹)
+            @test m isa AdvancedHMC.RankUpdateEuclideanMetric
+            @test m.A == A
+            @test m.B == B
+            @test m.D == D
+        end
+
+        metric2 = AdvancedHMC.RankUpdateEuclideanMetric(3)
         @test size(metric2) == (3,)
         @test size(metric2, 2) == 1
         @test eltype(metric2) === Float64
-        metric2 = Pathfinder.RankUpdateEuclideanMetric((4,))
-        @test metric2.M⁻¹ ≈ I
+        metric2 = AdvancedHMC.RankUpdateEuclideanMetric((4,))
         @test size(metric2) == (4,)
         @test size(metric2, 2) == 1
-        metric2 = Pathfinder.RankUpdateEuclideanMetric(Float32, (4,))
-        @test metric2.M⁻¹ ≈ I
+        metric2 = AdvancedHMC.RankUpdateEuclideanMetric(Float32, (4,))
         @test size(metric2) == (4,)
         @test size(metric2, 2) == 1
-        @test eltype(metric2.M⁻¹) === Float32
+        @test eltype(metric2) === Float32
 
         @test size(metric) == (5,)
         @test size(metric, 2) == 1
-        @test AdvancedHMC.renew(metric, M⁻¹2).M⁻¹ === M⁻¹2
-        @test sprint(show, metric) == "RankUpdateEuclideanMetric(diag=$(diag(metric.M⁻¹)))"
+        @test startswith(sprint(show, metric), "RankUpdateEuclideanMetric(")
         @test AdvancedHMC.neg_energy(h, r, θ) ≈ AdvancedHMC.neg_energy(h_dense, r, θ)
         @test AdvancedHMC.∂H∂r(h, r) ≈ AdvancedHMC.∂H∂r(h_dense, r)
         kinetic = AdvancedHMC.GaussianKinetic()
-        compare_estimates(
-            as_draw_array([rand(metric, kinetic) for _ in 1:10_000]),
-            as_draw_array([rand(metric_dense, kinetic) for _ in 1:10_000]),
-        )
+        rng = Random.default_rng()
+        if isdefined(AdvancedHMC, :rand_momentum)  # AHMC ≥ v0.7.0
+            compare_estimates(
+                as_draw_array([
+                    AdvancedHMC.rand_momentum(rng, metric, kinetic, θ) for _ in 1:10_000
+                ]),
+                as_draw_array([
+                    AdvancedHMC.rand_momentum(rng, metric_dense, kinetic, θ) for
+                    _ in 1:10_000
+                ]),
+            )
+        else
+            compare_estimates(
+                as_draw_array([rand(rng, metric, kinetic) for _ in 1:10_000]),
+                as_draw_array([rand(rng, metric_dense, kinetic) for _ in 1:10_000]),
+            )
+        end
     end
 
     @testset "sample" begin
@@ -181,7 +205,7 @@ end
         end
 
         @testset "Initial point and final metric" begin
-            metric = Pathfinder.RankUpdateEuclideanMetric(result_pf.fit_distribution.Σ)
+            metric = AdvancedHMC.RankUpdateEuclideanMetric(result_pf.fit_distribution.Σ)
             hamiltonian = Hamiltonian(metric, ∇P)
             ϵ = find_good_stepsize(hamiltonian, θ₀)
             integrator = Leapfrog(ϵ)

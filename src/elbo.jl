@@ -1,28 +1,26 @@
-function maximize_elbo(rng, logp, dists, ndraws, executor; save_samples::Bool=true)
+function maximize_elbo(rng, logp, dists, ndraws, ntasks::Int; save_samples::Bool=true)
     dim = isempty(dists) ? 0 : length(first(dists))
-    Tdraws = Matrix{eltype(eltype(dists))}
-    draws = save_samples ? nothing : Tdraws(undef, (dim, ndraws))
-    EE = Core.Compiler.return_type(
-        elbo_and_samples!, Tuple{Tdraws,typeof(rng),typeof(logp),eltype(dists)}
-    )
-    estimates = similar(dists, EE)
-    isempty(estimates) && return 0, estimates
-
-    Folds.map!(estimates, dists, executor) do dist
-        _draws = draws === nothing ? Tdraws(undef, (dim, ndraws)) : draws
-        return elbo_and_samples!(_draws, rng, logp, dist; save_samples)
+    T = eltype(eltype(dists))
+    seeds = rand!(rng, similar(dists, UInt64))
+    # each chunk gets its own RNG and draws buffer. `elbo_and_samples!` copies the draws if
+    # they are to be saved, so the buffer can be reused.
+    setup = () -> (copy(rng), Matrix{T}(undef, dim, ndraws))
+    estimates = _chunk_tmap(dists, seeds; ntasks, setup) do (chunk_rng, draws), dist, seed
+        Random.seed!(chunk_rng, seed)
+        return elbo_and_samples!(draws, chunk_rng, logp, dist; save_samples)
     end
-    _, iteration_opt = _findmax(estimates |> Transducers.Map(est -> est.value))
+    isempty(estimates) && return 0, estimates
+    _, iteration_opt = _findmax_skipnan(est -> est.value, estimates)
     return iteration_opt, estimates
 end
 
-function elbo_and_samples!(ϕ, rng, logp, dist; save_samples::Bool=true)
+function elbo_and_samples!(ϕ, rng, logp, dist; save_samples::Bool=true, ntasks::Int=1)
     ϕ, logqϕ = rand_and_logpdf!(rng, dist, ϕ)
-    logpϕ = similar(logqϕ)
-    logpϕ .= logp.(eachcol(ϕ))
+    # draws are generated sequentially above, so only `logp` is evaluated in parallel
+    logpϕ = _maybe_tmap!(logp, similar(logqϕ), eachcol(ϕ); ntasks)
     logr = logpϕ - logqϕ
     elbo = Statistics.mean(logr)
-    elbo_se = sqrt(Statistics.var(logr) / length(logr))
+    elbo_se = sqrt(Statistics.var(logr; mean = elbo) / length(logr))
     ϕ_save = save_samples ? copyto!(similar(ϕ), ϕ) : similar(ϕ, map(zero, size(ϕ)))
     return ELBOEstimate(elbo, elbo_se, ϕ_save, logpϕ, logqϕ, logr)
 end

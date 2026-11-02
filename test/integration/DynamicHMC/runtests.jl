@@ -20,11 +20,8 @@ struct RegressionProblem{X,Y}
 end
 
 function (prob::RegressionProblem)(θ)
-    σ = θ.σ
-    α = θ.α
-    β = θ.β
-    x = prob.x
-    y = prob.y
+    (; σ, α, β) = θ
+    (; x, y) = prob
     lp = normlogpdf(σ) + logtwo
     lp += normlogpdf(α)
     lp += sum(normlogpdf, β)
@@ -84,7 +81,7 @@ end
         trans = as((σ=asℝ₊, α=asℝ, β=as(Array, size(X, 2))))
         P = TransformedLogDensity(trans, prob)
         ∇P = ADgradient(:ForwardDiff, P)
-        rng = Random.GLOBAL_RNG
+        rng = Random.default_rng()
 
         result_hmc1 = mcmc_with_warmup(rng, ∇P, ndraws; reporter=NoProgressReport())
 

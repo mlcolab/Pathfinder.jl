@@ -2,13 +2,11 @@ using ADTypes
 using Distributions
 using ForwardDiff
 using LinearAlgebra
-using Optimization
 using Pathfinder
 using PSIS
 using ReverseDiff
 using SciMLBase
 using Test
-using Transducers
 
 @testset "multi path pathfinder" begin
     @testset "MvNormal" begin
@@ -24,12 +22,10 @@ using Transducers
         ℓ = build_logdensityproblem(logp, dim, 2)
         rngs = [MersenneTwister(), Random.default_rng()]
         seed = 76
-        @testset for rng in rngs
-            executor = rng isa MersenneTwister ? SequentialEx() : ThreadedEx()
-
+        @testset for rng in rngs, ntasks in unique((1, Threads.nthreads()))
             Random.seed!(rng, seed)
             result = multipathfinder(
-                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, executor
+                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, ntasks
             )
             @test result isa MultiPathfinderResult
             @test result.input === ℓ
@@ -66,7 +62,7 @@ using Transducers
 
             Random.seed!(rng, seed)
             result2 = multipathfinder(
-                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, executor
+                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, ntasks
             )
             @test result2.fit_distribution == result.fit_distribution
             @test result2.draws == result.draws
@@ -74,7 +70,7 @@ using Transducers
 
             Random.seed!(rng, seed)
             result3 = multipathfinder(
-                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, executor
+                ℓ, ndraws; nruns, ndraws_elbo, ndraws_per_run, rng, ntasks
             )
             for (c1, c2) in
                 zip(result.fit_distribution.components, result3.fit_distribution.components)
@@ -108,25 +104,25 @@ using Transducers
         multipathfinder(ℓ, 10; nruns=2)
     end
 
-    Threads.nthreads() > 1 && @testset "save_trace" begin
+    @testset "save_trace" begin
         # if trace not stored, then ELBO draws are not reused for returned draws, so each
         # single path run will end with a different RNG state depending on if save_trace is
-        # true or false, which then affects subsequent runs. If we restrict ourselves to 1
-        # thread per run, then we should get identical results for save_trace=true and
+        # true or false. Since each run is independently seeded, this does not affect
+        # subsequent runs, so we should get identical fits for save_trace=true and
         # save_trace=false
         dim = 10
         Σ = rand_pd_mat(Float64, dim)
         logp(x) = -dot(x, Σ, x) / 2
         ℓ = build_logdensityproblem(logp, dim, 2)
         ndraws = 100
-        nruns = Threads.nthreads()
-        executor = ThreadedEx()
+        nruns = 4
+        ntasks = Threads.nthreads()
         importance = false
 
         # Test with save_trace=true (default)
         rng = Random.seed!(Random.default_rng(), 42)
         result_with_trace = multipathfinder(
-            ℓ, ndraws; importance, nruns, rng, dim, executor, save_trace=true
+            ℓ, ndraws; importance, nruns, rng, dim, ntasks, save_trace=true
         )
         for r in result_with_trace.pathfinder_results
             @test !isempty(r.fit_distributions)
@@ -138,7 +134,7 @@ using Transducers
         # Test with save_trace=false
         Random.seed!(rng, 42)
         result_without_trace = multipathfinder(
-            ℓ, ndraws; importance, nruns, rng, dim, executor, save_trace=false
+            ℓ, ndraws; importance, nruns, rng, dim, ntasks, save_trace=false
         )
         for r in result_without_trace.pathfinder_results
             @test isempty(r.fit_distributions)
@@ -153,6 +149,133 @@ using Transducers
         )
             @test r1.fit_distribution ≈ r2.fit_distribution
             @test r1.fit_iteration == r2.fit_iteration
+        end
+    end
+
+    @testset "reproducibility across ntasks" begin
+        logp(x) = -sum(abs2, x) / 2
+        ℓ = build_logdensityproblem(logp, 5, 2)
+        seed = 19
+        nruns = 6
+        ndraws = 200
+        nthreads = Threads.nthreads()
+
+        @testset "explicit rng" begin
+            rng = MersenneTwister(seed)
+            serial = multipathfinder(ℓ, ndraws; rng, nruns, ntasks=1, ntasks_per_run=1)
+            Random.seed!(rng, seed)
+            threaded = multipathfinder(
+                ℓ, ndraws; rng, nruns, ntasks=nthreads, ntasks_per_run=nthreads
+            )
+            @test serial.draws == threaded.draws
+            @test serial.draw_component_ids == threaded.draw_component_ids
+            @test [c.μ for c in serial.fit_distribution.components] == [c.μ for c in threaded.fit_distribution.components]
+            @test [c.Σ for c in serial.fit_distribution.components] == [c.Σ for c in threaded.fit_distribution.components]
+        end
+
+        @testset "default rng" begin
+            Random.seed!(seed)
+            serial = multipathfinder(ℓ, ndraws; nruns, ntasks=1, ntasks_per_run=1)
+            Random.seed!(seed)
+            threaded = multipathfinder(
+                ℓ, ndraws; nruns, ntasks=nthreads, ntasks_per_run=nthreads
+            )
+            @test serial.draws == threaded.draws
+            @test serial.draw_component_ids == threaded.draw_component_ids
+            @test [c.μ for c in serial.fit_distribution.components] == [c.μ for c in threaded.fit_distribution.components]
+            @test [c.Σ for c in serial.fit_distribution.components] == [c.Σ for c in threaded.fit_distribution.components]
+        end
+    end
+
+    @testset "resample(::MultiPathfinderResult)" begin
+        dim = 5
+        nruns = 4
+        ndraws_per_run = 20
+        ndraws_total = nruns * ndraws_per_run
+        ndraws_new = 8
+        logp(x) = -sum(abs2, x) / 2
+        ℓ = build_logdensityproblem(logp, dim, 2)
+        rng = MersenneTwister(42)
+        result = multipathfinder(ℓ, ndraws_per_run; nruns, ndraws_per_run, rng)
+
+        @testset "resample existing draws with replacement" begin
+            r2 = resample(result, ndraws_new)
+            @test r2 isa MultiPathfinderResult
+            @test size(r2.draws) == (dim, ndraws_new)
+            @test length(r2.draw_component_ids) == ndraws_new
+            @test length(unique(r2.draw_component_ids)) <= nruns
+            @test r2.draws_transformed == r2.draws
+            @test r2.psis_result === result.psis_result
+            draws_all = mapreduce(x -> x.draws, hcat, result.pathfinder_results)
+            for col in eachcol(r2.draws)
+                @test any(==(col), eachcol(draws_all))
+            end
+        end
+
+        @testset "resample existing draws without replacement" begin
+            r2 = resample(result, ndraws_new; replace=false)
+            @test size(r2.draws) == (dim, ndraws_new)
+            draws_all = mapreduce(x -> x.draws, hcat, result.pathfinder_results)
+            for col in eachcol(r2.draws)
+                @test any(==(col), eachcol(draws_all))
+            end
+            @test length(unique(eachcol(r2.draws))) == ndraws_new
+        end
+
+        @testset "resample existing draws without importance" begin
+            r2 = resample(result, ndraws_new; importance=false)
+            @test r2.psis_result === nothing
+            draws_all = mapreduce(x -> x.draws, hcat, result.pathfinder_results)
+            for col in eachcol(r2.draws)
+                @test any(==(col), eachcol(draws_all))
+            end
+        end
+
+        @testset "resample existing draws with importance, no stored PSIS" begin
+            result_no_psis = multipathfinder(
+                ℓ, ndraws_per_run; nruns, ndraws_per_run, rng, importance=false
+            )
+            @test result_no_psis.psis_result === nothing
+            r2 = resample(result_no_psis, ndraws_new)
+            @test r2 isa MultiPathfinderResult
+            @test r2.psis_result isa PSIS.PSISResult
+            draws_all = mapreduce(x -> x.draws, hcat, result_no_psis.pathfinder_results)
+            for col in eachcol(r2.draws)
+                @test any(==(col), eachcol(draws_all))
+            end
+        end
+
+        @testset "generate new draws" begin
+            r2 = resample(result, ndraws_new; ndraws_per_run=50, replace=true)
+            @test r2 isa MultiPathfinderResult
+            @test size(r2.draws) == (dim, ndraws_new)
+            @test length(r2.draw_component_ids) == ndraws_new
+            @test r2.psis_result isa PSIS.PSISResult
+            # new draws are NOT necessarily in the original pool
+        end
+
+        @testset "generate new draws without importance" begin
+            r2 = resample(
+                result, ndraws_new; ndraws_per_run=50, importance=false, replace=true
+            )
+            @test size(r2.draws) == (dim, ndraws_new)
+            @test r2.psis_result === nothing
+        end
+
+        @testset "non-mutating: original result unchanged" begin
+            draws_before = copy(result.draws)
+            resample(result, ndraws_new)
+            @test result.draws == draws_before
+        end
+
+        @testset "preserved fields" begin
+            r2 = resample(result, ndraws_new)
+            @test r2.input === result.input
+            @test r2.optimizer === result.optimizer
+            @test r2.fit_distribution === result.fit_distribution
+            @test r2.fit_distribution_transformed === result.fit_distribution_transformed
+            @test r2.pathfinder_results === result.pathfinder_results
+            @test r2.logp === result.logp
         end
     end
 end

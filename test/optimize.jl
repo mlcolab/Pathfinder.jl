@@ -8,6 +8,8 @@ using ReverseDiff
 using SciMLBase
 using Test
 
+using OptimizationBase: OptimizationState
+
 @testset "build_optim_function" begin
     n = 20
     x = randn(n)
@@ -34,8 +36,10 @@ using Test
             @test fun.adtype === adtype
             @test fun.f(x, nothing) ≈ -ℓ.logp(x)
             ∇fx = similar(x)
-            fun.grad(∇fx, x, nothing)
-            @test ∇fx ≈ -ℓ_reference.∇logp(x)
+            if max_order > 0
+                fun.grad(∇fx, x, nothing)
+                @test ∇fx ≈ -ℓ_reference.∇logp(x)
+            end
             if max_order > 1
                 H = similar(x, n, n)
                 fun.hess(H, x, nothing)
@@ -69,9 +73,7 @@ end
                 (fail_on_nonfinite && (isnan(fval) || fval == Inf || !isfinite(gval)))
 
             callback = (state, args...) -> cbfail
-            state = Optimization.OptimizationState(;
-                iter=0, u=x, objective=-logp(x), grad=-∇logp(x)
-            )
+            state = OptimizationState(; iter=0, u=x, objective=-logp(x), grad=-∇logp(x))
             cb_args = (state, -logp(x))
 
             cb = Pathfinder.OptimizationCallback(
@@ -149,9 +151,12 @@ end
         end
         @test logs[1].kwargs[:progress] === nothing
         @test logs[1].message == "Optimizing"
-        @test logs[2].kwargs[:progress] == 0.0
+        # First callback progress depends on backend iteration numbering
+        # (0-indexed in Optim v1, 1-indexed in Optim v2)
+        @test logs[2].kwargs[:progress] isa Number
+        @test 0.0 <= logs[2].kwargs[:progress] <= 0.001
         @test logs[2].message == "Optimizing"
-        @test logs[3].kwargs[:progress] == 0.001
+        @test logs[3].kwargs[:progress] > logs[2].kwargs[:progress]
         @test logs[end].kwargs[:progress] == "done"
     end
 end

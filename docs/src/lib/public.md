@@ -4,13 +4,10 @@ Documentation for `Pathfinder.jl`'s public interface.
 
 See the [Internals](@ref) section for documentation of internal functions.
 
-## Index
+Pathfinder can be run in two primary modes: single- and multi-path.
 
-```@index
-Pages = ["public.md"]
-```
 
-## Public Interface
+## Single-path Pathfinder
 
 ```@autodocs
 Modules = [Pathfinder]
@@ -20,10 +17,37 @@ Public = true
 Private = false
 ```
 
+## Multi-path Pathfinder
+
 ```@autodocs
 Modules = [Pathfinder]
 Pages = ["multipath.jl"]
 Order = [:function, :type]
 Public = true
 Private = false
+```
+
+## Resampling
+
+```@autodocs
+Modules = [Pathfinder]
+Pages = ["resample.jl"]
+Order = [:function, :type]
+Public = true
+Private = false
+```
+
+## AdvancedHMC integration
+
+```@docs
+AdvancedHMC.RankUpdateEuclideanMetric(::Pathfinder.WoodburyPDMat)
+```
+
+## Turing integration
+
+The above functions have special overloads for supporting Turing models.
+
+```@docs
+Pathfinder.pathfinder(::DynamicPPL.Model; kwargs...)
+Pathfinder.multipathfinder(::DynamicPPL.Model, ::Int; kwargs...)
 ```

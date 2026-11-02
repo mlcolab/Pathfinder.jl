@@ -1,31 +1,16 @@
-function _log_density_problem_order(log_density_problem)
-    return _log_density_problem_order(LogDensityProblems.capabilities(log_density_problem))
-end
-function _log_density_problem_order(
-    ::LogDensityProblems.LogDensityOrder{order}
-) where {order}
-    return order
-end
-
-function _as_log_density_problem_with_derivatives(log_density_problem, adtype)
-    order = _log_density_problem_order(log_density_problem)
-    iszero(order) || return log_density_problem
-    return LogDensityProblemsAD.ADgradient(adtype, log_density_problem)
-end
-
 function build_optim_function(
-    _log_density_problem,
+    log_density_problem,
     adtype::ADTypes.AbstractADType,
-    ::LogDensityProblems.LogDensityOrder;
-)
-    log_density_problem = _as_log_density_problem_with_derivatives(
-        _log_density_problem, adtype
-    )
-    order = _log_density_problem_order(log_density_problem)
-    function grad(res, x, _...)
-        _, ∇fx = LogDensityProblems.logdensity_and_gradient(log_density_problem, x)
-        @. res = -∇fx
-        return res
+    ::LogDensityProblems.LogDensityOrder{order};
+) where {order}
+    if order > 0
+        function grad(res, x, _...)
+            _, ∇fx = LogDensityProblems.logdensity_and_gradient(log_density_problem, x)
+            @. res = -∇fx
+            return res
+        end
+    else
+        grad = nothing
     end
     if order > 1
         function hess(res, x, _...)
@@ -56,37 +41,14 @@ function optimize_with_trace(
     callback=nothing,
     fail_on_nonfinite=true,
     ndraws_elbo::Int=5,
-    rng=Random.GLOBAL_RNG,
+    rng=Random.default_rng(),
     (invH_init!)=gilbert_invH_init!,
     save_trace::Bool=true,
     history_length::Int=DEFAULT_HISTORY_LENGTH,
+    ntasks::Int=1,
     kwargs...,
 )
-    if prob.f.grad === nothing
-        # Generate a cache to use Optimization's native functionality for adding missing
-        # gradient values
-        optim_cache = try
-            Optimization.OptimizationCache(prob, optimizer)
-        catch e
-            if e isa MethodError
-                # OptimizationBase <v2.0.1
-                data = Iterators.cycle((Optimization.OptimizationBase.NullData(),))
-                Optimization.OptimizationCache(prob, optimizer, data)
-            else
-                throw(e)
-            end
-        end
-        fun = optim_cache.f
-        if fun.grad === nothing
-            throw(
-                ArgumentError(
-                    "Gradient function is not available. Please provide an OptimizationProblem with an explicit gradient function.",
-                ),
-            )
-        end
-    else
-        fun = prob.f
-    end
+    fun = _optim_function_with_gradient(prob, optimizer)
 
     logp(x) = -fun.f(x, nothing)
     function ∇logp(x)
@@ -111,6 +73,7 @@ function optimize_with_trace(
         history_length,
         rng,
         save_trace,
+        ntasks,
         maxiters,
         fail_on_nonfinite,
         callback,
@@ -118,7 +81,7 @@ function optimize_with_trace(
         progress_name,
         progress_id,
     )
-    sol = Optimization.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
+    sol = SciMLBase.solve(prob, optimizer; callback=_callback, maxiters, kwargs...)
 
     (; optim_trace, fit_distributions, elbo_estimates, fit_distribution, fit_iteration) =
         _callback
@@ -131,6 +94,21 @@ function optimize_with_trace(
         fit_distribution,
         fit_iteration,
     )
+end
+
+function _optim_function_with_gradient(prob, optimizer)
+    prob.f.grad === nothing || return prob.f
+    # Generate a cache to use OptimizationBase's native functionality for adding missing
+    # gradient values
+    fun = OptimizationBase.OptimizationCache(prob, optimizer).f
+    if fun.grad === nothing
+        throw(
+            ArgumentError(
+                "Gradient function is not available. Please provide an OptimizationProblem with an explicit gradient function.",
+            ),
+        )
+    end
+    return fun
 end
 
 function _fill_missing_gradient_values!(∇fxs, xs, optim_fun)
@@ -167,6 +145,7 @@ mutable struct OptimizationCallback{
     # User-provided options
     const rng::R
     const save_trace::Bool
+    const ntasks::Int
     const maxiters::Int
     const fail_on_nonfinite::Bool
     const callback::CB
@@ -191,6 +170,7 @@ function OptimizationCallback(
     u0;
     rng::Random.AbstractRNG=Random.default_rng(),
     save_trace::Bool=true,
+    ntasks::Int=1,
     maxiters::Int=1_000,
     fail_on_nonfinite::Bool=true,
     ndraws_elbo::Int=5,
@@ -217,6 +197,7 @@ function OptimizationCallback(
         ∇logp,
         rng,
         save_trace,
+        ntasks,
         maxiters,
         fail_on_nonfinite,
         callback,
@@ -233,12 +214,13 @@ function OptimizationCallback(
     )
 end
 
-function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args...)
+function (cb::OptimizationCallback)(state::OptimizationState, args...)
     (;
         logp,
         ∇logp,
         rng,
         save_trace,
+        ntasks,
         maxiters,
         fail_on_nonfinite,
         callback,
@@ -252,9 +234,11 @@ function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args.
         progress_id,
     ) = cb
     ret = callback !== nothing && callback(state, args...)
-    iteration = state.iter
-    Base.@logmsg ProgressLogging.ProgressLevel progress_name progress = iteration / maxiters _id =
+    Base.@logmsg ProgressLogging.ProgressLevel progress_name progress = state.iter / maxiters _id =
         progress_id
+    # optimizers differ in how they number iterations in `state.iter`, so we instead use the
+    # index of the current point in the trace, where the initial point is iteration 0
+    iteration = length(elbo_estimates)
 
     # some optimizers mutate x, so we must copy it
     x = copy(state.u)
@@ -268,7 +252,7 @@ function (cb::OptimizationCallback)(state::Optimization.OptimizationState, args.
     # Fit distribution
     fit_distribution = fit_mvnormal(lbfgs_state)
     elbo_estimate = elbo_and_samples!(
-        draws_cache, rng, logp, fit_distribution; save_samples=save_trace
+        draws_cache, rng, logp, fit_distribution; save_samples=save_trace, ntasks
     )
 
     push!(optim_trace.log_densities, logp_x)
