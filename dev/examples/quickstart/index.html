@@ -21,7 +21,66 @@ end
 ]
 μ = [-0.55, 0.49, -0.76, 0.25, 0.94]
 P = inv(Symmetric(Σ))
-prob_mvnormal = MvNormalProblem(μ, P)</code></pre><p>Now we run <a href="../../lib/public/#Pathfinder.pathfinder"><code>pathfinder</code></a>.</p><pre><code class="language-julia hljs">result = pathfinder(prob_mvnormal; dim=5, init_scale=4)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Single-path Pathfinder result
+prob_mvnormal = MvNormalProblem(μ, P)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr91"><span class="sgr1">ERROR: </span></span>LoadError: UndefVarError: `pd_from_upper` not defined in `BijectorsReverseDiffExt`
+Suggestion: check for spelling errors or missing imports.
+Stacktrace:
+ [1] top-level scope
+ <span class="sgr90">  @</span> <span class="sgr90">~/.julia/packages/Bijectors/6t7LY/ext/<span class="sgr4">BijectorsReverseDiffExt.jl:350</span></span>
+ [2] <span class="sgr1">include(</span><span class="sgr90">mod</span>::Module, <span class="sgr90">_path</span>::String<span class="sgr1">)</span>
+ <span class="sgr90">  @</span> <span class="sgr90">Base</span> <span class="sgr90">./<span class="sgr4">Base.jl:309</span></span>
+ [3] <span class="sgr1">include_package_for_output(</span><span class="sgr90">pkg</span>::Base.PkgId, <span class="sgr90">input</span>::String, <span class="sgr90">depot_path</span>::Vector<span class="sgr90">{String}</span>, <span class="sgr90">dl_load_path</span>::Vector<span class="sgr90">{String}</span>, <span class="sgr90">load_path</span>::Vector<span class="sgr90">{String}</span>, <span class="sgr90">concrete_deps</span>::Vector<span class="sgr90">{Pair{Base.PkgId, UInt128}}</span>, <span class="sgr90">source</span>::Nothing, <span class="sgr90">preresolved</span>::Vector<span class="sgr90">{Pair{Base.PkgId, String}}</span><span class="sgr1">)</span>
+ <span class="sgr90">  @</span> <span class="sgr90">Base</span> <span class="sgr90">./<span class="sgr4">loading.jl:3229</span></span>
+ [4] top-level scope
+ <span class="sgr90">  @</span> <span class="sgr90"><span class="sgr4">stdin:5</span></span>
+ [5] <span class="sgr1">eval(</span><span class="sgr90">m</span>::Module, <span class="sgr90">e</span>::Any<span class="sgr1">)</span>
+ <span class="sgr90">  @</span> <span class="sgr90">Core</span> <span class="sgr90">./<span class="sgr4">boot.jl:489</span></span>
+ [6] <span class="sgr1">include_string(</span><span class="sgr90">mapexpr</span>::typeof(identity), <span class="sgr90">mod</span>::Module, <span class="sgr90">code</span>::String, <span class="sgr90">filename</span>::String<span class="sgr1">)</span>
+ <span class="sgr90">  @</span> <span class="sgr90">Base</span> <span class="sgr90">./<span class="sgr4">loading.jl:3064</span></span>
+ [7] <span class="sgr1">include_string</span>
+ <span class="sgr90">  @</span> <span class="sgr90">./<span class="sgr4">loading.jl:3074</span> [inlined]</span>
+ [8] <span class="sgr1">exec_options(</span><span class="sgr90">opts</span>::Base.JLOptions<span class="sgr1">)</span>
+ <span class="sgr90">  @</span> <span class="sgr90">Base</span> <span class="sgr90">./<span class="sgr4">client.jl:342</span></span>
+ [9] <span class="sgr1">_start()</span>
+ <span class="sgr90">  @</span> <span class="sgr90">Base</span> <span class="sgr90">./<span class="sgr4">client.jl:577</span></span>
+in expression starting at /home/runner/.julia/packages/Bijectors/6t7LY/ext/BijectorsReverseDiffExt.jl:1
+in expression starting at stdin:5
+
+  1 dependency had output during precompilation:
+┌ Bijectors → BijectorsReverseDiffExt
+│  [Output was shown above]
+└
+<span class="sgr91"><span class="sgr1">┌ Error: </span></span>Error during loading of extension BijectorsReverseDiffExt of Bijectors, use `Base.retry_load_extensions()` to retry.
+<span class="sgr91"><span class="sgr1">│ </span></span>  exception =
+<span class="sgr91"><span class="sgr1">│ </span></span>   1-element ExceptionStack:
+<span class="sgr91"><span class="sgr1">│ </span></span>   The following 1 package failed to precompile:
+<span class="sgr91"><span class="sgr1">│ </span></span>
+<span class="sgr91"><span class="sgr1">│ </span></span>   Bijectors → BijectorsReverseDiffExt
+<span class="sgr91"><span class="sgr1">│ </span></span>   Failed to precompile BijectorsReverseDiffExt [a44797c8-2cda-501f-b168-c800fee66adc] to &quot;/home/runner/.julia/compiled/v1.13/BijectorsReverseDiffExt/jl_t1Xak7&quot; (ProcessExited(1)).
+<span class="sgr91"><span class="sgr1">│ </span></span>
+<span class="sgr91"><span class="sgr1">└ </span></span><span class="sgr90">@ Base loading.jl:1680</span>
+<span class="sgr91"><span class="sgr1">ERROR: </span></span>LoadError: UndefVarError: `pd_from_upper` not defined in `BijectorsReverseDiffExt`
+Suggestion: check for spelling errors or missing imports.
+Stacktrace:
+ [1] top-level scope
+ <span class="sgr90">  @</span> <span class="sgr90">~/.julia/packages/Bijectors/6t7LY/ext/<span class="sgr4">BijectorsReverseDiffExt.jl:350</span></span>
+ [2] <span class="sgr1">include(</span><span class="sgr90">mod</span>::Module, <span class="sgr90">_path</span>::String<span class="sgr1">)</span>
+ <span class="sgr90">  @</span> <span class="sgr90">Base</span> <span class="sgr90">./<span class="sgr4">Base.jl:309</span></span>
+ [3] <span class="sgr1">include_package_for_output(</span><span class="sgr90">pkg</span>::Base.PkgId, <span class="sgr90">input</span>::String, <span class="sgr90">depot_path</span>::Vector<span class="sgr90">{String}</span>, <span class="sgr90">dl_load_path</span>::Vector<span class="sgr90">{String}</span>, <span class="sgr90">load_path</span>::Vector<span class="sgr90">{String}</span>, <span class="sgr90">concrete_deps</span>::Vector<span class="sgr90">{Pair{Base.PkgId, UInt128}}</span>, <span class="sgr90">source</span>::Nothing, <span class="sgr90">preresolved</span>::Vector<span class="sgr90">{Pair{Base.PkgId, String}}</span><span class="sgr1">)</span>
+ <span class="sgr90">  @</span> <span class="sgr90">Base</span> <span class="sgr90">./<span class="sgr4">loading.jl:3229</span></span>
+ [4] top-level scope
+ <span class="sgr90">  @</span> <span class="sgr90"><span class="sgr4">stdin:5</span></span>
+ [5] <span class="sgr1">eval(</span><span class="sgr90">m</span>::Module, <span class="sgr90">e</span>::Any<span class="sgr1">)</span>
+ <span class="sgr90">  @</span> <span class="sgr90">Core</span> <span class="sgr90">./<span class="sgr4">boot.jl:489</span></span>
+ [6] <span class="sgr1">include_string(</span><span class="sgr90">mapexpr</span>::typeof(identity), <span class="sgr90">mod</span>::Module, <span class="sgr90">code</span>::String, <span class="sgr90">filename</span>::String<span class="sgr1">)</span>
+ <span class="sgr90">  @</span> <span class="sgr90">Base</span> <span class="sgr90">./<span class="sgr4">loading.jl:3064</span></span>
+ [7] <span class="sgr1">include_string</span>
+ <span class="sgr90">  @</span> <span class="sgr90">./<span class="sgr4">loading.jl:3074</span> [inlined]</span>
+ [8] <span class="sgr1">exec_options(</span><span class="sgr90">opts</span>::Base.JLOptions<span class="sgr1">)</span>
+ <span class="sgr90">  @</span> <span class="sgr90">Base</span> <span class="sgr90">./<span class="sgr4">client.jl:342</span></span>
+ [9] <span class="sgr1">_start()</span>
+ <span class="sgr90">  @</span> <span class="sgr90">Base</span> <span class="sgr90">./<span class="sgr4">client.jl:577</span></span>
+in expression starting at /home/runner/.julia/packages/Bijectors/6t7LY/ext/BijectorsReverseDiffExt.jl:1
+in expression starting at stdin:5</code></pre><p>Now we run <a href="../../lib/public/#Pathfinder.pathfinder"><code>pathfinder</code></a>.</p><pre><code class="language-julia hljs">result = pathfinder(prob_mvnormal; dim=5, init_scale=4)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Single-path Pathfinder result
   tries: 1
   draws: 5
   fit iteration: 5 (total: 5)
@@ -99,7 +158,7 @@ end
 prob_banana = BananaProblem()</code></pre><p>and then visualise it:</p><pre><code class="language-julia hljs">xrange = -3.5:0.05:3.5
 yrange = -3:0.05:7
 logp_banana(x) = LogDensityProblems.logdensity(prob_banana, x)
-contour(xrange, yrange, exp ∘ logp_banana ∘ Base.vect; xlabel=&quot;x₁&quot;, ylabel=&quot;x₂&quot;)</code></pre><img src="18cf81f3.svg" alt="Example block output"/><p>Now we run <a href="../../lib/public/#Pathfinder.pathfinder"><code>pathfinder</code></a>.</p><pre><code class="language-julia hljs">result = pathfinder(prob_banana; init_scale=10)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Single-path Pathfinder result
+contour(xrange, yrange, exp ∘ logp_banana ∘ Base.vect; xlabel=&quot;x₁&quot;, ylabel=&quot;x₂&quot;)</code></pre><img src="69c5af5c.svg" alt="Example block output"/><p>Now we run <a href="../../lib/public/#Pathfinder.pathfinder"><code>pathfinder</code></a>.</p><pre><code class="language-julia hljs">result = pathfinder(prob_banana; init_scale=10)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Single-path Pathfinder result
   tries: 1
   draws: 5
   fit iteration: 9 (total: 17)
@@ -117,7 +176,7 @@ x₂_approx = result.draws[2, :]
 
 contour(xrange, yrange, exp ∘ logp_banana ∘ Base.vect)
 scatter!(x₁_approx, x₂_approx; msw=0, ms=2, alpha=0.5, color=1)
-plot!(xlims=extrema(xrange), ylims=extrema(yrange), xlabel=&quot;x₁&quot;, ylabel=&quot;x₂&quot;, legend=false)</code></pre><img src="597d316e.svg" alt="Example block output"/><p>While the draws do a poor job of covering the tails of the distribution, they are still useful for identifying the nonlinear correlation between these two parameters.</p><h2 id="A-100-dimensional-funnel"><a class="docs-heading-anchor" href="#A-100-dimensional-funnel">A 100-dimensional funnel</a><a id="A-100-dimensional-funnel-1"></a><a class="docs-heading-anchor-permalink" href="#A-100-dimensional-funnel" title="Permalink"></a></h2><p>As we have seen above, running multi-path Pathfinder is much more useful for target distributions that are far from normal. One particularly difficult distribution to sample is Neal&#39;s funnel:</p><p class="math-container">\[\begin{aligned}
+plot!(xlims=extrema(xrange), ylims=extrema(yrange), xlabel=&quot;x₁&quot;, ylabel=&quot;x₂&quot;, legend=false)</code></pre><img src="278c29cc.svg" alt="Example block output"/><p>While the draws do a poor job of covering the tails of the distribution, they are still useful for identifying the nonlinear correlation between these two parameters.</p><h2 id="A-100-dimensional-funnel"><a class="docs-heading-anchor" href="#A-100-dimensional-funnel">A 100-dimensional funnel</a><a id="A-100-dimensional-funnel-1"></a><a class="docs-heading-anchor-permalink" href="#A-100-dimensional-funnel" title="Permalink"></a></h2><p>As we have seen above, running multi-path Pathfinder is much more useful for target distributions that are far from normal. One particularly difficult distribution to sample is Neal&#39;s funnel:</p><p class="math-container">\[\begin{aligned}
 \tau &amp;\sim \mathrm{Normal}(\mu=0, \sigma=3)\\
 \beta_i &amp;\sim \mathrm{Normal}(\mu=0, \sigma=e^{\tau/2})
 \end{aligned}\]</p><p>Such funnel geometries appear in other models (e.g. many hierarchical models) and typically frustrate MCMC sampling. Multi-path Pathfinder can&#39;t sample the funnel well, but it can quickly give us draws that can help us diagnose that we have a funnel.</p><p>In this example, we draw from a 100-dimensional funnel and visualize 2 dimensions.</p><pre><code class="language-julia hljs">using ReverseDiff, ADTypes
@@ -150,4 +209,4 @@ result = multipathfinder(logp_funnel, ndraws; dim=100, nruns=20, init_scale=10, 
 
 contour(τ_range, β₁_range, exp ∘ logp_funnel ∘ Base.vect)
 scatter!(τ_approx, β₁_approx; msw=0, ms=2, alpha=0.5, color=1)
-plot!(; xlims=extrema(τ_range), ylims=extrema(β₁_range), xlabel=&quot;τ&quot;, ylabel=&quot;β₁&quot;, legend=false)</code></pre><img src="e26c72b2.svg" alt="Example block output"/></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../lib/internals/">« Internals</a><a class="docs-footer-nextpage" href="../resampling/">Resampling »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.20.0 on <span class="colophon-date" title="Monday 9 November 2026 00:18">Monday 9 November 2026</span>. Using Julia version 1.13.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+plot!(; xlims=extrema(τ_range), ylims=extrema(β₁_range), xlabel=&quot;τ&quot;, ylabel=&quot;β₁&quot;, legend=false)</code></pre><img src="f9686ec2.svg" alt="Example block output"/></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../lib/internals/">« Internals</a><a class="docs-footer-nextpage" href="../resampling/">Resampling »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.20.0 on <span class="colophon-date" title="Tuesday 10 November 2026 00:18">Tuesday 10 November 2026</span>. Using Julia version 1.13.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
