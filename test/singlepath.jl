@@ -162,9 +162,10 @@ using Test
             L = length(result_trace.optim_trace) - 1
             @test L == maxiters
 
-            # the same trajectory, stored as log-densities only
+            # The same trajectory length and endpoint, without per-iteration storage.
             @test length(result.optim_trace) - 1 == L
-            @test result.optim_trace.log_densities == result_trace.optim_trace.log_densities
+            @test isempty(result.optim_trace.log_densities)
+            @test result.fit_log_density == result_trace.optim_trace.log_densities[result.fit_iteration + 1]
             @test isempty(result.optim_trace.points)
             @test isempty(result.optim_trace.gradients)
             @test result.optim_trace.points isa typeof(result_trace.optim_trace.points)
@@ -183,21 +184,18 @@ using Test
             )
             @test all(isfinite, mean(result.fit_distribution))
 
-            # one ELBO estimate per iteration; only the selected one keeps its draws
+            # Only the selected ELBO estimate remains, separately from optional history.
             @test result.elbo_estimates isa typeof(result_trace.elbo_estimates)
-            @test length(result.elbo_estimates) == L
-            values = getproperty.(result.elbo_estimates, :value)
-            @test result.fit_iteration == last(Pathfinder._findmax_skipnan(values))
-            for (i, est) in enumerate(result.elbo_estimates)
-                @test length(est.log_density_ratios) == ndraws_elbo
-                @test size(est.draws) == (dim, i == result.fit_iteration ? ndraws_elbo : 0)
-            end
+            @test isempty(result.elbo_estimates)
+            @test length(result.fit_elbo_estimate.log_density_ratios) == ndraws_elbo
+            @test size(result.fit_elbo_estimate.draws) == (dim, ndraws_elbo)
+            @test result_trace.fit_elbo_estimate === result_trace.elbo_estimates[result_trace.fit_iteration]
 
             # the returned draws reuse the selected fit's ELBO draws, as with `save_trace`
             @test size(result.draws) == (dim, ndraws)
             k = min(ndraws, ndraws_elbo)
             @test result.draws[:, 1:k] ==
-                result.elbo_estimates[result.fit_iteration].draws[:, 1:k]
+                result.fit_elbo_estimate.draws[:, 1:k]
             @test all(isfinite, result.draws)
 
             # reproducible
@@ -207,12 +205,13 @@ using Test
             )
             @test result2.fit_iteration == result.fit_iteration
             @test result2.draws == result.draws
-            @test getproperty.(result2.elbo_estimates, :value) == values
+            @test result2.fit_elbo_estimate.value == result.fit_elbo_estimate.value
+            @test result2.fit_elbo_estimate.std_err == result.fit_elbo_estimate.std_err
         end
 
         @testset "memory does not grow with the number of iterations" begin
-            # large enough that the O(dim) part of the result dominates its scalars
-            dim_large = 2_000
+            # A small dimension exposes even a scalar or sample-vector history.
+            dim_large = 30
             prec_large = exp10.(range(-2, 2; length=dim_large))
             logp_large(x) = -dot(prec_large, abs2.(x)) / 2
             ℓ_large = build_logdensityproblem(logp_large, dim_large, 1)
@@ -237,8 +236,10 @@ using Test
             result_trace = pathfinder(
                 ℓ_large; init=init_large, rng, maxiters=80, ndraws_elbo, ndraws=10, ntries=1
             )
-            # 4x the iterations add only the per-iteration scalars
-            @test sizes[2] < 1.05 * sizes[1]
+            # If the final fit wins, its diagonal shares the live L-BFGS state's
+            # vector. An earlier winner retains one extra dimension-sized vector;
+            # the allowance is fixed, never proportional to iteration count.
+            @test abs(sizes[2] - sizes[1]) <= Base.summarysize(zeros(dim_large))
             @test Base.summarysize(result_trace) > 5 * sizes[2]
         end
 

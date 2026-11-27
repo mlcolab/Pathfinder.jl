@@ -45,8 +45,7 @@ function optimize_with_trace(
 )
     u0 = prob.u0
     fun = prob.f
-    # caches for the trace of x and f(x); with an online fit, the points and gradients are
-    # consumed as they arrive and these two stay empty
+    # With an online fit, all per-iteration histories stay empty.
     xs = typeof(u0)[]
     fxs = typeof(fun.f(u0, nothing))[]
     ∇fxs = Union{Nothing,typeof(u0)}[]
@@ -65,7 +64,8 @@ function optimize_with_trace(
 
     _∇fxs = _fill_missing_gradient_values!(∇fxs, xs, sol.cache.f)
 
-    return sol, OptimizationTrace(xs, fxs, _∇fxs)
+    num_points = online_fit === nothing ? length(xs) : online_fit.iteration + Int(online_fit.started)
+    return sol, OptimizationTrace(xs, fxs, _∇fxs, num_points)
 end
 
 function _fill_missing_gradient_values!(∇fxs, xs, optim_fun)
@@ -116,12 +116,12 @@ function (cb::OptimizationCallback)(state::OptimizationState, args...)
     fx = -state.objective
     ∇fx = state.grad === nothing ? nothing : -state.grad
 
-    push!(fxs, fx)
     if online_fit === nothing
+        push!(fxs, fx)
         push!(xs, x)
         push!(∇fxs, ∇fx)
     else
-        _fit!(online_fit, x, ∇fx)
+        _fit!(online_fit, x, ∇fx, fx)
     end
 
     if fail_on_nonfinite && !ret
@@ -140,8 +140,9 @@ the point arrives, estimate its ELBO, and keep only the ELBO-maximizing fit and 
 Passed as `online_fit` to [`optimize_with_trace`](@ref), it replaces storing the trajectory
 and fitting after the optimization, so the memory it holds is independent of the number of
 iterations: the L-BFGS state and two fits, `O(dim * history_length)`, plus the draws of the
-selected fit, `O(dim * ndraws_elbo)`. Its `elbo_estimates` carry one entry per iteration
-whose draws are kept only for `fit_iteration`, as `_without_draws` makes them.
+selected fit, `O(dim * ndraws_elbo)`. Its `elbo_estimates` stays empty; the winner is
+`fit_elbo_estimate`, with its point's log density in `fit_log_density`. `iteration`
+counts scored points independently of the optional histories.
 
 The inverse Hessians are the ones [`lbfgs_inverse_hessians`](@ref) reconstructs from the
 stored trajectory, built one point at a time through the same
@@ -170,6 +171,9 @@ mutable struct OnlineFit{
     const elbo_estimates::Vector{EE}
     fit_distribution::FD # the fit at `fit_iteration`
     fit_iteration::Int
+    fit_elbo_estimate::Union{Nothing,EE}
+    fit_log_density::Real # preserve the objective's precision, which may differ from x
+    iteration::Int
     best::Union{Missing,Tuple{T,Int}} # `_findmax_skipnan` state over the ELBO values
     started::Bool # whether the first point has arrived
 end
@@ -212,6 +216,9 @@ function OnlineFit(
         EE[],
         fit_distribution,
         0,
+        nothing,
+        zero(T),
+        0,
         missing,
         false,
     )
@@ -233,8 +240,8 @@ end
 
 # Advance the fit by the point `x` with gradient `∇logpx` (`nothing` if the optimizer did
 # not report one).
-function _fit!(fit::OnlineFit, x, ∇logpx)
-    (; lbfgs_state, logp, ∇logp, rng, elbo_rng, ndraws_elbo, elbo_estimates) = fit
+function _fit!(fit::OnlineFit, x, ∇logpx, logpx)
+    (; lbfgs_state, logp, ∇logp, rng, elbo_rng, ndraws_elbo) = fit
     if ∇logpx === nothing
         ∇logp === nothing && throw(
             ArgumentError(
@@ -252,6 +259,7 @@ function _fit!(fit::OnlineFit, x, ∇logpx)
         lbfgs_state.θ = x
         lbfgs_state.∇logpθ = ∇logpx
         fit.fit_distribution = fit_mvnormal(lbfgs_state)
+        fit.fit_log_density = logpx
         fit.started = true
         return fit
     end
@@ -261,19 +269,13 @@ function _fit!(fit::OnlineFit, x, ∇logpx)
     Random.seed!(elbo_rng, rand(rng, UInt64))
     estimate = elbo_and_samples(elbo_rng, logp, dist, ndraws_elbo)
 
-    iteration = length(elbo_estimates) + 1
+    iteration = fit.iteration += 1
     best = fit.best = _findmax_skipnan_step(fit.best, estimate.value, iteration)
     if last(best) == iteration
-        # this fit is now the selected one: keep its draws, and drop the previous winner's
-        previous = fit.fit_iteration
-        if previous > 0
-            elbo_estimates[previous] = _without_draws(elbo_estimates[previous])
-        end
-        push!(elbo_estimates, estimate)
+        fit.fit_elbo_estimate = estimate
         fit.fit_distribution = dist
         fit.fit_iteration = iteration
-    else
-        push!(elbo_estimates, _without_draws(estimate))
+        fit.fit_log_density = logpx
     end
     return fit
 end
@@ -282,10 +284,13 @@ struct OptimizationTrace{P,L}
     points::P
     log_densities::L
     gradients::P
+    num_points::Int
 end
 
-# the log densities are always recorded; with an online fit, the points and gradients are not
-Base.length(trace::OptimizationTrace) = length(trace.log_densities)
+OptimizationTrace(points, log_densities, gradients) =
+    OptimizationTrace(points, log_densities, gradients, length(log_densities))
+
+Base.length(trace::OptimizationTrace) = trace.num_points
 
 function Base.show(io::IO, trace::OptimizationTrace)
     print(io, "OptimizationTrace with $(length(trace) - 1) iterations")

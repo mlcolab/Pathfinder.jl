@@ -33,29 +33,33 @@ Container for results of single-path Pathfinder.
     user-supplied target distribution. This is only different from `fit_distribution` when
     integrating with other packages, and its type depends on the type of `input`.
 - `draws_transformed`: `draws` transformed to be draws from `fit_distribution_transformed`.
-- `fit_iteration::Int`: Iteration at which ELBO estimate was maximized
+- `fit_iteration::Int`: Absolute iteration at which ELBO estimate was maximized, or zero
+    when no fit was scored. This remains an iteration number with `save_trace=false`.
 - `num_tries::Int`: Number of tries until Pathfinder succeeded
 - `optim_solution::`[`SciMLBase.OptimizationSolution`](@extref): Solution object of
     optimization.
 - `optim_trace::Pathfinder.OptimizationTrace`: container for optimization trace of points,
     log-density, and gradient. The first point is the initial point. With
-    `save_trace=false`, only the log-densities are stored, and `length(optim_trace) - 1` is
-    still the number of iterations.
+    `save_trace=false`, points, log-densities and gradients are empty.
+    `length(optim_trace) - 1` still counts the iterations in either mode.
 - `fit_distributions::AbstractVector{Distributions.MvNormal}`: Multivariate normal
     distributions for each point in `optim_trace`, where
     `fit_distributions[fit_iteration + 1] == fit_distribution`. Empty with
     `save_trace=false`.
 - `elbo_estimates::AbstractVector{<:Pathfinder.ELBOEstimate}`: ELBO estimates for all but
-    the first distribution in `fit_distributions`, one per iteration. With
-    `save_trace=false`, only `elbo_estimates[fit_iteration]` keeps its draws; the others
-    have none.
+    the first distribution in `fit_distributions`, one per iteration. Empty with
+    `save_trace=false`; use `fit_elbo_estimate` for the selected fit in either mode.
 - `num_bfgs_updates_rejected::Int`: Number of times a BFGS update to the reconstructed
     inverse Hessian was rejected to keep the inverse Hessian positive definite.
+- `fit_elbo_estimate::Union{Nothing,Pathfinder.ELBOEstimate}`: The selected fit's ELBO
+    estimate and draws, or `nothing` when no fit was scored.
+- `fit_log_density::Real`: Log density at the selected fit's iterate (the initial point
+    when no fit was scored).
 
 # Returns
 - [`PathfinderResult`](@ref)
 """
-struct PathfinderResult{I,O,R,OP,LP,FD,D,FDT,DT,OS,OT,EE}
+struct PathfinderResult{I,O,R,OP,LP,FD,D,FDT,DT,OS,OT,EE,FE,FL}
     input::I
     optimizer::O
     rng::R
@@ -72,6 +76,8 @@ struct PathfinderResult{I,O,R,OP,LP,FD,D,FDT,DT,OS,OT,EE}
     fit_distributions::Vector{FD}
     elbo_estimates::EE
     num_bfgs_updates_rejected::Int
+    fit_elbo_estimate::FE
+    fit_log_density::FL
 end
 
 function Base.show(io::IO, ::MIME"text/plain", result::PathfinderResult)
@@ -82,7 +88,8 @@ function Base.show(io::IO, ::MIME"text/plain", result::PathfinderResult)
         io,
         "  fit iteration: $(result.fit_iteration) (total: $(length(result.optim_trace) - 1))",
     )
-    println(io, "  fit ELBO: $(_to_string(result.elbo_estimates[result.fit_iteration]))")
+    estimate = result.fit_elbo_estimate
+    println(io, "  fit ELBO: $(estimate === nothing ? "not scored" : _to_string(estimate))")
     print(io, "  fit distribution: ", result.fit_distribution)
     return nothing
 end
@@ -141,8 +148,10 @@ $(_ARGUMENT_DOCSTRING)
     together take `O(dim * maxiters * history_length)` memory. If `false`, each fit is
     scored as soon as its point is reached and only the ELBO-maximizing fit and its draws
     are kept, so memory does not grow with the number of iterations. The result then has
-    empty `optim_trace.points`, `optim_trace.gradients` and `fit_distributions`, and only
-    `elbo_estimates[fit_iteration]` carries draws. The ELBO estimates are computed one at a
+    empty `optim_trace.points`, `optim_trace.log_densities`, `optim_trace.gradients`,
+    `fit_distributions` and `elbo_estimates`. The winner is available through
+    `fit_elbo_estimate` and `fit_log_density`; iteration counts remain available through
+    `fit_iteration` and `length(optim_trace) - 1`. The ELBO estimates are computed one at a
     time during the optimization, so `ntasks` does not parallelize them, and from a
     different random stream than with `save_trace=true`, so the selected iteration can
     differ between the two by the Monte Carlo error of the ELBO estimates.
@@ -221,6 +230,8 @@ function pathfinder(
         fit_distributions,
         fit_iteration,
         elbo_estimates,
+        fit_elbo_estimate,
+        fit_log_density,
         num_bfgs_updates_rejected,
     ) = path_result
 
@@ -228,7 +239,7 @@ function pathfinder(
         ndraws_elbo_actual = 0
         @warn "Pathfinder failed after $itry tries. Increase `ntries`, inspect the model for numerical instability, or provide a more suitable `init_sampler`."
     else
-        elbo_estimate_opt = elbo_estimates[fit_iteration]
+        elbo_estimate_opt = fit_elbo_estimate
         ndraws_elbo_actual = ndraws_elbo
     end
 
@@ -267,6 +278,8 @@ function pathfinder(
         fit_distributions,
         elbo_estimates,
         num_bfgs_updates_rejected,
+        fit_elbo_estimate,
+        fit_log_density,
     )
 end
 
@@ -321,23 +334,25 @@ function _pathfinder(
             rng, logp, fit_distributions[(begin + 1):end], ndraws_elbo, ntasks
         )
         fit_distribution = fit_distributions[fit_iteration + 1]
+        fit_elbo_estimate = isempty(elbo_estimates) ? nothing : elbo_estimates[fit_iteration]
+        fit_log_density = optim_trace.log_densities[fit_iteration + 1]
     else
         # fit and score each distribution as its point is reached, keeping only the best
         online_fit = OnlineFit(prob, logp; rng, ndraws_elbo, history_length)
         optim_solution, optim_trace = optimize_with_trace(
             prob, optimizer; online_fit, kwargs...
         )
-        (; fit_distribution, fit_iteration, elbo_estimates) = online_fit
+        (; fit_distribution, fit_iteration, elbo_estimates, fit_elbo_estimate, fit_log_density) = online_fit
         fit_distributions = typeof(fit_distribution)[]
         num_bfgs_updates_rejected = online_fit.lbfgs_state.num_bfgs_updates_rejected
     end
     L = length(optim_trace) - 1
     success = L > 0
 
-    if isempty(elbo_estimates)
+    if fit_elbo_estimate === nothing
         success = false
     else
-        elbo = elbo_estimates[fit_iteration].value
+        elbo = fit_elbo_estimate.value
         success &= !isnan(elbo) & (elbo != -Inf)
     end
 
@@ -349,6 +364,8 @@ function _pathfinder(
         fit_distributions,
         fit_iteration,
         elbo_estimates,
+        fit_elbo_estimate,
+        fit_log_density,
         num_bfgs_updates_rejected,
     )
 end

@@ -157,8 +157,8 @@ end
             prob, Optim.LBFGS(); online_fit
         )
         @test optim_sol isa SciMLBase.OptimizationSolution
-        # the trajectory is recorded as log-densities only
-        @test optim_trace_online.log_densities == optim_trace.log_densities
+        # Only the trajectory length and selected point's log density are retained.
+        @test isempty(optim_trace_online.log_densities)
         @test isempty(optim_trace_online.points)
         @test isempty(optim_trace_online.gradients)
         @test length(optim_trace_online) == length(optim_trace)
@@ -166,21 +166,26 @@ end
         @test online_fit.lbfgs_state.θ ≈ optim_trace.points[end]
         @test online_fit.lbfgs_state.num_bfgs_updates_rejected == num_rejected
         @test Pathfinder.fit_mvnormal(online_fit.lbfgs_state) == dists[end]
-        # one ELBO estimate per iteration, the selected one keeping its draws
+        # Score the stored trajectory using the original streaming seed order.
+        # This independent batch reference catches changes to selection and RNG use.
         L = length(optim_trace) - 1
-        @test length(online_fit.elbo_estimates) == L
+        reference_rng = MersenneTwister(11)
+        elbo_rng = copy(reference_rng)
+        estimates = map(dists[2:end]) do dist
+            Random.seed!(elbo_rng, rand(reference_rng, UInt64))
+            Pathfinder.elbo_and_samples(elbo_rng, logp, dist, ndraws_elbo)
+        end
+        @test isempty(online_fit.elbo_estimates)
+        @test online_fit.iteration == L
         @test 1 ≤ online_fit.fit_iteration ≤ L
         @test online_fit.fit_distribution == dists[online_fit.fit_iteration + 1]
-        for (i, est) in enumerate(online_fit.elbo_estimates)
-            @test est isa Pathfinder.ELBOEstimate
-            @test length(est.log_density_ratios) == ndraws_elbo
-            if i == online_fit.fit_iteration
-                @test size(est.draws) == (n, ndraws_elbo)
-            else
-                @test size(est.draws) == (n, 0)
-            end
-        end
-        values = getproperty.(online_fit.elbo_estimates, :value)
+        est = online_fit.fit_elbo_estimate
+        @test size(est.draws) == (n, ndraws_elbo)
+        @test est.draws == estimates[online_fit.fit_iteration].draws
+        @test est.log_density_ratios == estimates[online_fit.fit_iteration].log_density_ratios
+        @test online_fit.fit_log_density == optim_trace.log_densities[online_fit.fit_iteration + 1]
+        @test rand(copy(rng), UInt64, 8) == rand(copy(reference_rng), UInt64, 8)
+        values = getproperty.(estimates, :value)
         @test online_fit.fit_iteration == last(Pathfinder._findmax_skipnan(values))
         @test online_fit.best == Pathfinder._findmax_skipnan(values)
 
@@ -189,9 +194,8 @@ end
         online_fit2 = Pathfinder.OnlineFit(prob, logp; rng, ndraws_elbo, history_length)
         Pathfinder.optimize_with_trace(prob, Optim.LBFGS(); online_fit=online_fit2)
         @test online_fit2.fit_iteration == online_fit.fit_iteration
-        @test getproperty.(online_fit2.elbo_estimates, :value) == values
-        @test online_fit2.elbo_estimates[online_fit2.fit_iteration].draws ==
-            online_fit.elbo_estimates[online_fit.fit_iteration].draws
+        @test online_fit2.fit_elbo_estimate.value == online_fit.fit_elbo_estimate.value
+        @test online_fit2.fit_elbo_estimate.draws == online_fit.fit_elbo_estimate.draws
 
         @testset "gradient not reported by the optimizer" begin
             # Nelder-Mead reports no gradient, so the fit must compute it itself
@@ -202,7 +206,8 @@ end
                 prob, optimizer; online_fit, maxiters=20
             )
             _, optim_trace = Pathfinder.optimize_with_trace(prob, optimizer; maxiters=20)
-            @test optim_trace_online.log_densities == optim_trace.log_densities
+            @test isempty(optim_trace_online.log_densities)
+            @test length(optim_trace_online) == length(optim_trace)
             @test online_fit.lbfgs_state.θ ≈ optim_trace.points[end]
             @test online_fit.lbfgs_state.∇logpθ ≈ optim_trace.gradients[end]
 
@@ -231,6 +236,42 @@ end
         @test Pathfinder._gradient_function(fun_oop, p)(x) ≈ g(x)
         @test Pathfinder._gradient_function(fun_iip, p)(x) ≈ g(x)
         @test Pathfinder._gradient_function(fun_none, p) === nothing
+    end
+
+    @testset "long online callback has no per-iteration retention" begin
+        # Drive the real callback at low dimension, where even one scalar per
+        # iteration is visible. Alternating points keep scoring after convergence
+        # would stop a quadratic optimizer, without changing the fit's capacity.
+        logp(x) = -sum(abs2, x) / 2
+        fun = SciMLBase.OptimizationFunction{true}(
+            (x, p) -> -logp(x); grad=(g, x, p) -> copyto!(g, x)
+        )
+        prob = SciMLBase.OptimizationProblem(fun, ones(2))
+        fit = Pathfinder.OnlineFit(prob, logp; rng=MersenneTwister(17),
+            ndraws_elbo=5, history_length=3)
+        cb = Pathfinder.OptimizationCallback(Vector{Float64}[], Float64[],
+            Union{Nothing,Vector{Float64}}[], "retention", nothing, 20_000,
+            nothing, true, fit)
+        function feed(i)
+            x = fill(isodd(i) ? -1.0 : 1.0, 2)
+            cb(OptimizationState(; iter=i, u=x, objective=-logp(x), grad=x))
+        end
+        foreach(feed, 0:100)
+        bytes = Base.summarysize(cb)
+        foreach(feed, 101:20_000)
+        @test Base.summarysize(cb) == bytes
+        @test fit.iteration == 20_000
+        @test isempty(cb.xs) && isempty(cb.fxs) && isempty(cb.∇fxs)
+        @test isempty(fit.elbo_estimates)
+        @test size(fit.fit_elbo_estimate.draws) == (2, 5)
+        @test fit.fit_log_density == -1
+        # Objective precision need not match parameter precision.
+        prob32 = SciMLBase.OptimizationProblem(fun, ones(Float32, 2))
+        fit32 = Pathfinder.OnlineFit(prob32, logp; rng=MersenneTwister(17),
+            ndraws_elbo=5, history_length=3)
+        logpx = 1.0 + eps(Float64)
+        Pathfinder._fit!(fit32, prob32.u0, -prob32.u0, logpx)
+        @test fit32.fit_log_density === logpx
     end
 
     @testset "progress logging" begin

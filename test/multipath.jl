@@ -247,8 +247,9 @@ using Test
         for r in result.pathfinder_results
             @test isempty(r.fit_distributions)
             @test isempty(r.optim_trace.points)
-            @test !isempty(r.elbo_estimates)
-            @test size(r.elbo_estimates[r.fit_iteration].draws, 1) == dim
+            @test isempty(r.elbo_estimates)
+            @test isempty(r.optim_trace.log_densities)
+            @test size(r.fit_elbo_estimate.draws, 1) == dim
         end
         Random.seed!(rng, 5)
         result2 = multipathfinder(ℓ, ndraws; nruns, rng, save_trace=false)
