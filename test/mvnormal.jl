@@ -26,6 +26,17 @@ using Test
         @test num_bfgs_updates_rejected2 == num_bfgs_updates_rejected1
         @test Σs ≈ getproperty.(dists, :Σ)
         @test optim_trace.points .+ Σs .* optim_trace.gradients ≈ getproperty.(dists, :μ)
+
+        state = Pathfinder.LBFGSInverseHessianState(
+            optim_trace.points[1], optim_trace.gradients[1]; history_length
+        )
+        @test @inferred(Pathfinder.fit_mvnormal(state)) == dists[1]
+        for l in 2:length(dists)
+            Pathfinder.update_inverse_hessian!(
+                state, optim_trace.points[l], optim_trace.gradients[l]
+            )
+            @test Pathfinder.fit_mvnormal(state) == dists[l]
+        end
     end
 
     @testset "rand_and_logpdf" begin

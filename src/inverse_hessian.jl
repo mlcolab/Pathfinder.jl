@@ -10,6 +10,94 @@ function gilbert_init(α, s, y)
 end
 
 """
+    LBFGSInverseHessianState(θ₀, ∇logpθ₀; Hinit=gilbert_init, history_length=5, ϵ=1e-12)
+
+State of the L-BFGS inverse Hessian reconstruction along a trajectory, advanced one point at
+a time with [`update_inverse_hessian!`](@ref) and read with
+[`lbfgs_inverse_hessian`](@ref).
+
+[`lbfgs_inverse_hessians`](@ref) folds a stored trajectory through it, and the online fit of
+[`optimize_with_trace`](@ref) feeds it one point per optimizer iteration, so both construct
+the same inverse Hessian approximations. Its memory is `O(length(θ₀) * history_length)`.
+"""
+mutable struct LBFGSInverseHessianState{
+    T<:Real,
+    V<:AbstractVector{T},
+    G<:AbstractVector{T},
+    MS<:AbstractMatrix{T},
+    MY<:AbstractMatrix{T},
+    E<:Real,
+    F,
+}
+    θ::V # current point
+    ∇logpθ::G # gradient of the log density at `θ`
+    const s::V # cache for BFGS update, i.e. sₗ = θₗ₊₁ - θₗ = -λ Hₗ ∇logpθₗ
+    const y::G # cache for yₗ = ∇logpθₗ₊₁ - ∇logpθₗ = Hₗ₊₁ \ s₁ (secant equation)
+    const S::MS # history of s
+    const Y::MY # history of y
+    α::V # diag(H₀)
+    history_ind::Int # index of last set history entry
+    history_length_effective::Int # length of history so far
+    num_bfgs_updates_rejected::Int
+    const history_length::Int
+    const ϵ::E
+    const Hinit::F
+end
+
+function LBFGSInverseHessianState(
+    θ, ∇logpθ; Hinit=gilbert_init, history_length::Int=5, ϵ=1e-12
+)
+    n = length(θ)
+    s = similar(θ)
+    y = similar(∇logpθ)
+    S = similar(s, n, history_length)
+    Y = similar(y, n, history_length)
+    α = fill!(similar(θ), true) # H₀ = I
+    return LBFGSInverseHessianState(
+        θ, ∇logpθ, s, y, S, Y, α, 0, 0, 0, history_length, ϵ, Hinit
+    )
+end
+
+"""
+    update_inverse_hessian!(state::LBFGSInverseHessianState, θ, ∇logpθ) -> state
+
+Advance `state` to the next point `θ` of the trajectory, with gradient `∇logpθ`.
+
+The update to the inverse Hessian is rejected, and counted in
+`state.num_bfgs_updates_rejected`, if it would destroy positive definiteness.
+"""
+function update_inverse_hessian!(state::LBFGSInverseHessianState, θlp1, ∇logpθlp1)
+    (; s, y, S, Y, history_length, ϵ) = state
+    s .= θlp1 .- state.θ
+    y .= state.∇logpθ .- ∇logpθlp1
+    if dot(y, s) > ϵ * sum(abs2, y)  # curvature is positive, safe to update inverse Hessian
+        # add s and y to history
+        history_ind = state.history_ind = mod1(state.history_ind + 1, history_length)
+        state.history_length_effective = max(history_ind, state.history_length_effective)
+        S[:, history_ind] .= s
+        Y[:, history_ind] .= y
+
+        # initial diagonal estimate of H
+        state.α = state.Hinit(state.α, s, y)
+    else
+        state.num_bfgs_updates_rejected += 1
+    end
+
+    state.θ, state.∇logpθ = θlp1, ∇logpθlp1
+    return state
+end
+
+"""
+    lbfgs_inverse_hessian(state::LBFGSInverseHessianState) -> WoodburyPDMat
+
+The approximate inverse Hessian at the current point of `state`.
+"""
+function lbfgs_inverse_hessian(state::LBFGSInverseHessianState)
+    (; α, S, Y, history_ind, history_length_effective) = state
+    return lbfgs_inverse_hessian(Diagonal(α), S, Y, history_ind, history_length_effective)
+end
+
+"""
     lbfgs_inverse_hessians(
         θs, ∇logpθs; Hinit=gilbert_init, history_length=5, ϵ=1e-12
     ) -> Tuple{Vector{WoodburyPDMat},Int}
@@ -24,45 +112,18 @@ were rejected due to keeping the inverse Hessian positive definite.
 """
 function lbfgs_inverse_hessians(θs, ∇logpθs; Hinit=gilbert_init, history_length=5, ϵ=1e-12)
     L = length(θs) - 1
-    θ = θs[1]
-    ∇logpθ = ∇logpθs[1]
-    n = length(θ)
+    # at most `L` updates are stored, so a shorter history needs no more columns
+    state = LBFGSInverseHessianState(
+        θs[1], ∇logpθs[1]; Hinit, history_length=min(history_length, L), ϵ
+    )
+    Hs = [lbfgs_inverse_hessian(state)] # trace of H
 
-    # allocate caches/containers
-    history_ind = 0 # index of last set history entry
-    history_length_effective = 0 # length of history so far
-    s = similar(θ) # cache for BFGS update, i.e. sₗ = θₗ₊₁ - θₗ = -λ Hₗ ∇logpθₗ
-    y = similar(∇logpθ) # cache for yₗ = ∇logpθₗ₊₁ - ∇logpθₗ = Hₗ₊₁ \ s₁ (secant equation)
-    S = similar(s, n, min(history_length, L)) # history of s
-    Y = similar(y, n, min(history_length, L)) # history of y
-    α = fill!(similar(θ), true) # diag(H₀)
-    H = lbfgs_inverse_hessian(Diagonal(α), S, Y, history_ind, history_length_effective) # H₀ = I
-    Hs = [H] # trace of H
-
-    num_bfgs_updates_rejected = 0
     for l in 1:L
-        θlp1, ∇logpθlp1 = θs[l + 1], ∇logpθs[l + 1]
-        s .= θlp1 .- θ
-        y .= ∇logpθ .- ∇logpθlp1
-        if dot(y, s) > ϵ * sum(abs2, y)  # curvature is positive, safe to update inverse Hessian
-            # add s and y to history
-            history_ind = mod1(history_ind + 1, history_length)
-            history_length_effective = max(history_ind, history_length_effective)
-            S[1:n, history_ind] .= s
-            Y[1:n, history_ind] .= y
-
-            # initial diagonal estimate of H
-            α = Hinit(α, s, y)
-        else
-            num_bfgs_updates_rejected += 1
-        end
-
-        θ, ∇logpθ = θlp1, ∇logpθlp1
-        H = lbfgs_inverse_hessian(Diagonal(α), S, Y, history_ind, history_length_effective)
-        push!(Hs, H)
+        update_inverse_hessian!(state, θs[l + 1], ∇logpθs[l + 1])
+        push!(Hs, lbfgs_inverse_hessian(state))
     end
 
-    return Hs, num_bfgs_updates_rejected
+    return Hs, state.num_bfgs_updates_rejected
 end
 
 """
